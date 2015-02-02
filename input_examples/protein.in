@@ -1,0 +1,54 @@
+logfile = protein.log
+forcefield = amber, ff14SB, tip3p, cm
+#ff_addons = GLYCAM_06j-1, lipid14
+
+# MPI
+#mdengine = amber, pmemd.MPI
+#mdengine.prefix = mpirun -np 4
+
+mdengine = namd, namd2
+mdengine.prefix = /usr/local/NAMD_2.9_Linux-x86/charmrun
+mdengine.postfix = ++local +p4
+
+# multicore (local only)
+#mdengine = namd, namd2
+#mdengine.postfix = +p2 +isomalloc_sync
+
+# thread-MPI (local only)
+#mdengine = gromacs, mdrun
+#mdengine.postfix = -nt 4
+
+#mdengine = dlpoly, DLPOLY.Z
+#mdengine.prefix = mpirun -np 4
+
+
+[protein]
+basedir = H1kin/TK
+molecules = 1M17
+propka = False
+
+box.type = rectangular    # this creates the hydrated box
+box.length = 10.0
+neutralize = 1
+align_axes = True
+
+min.nsteps = 300
+min.ncyc = 200
+min.restraint = backbone
+min.restr_force = 10.0
+
+md.constT.nsteps = 0
+md.constT.restraint = backbone
+md.constT.restr_force = 5.0
+
+md.heat.nsteps = 5000
+md.heat.restraint = backbone
+md.heat.restr_force = 5.0
+
+md.press.nsteps = 10000
+md.press.restraint = backbone
+md.press.restr_force = 4.0
+
+md.relax.nsteps = 1000
+md.relax.nrestr = 5
+md.relax.restraint = backbone

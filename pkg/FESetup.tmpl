@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+#  Copyright (C) 2014-2015  Hannes H Loeffler
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+#  For full details of the license please see the COPYING file
+#  that should have come with this distribution.
+#
+#
+# set up the environment to run FESetup
+#
+# "$Id$
+#
+
+
+
+FES_HOME=%TOPDIR%
+
+# NOTE: this _must_ be a Python 2.7 interpreter
+python_exe=%PYINP%
+
+# standard AMBERHOME environment variable
+AMBERHOME=%AMBER%
+
+# mdrun/grompp is required in bin/ of this directory
+GMXHOME=%GROMACS%
+
+# namd2 executable is required in this directory
+NAMDHOME=%NAMD%
+
+# executable expected in execute/ of this directory
+DLPOLYHOME=%DLPOLY%
+
+# if we don't set these OpenBabel will segfault
+BABEL_LIBDIR=$FES_HOME/lib/openbabel/2.3.90
+BABEL_DATADIR=$FES_HOME/share/openbabel/2.3.90
+
+# LD_LIBRARY_PATH may already be set through modules, etc.
+# FIXME: check for conflicts due to path order!
+if [ -z "$LD_LIBRARY_PATH" ]; then
+  LD_LIBRARY_PATH=$FES_HOME/lib
+else
+  LD_LIBRARY_PATH=$FES_HOME/lib:$LD_LIBRARY_PATH
+fi
+
+PYTHONPATH=$FES_HOME/lib/python2.7/site-packages
+
+export FES_HOME
+export PYTHONPATH
+export LD_LIBRARY_PATH
+export AMBERHOME
+export NAMDHOME
+export GMXHOME
+export DLPOLYHOME
+export BABEL_LIBDIR
+export BABEL_DATADIR
+
+
+python_version=$($python_exe --version 2>&1)
+
+if [ $? -ne 0 ]; then
+  echo "ERROR: Python interpreter $python_exe cannot be run."
+  exit 1
+fi
+
+python_version=$(echo $python_version | cut -c8-10)
+
+if [ "$python_version" != "2.7" ]; then
+  echo "ERROR: $python_exe requires Python 2.7 but is version $python_version."
+  exit 1
+fi
+
+$python_exe $FES_HOME/bin/dGprep.py $*

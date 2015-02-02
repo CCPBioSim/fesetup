@@ -1,0 +1,34 @@
+logfile = ligand.log
+forcefield = amber, ff14SB, tip4pew, hfe
+mdengine = amber, pmemd.MPI
+mdengine.prefix = mpirun -np 2
+
+[ligand]
+basedir = smallmols
+molecules = acetone, ethane, benzoic_acid
+
+box.type = rectangular
+box.length = 10.0
+neutralize = 1
+
+min.nsteps = 0
+min.ncyc = 20
+min.restraint = heavy
+min.restr_force = 6.0
+
+md.heat.nsteps = 2000
+md.heat.restraint = heavy
+md.heat.restr_force = 5.0
+
+md.constT.nsteps = 1000
+md.constT.restraint = heavy
+md.constT.restr_force = 5.0
+
+md.press.nsteps = 5000
+md.press.restraint = heavy
+md.press.restr_force = 4.0
+
+md.relax.nsteps = 1000
+md.relax.nrestr = 5
+md.relax.restraint = heavy
+

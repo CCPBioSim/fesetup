@@ -1,0 +1,34 @@
+AMBER:
+  ParmEd (copy to lib/python2.7/site-packages):
+
+  tleap: include older force fields via -I
+
+  parmchk2: 64bit may crash on some systems (Ubuntu only?) ->
+    possible solution: add the following lines to PARMCHK.DAT
+===== START =====
+#
+PARM    du      0               0       1.00    0
+#
+PARM    zz      0               0       1.00    0
+===== END =====
+
+
+Sire/Python2:
+  modify Sire/Config/__init__.py to setup paths based on FES_HOME
+
+
+RDKit:
+  check if paths have to be set in lib/python2.7/site-packages/rdkit/RDPaths.py
+  (point RDCodeDir and _share to $FES_HOME)
+
+
+Openbabel:
+  remove writing of residue name in WriteMolecule() in src/formats/mol2format.cpp, ~line #591: option 'r'
+  allow reading of AMBER atomtypes and convert to element name in ~l179: option 'a'
+
+
+OpenMM 6.2.0:
+  In addition to libOpenMM.so also copy libOpenMMDrude.so, otherwise segfault
+==========
+
+TODO:

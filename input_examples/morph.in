@@ -1,0 +1,33 @@
+logfile = morph.log
+forcefield = amber, ff14SB, tip3p, hfe
+FE_type = pmemd/softcore
+mdengine = amber, pmemd.MPI
+mdengine.prefix = mpirun -np 2
+
+[ligand]
+basedir = smallmols
+morph_pairs = ethane > methanol, ethane > tbutane, ethane > propane,
+              tbutane > propane, tbutane > acetone,
+              propane > acetone, propane > methane,
+              methane > methanol, methane > methyl-benzene,
+              methyl-benzene > benzene, methyl-benzene > ethyl-benzene,
+              ethyl-benzene > benzene, ethyl-benzene > triazine,
+              triazine > cyclopropyl-benzene, triazine > benzene,
+              benzene > chloro-benzene, benzene > cyclopropyl-benzene,
+              chloro-benzene > cyclopropyl-benzene,
+              phenylacteone > pyrimidylpropane,
+# and reverse:
+              methanol > ethane, tbutane > ethane, propane > ethane,
+              propane > tbutane, acetone > tbutane, acetone > propane,
+              methane > propane, methanol > methane, methyl-benzene > methane,
+              benzene > methyl-benzene, ethyl-benzene > methyl-benzene,
+              benzene > ethyl-benzene, triazine > ethyl-benzene,
+              cyclopropyl-benzene > triazine, benzene > triazine,
+              chloro-benzene > benzene, cyclopropyl-benzene > benzene,
+              cyclopropyl-benzene > chloro-benzene,
+              pyrimidylpropane > phenylacteone
+
+#box.type = rectangular
+box.length = 12.0
+neutralize = yes
+min.nsteps = 0
