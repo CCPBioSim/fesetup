@@ -2,6 +2,17 @@ cat << EOF  > "$archname"
 #!/bin/sh
 # This script was generated using Makeself $MS_VERSION
 
+
+# MOD 0 START
+# modifications for FESetup
+# James Gebbie and Hannes H Loeffler (STFC Daresbury, UK) 2015
+FES_install_top=\`pwd\`
+FES_program='FESetup1.1'
+FES_extract_dir='./'
+
+trap FES_Control_C 2
+# MOD 0 END
+
 umask 077
 
 CRCsum="$CRCsum"
@@ -31,16 +42,25 @@ fi
 unset CDPATH
 
 # MOD 1 START
-# modifications for FESetup
-# James Gebbie and Hannes H Loeffler (STFC Daresbury, UK), 2015
-echo "=== \$label ==="
+# James Gebbie and Hannes H Loeffler
+echo "Installing package \${label}..."
 echo
 
-FES_program='FESetup1.1'
-FES_extract_dir='./'
+
+FES_Control_C() {
+    cd \$FES_install_top
+
+    echo
+    echo
+    echo "Installation aborted by user. Cleaning up..."
+
+    rm -rf \$targetdir
+
+    exit 1
+}
 
 FES_error() {
-    MS_Printf "ERROR: \$1\n"
+    MS_Printf "\nERROR: \$1\n"
     MS_Printf "Aborting the installation of \$FES_program!\n"
     exit 1
 }
@@ -63,7 +83,7 @@ FES_test_OS() {
 	return
     fi
 
-    MS_Printf "Determining system environment...\n"
+    MS_Printf "Determining system environment..."
 
     # What OS kernel are we running.
     kernel_name=\`uname -s\`
@@ -86,14 +106,12 @@ FES_test_OS() {
             FES_error "unsupported architecture: \$machine."
     esac
 
-    MS_Printf "Your machine is running \$kernel_name \$machine/\$FES_bits\n"
+    MS_Printf "    found \$kernel_name \$machine/\$FES_bits\n"
 
     # Extract the correct version.
     if [ "\$FES_bits" = "32" ]; then
-        MS_Printf "Extracting the 32 bit version.\n"
 	FES_extract_dir="./FESetup\$FES_bits"
     elif [ "\$FES_bits" = "64" ]; then
-        MS_Printf "Extracting the 64 bit version.\n"
 	FES_extract_dir="./FESetup\$FES_bits"
     fi
 }
@@ -109,7 +127,7 @@ FES_test_python() {
 	return
     fi
 
-    MS_Printf "Checking for Python version \$python_required...\n"
+    MS_Printf "Checking for Python version \$python_required..."
 
     python_version=\`\$FES_python --version 2>&1\`
 
@@ -120,16 +138,24 @@ FES_test_python() {
     python_version=\`echo \$python_version | cut -c8-10\`
 
     if [ "\$python_version" != "\$python_required" ]; then
-        FES_error "\$FES_program requires Python \$python_required.\n\$FES_python is version \$python_version."
+        FES_error "Incompatible version \$python_version found."
     else 
-        MS_Printf "Python version \$python_required has been found.\n"
+        MS_Printf "   found \$python_version\n"
     fi
 }
 
-FE_make_script() {
-    scr=FESetup\$1/bin/FESetup
-    tmpl=FESetup\$1/bin/FESetup.tmpl
-    lnk=FESetup\$1/bin/dGprep.py
+FES_make_script() {
+    scr=FESetup
+    tmpl=FESetup.tmpl
+    curr_dir=\`pwd -P\`
+
+    if ! cd FESetup\$1/bin > /dev/null; then
+	FES_error "directory FESetup\$1/bin does not exist."
+    fi
+
+    if [ ! -f \$tmpl ]; then
+        FES_error "template file \$tmpl not found."
+    fi
 
     sed -e "s,%TOPDIR%,\$FES_TOP/FESetup\$1," \\
 	-e "s,%PYINP%,\$FES_python," \\
@@ -139,40 +165,78 @@ FE_make_script() {
 	-e "s,%DLPOLY%,\$FES_DLPOLY," \$tmpl > \$scr
 
     chmod +x \$scr
-
     rm -f \$tmpl
 
-    if [ ! -e \$lnk ]; then
-	cd FESetup\$1/bin
-	ln -sf ../lib/python2.7/site-packages/FESetup/ui/dGprep.py
-	cd - > /dev/null
+    rm -f dGprep.py
+    ln -sf ../lib/python2.7/site-packages/FESetup/ui/dGprep.py
+
+    cd \$curr_dir
+}
+
+FES_check_path () {
+    path=\$1
+    exes=\$2
+
+    if [ ! -d "\$path" -o -z "\$path" ]; then
+        FES_check_path_ok=0
+        return
+    fi
+
+    found=0
+    total=0
+
+    for exe in \$exes; do
+        exes2=\$path/\$exe
+
+        for exe2 in \$exes2; do
+            total=`expr \$total + 1`
+
+            if [ -x "\$exe2" ]; then
+                found=`expr \$found + 1`
+            fi 
+        done
+    done
+
+    if [ \$found -ne \$total ]; then
+        FES_check_path_ok=0
+    else
+        FES_check_path_ok=1
     fi
 }
 
 FES_post_install() {
     FES_TOP=\`pwd -P\`
 
-cat <<_FES_POST
+    if [ -z "\$FES_bits" ]; then
+        bits="32 or 64"
+    else
+        bits=\$FES_bits
+    fi 
 
+    cat <<_FES_POST
 
-The installer will now ask for the names of several directories where
-MD software packages like AMBER, GROMACS, NAMD and DL_POLY are installed.
+=========================  post installation setup =========================
+
+The installer will now ask for the names of several directories where the
+MD software packages AMBER, GROMACS, NAMD and DL_POLY are installed.
 All options either have defaults or are optional.  You can change this
-any time later in the FESetup script in the bin directory.
+any time later in \$targetdir/FESetup\$bits/bin/FESetup.
 
-Confirm defaults by pressing just Enter.
+Confirm defaults by pressing the Enter key.
 
 This installer comes with the AMBER tools required for \$FES_program but you
 can choose to point AMBERHOME to your own installation.  If you choose your
 own please be aware that you will need to modify dat/antechamber/PARMCHK.DAT
-as contained in this installer package to avoid segmentation faults with parmchk2.
+as contained in this installer package to avoid segmentation faults with
+parmchk 2.
 
 _FES_POST
 
-    amber=y
+    amber=n
+    amber_exe_list="sander antechamber teLeap sqm"
 
     if [ -n "\$AMBERHOME" ]; then
-	echo -n "\\\$AMBERHOME is set to \$AMBERHOME, do you wish to use this? [y/N] "
+	MS_Printf "\\\$AMBERHOME is set to \$AMBERHOME, do you wish to use this? [y/N] "
 
 	read amber
     fi
@@ -180,26 +244,29 @@ _FES_POST
     case "\$amber" in
 	y*|Y*)
             FES_AMBER=\$AMBERHOME
-	    
-	    if [ ! -x "\$FES_AMBER/bin/antechamber" -a \\
-		! -x "\$FES_AMBER/bin/antechamber" ]; then
-		echo 'WARNING: AMBER is not properly installed, using default path!'
+
+	    FES_check_path \$FES_AMBER/bin "\$amber_exe_list"
+
+	    if [ \$FES_check_path_ok -lt 1 ]; then
+		echo 'WARNING: AMBER not properly installed, using default path!'
 		FES_AMBER='\$FES_HOME/amber14'
 	    fi
 	    ;;
 	*)
-            echo -n 'AMBER directory? [\$FES_HOME/amber14] '
+            MS_Printf 'AMBER directory? [\$FES_HOME/amber14] '
 
 	    read amber2
 
-	    if [ -z "$amber2" ]; then
+	    if [ -z "\$amber2" ]; then
 		FES_AMBER='\$FES_HOME/amber14'
 	    else
 		FES_AMBER=\$amber2
-	    
-		if [ ! -x "\$FES_AMBER/bin/antechamber" -a \\
-		    ! -x "\$FES_AMBER/bin/antechamber" ]; then
-		    echo 'WARNING: AMBER is not properly installed, using default path!'
+
+		FES_check_path \$FES_AMBER/bin "\$amber_exe_list"
+
+		if [ \$FES_check_path_ok -lt 1 ]; then
+		    echo 'WARNING: AMBER not properly installed, '\
+                         'using default path!'
 		    FES_AMBER='\$FES_HOME/amber14'
 		fi
 	    fi
@@ -211,14 +278,14 @@ _FES_POST
     if [ -n "\$GMXBIN" ]; then
 	gmxbin=\`dirname \$GMXBIN\`
 	
-	echo -n 'GROMACS appears to be installed in \$gmxbin, do you wish to use this? [Y/n] '
+	MS_Printf "GROMACS appears to be installed in \$gmxbin, do you wish to use this? [Y/n] "
 
 	read gromacs
     fi
 
     case "\$gromacs" in
 	n*|N*)
-            echo -n 'GROMACS directory? [] '
+            MS_Printf 'GROMACS directory? [] '
 
 	    read gromacs2
 
@@ -230,65 +297,56 @@ _FES_POST
             FES_GROMACS=\$gmxbin
     esac
 
-    found_mdrun=
-    found_grompp=
-
-    for bin in \$FES_GROMACS/bin/mdrun*; do
-	if [ -x "\$bin" ]; then
-	    found_mdrun=y
-	    break
+    if [ -n "\$FES_GROMACS" ]; then
+	FES_check_path \$FES_GROMACS/bin "mdrun* grompp*"
+	
+	if [ \$FES_check_path_ok -lt 1 ]; then
+	    echo 'WARNING: GROMACS not properly installed, using empty path!'
+	    FES_GROMACS=
 	fi
-    done
-
-    for bin in \$FES_GROMACS/bin/grompp*; do
-	if [ -x "\$bin" ]; then
-	    found_grompp=y
-	    break
-	fi
-    done
-
-    if [ ! -z "\$FES_GROMACS" -a -z "\$found_mdrun" -a -z "\$found_grompp" ]; then
-	echo 'WARNING: GROMACS is not properly installed, using empty path!'
-	FES_GROMACS=
     fi
 
 
-    echo -n 'NAMD directory (path contains binary namd2)? [] '
+    MS_Printf 'NAMD directory (path contains namd2)? [] '
 
     read namd
 
     if [ -n "\$namd" ]; then
 	FES_NAMD=\$namd
+	
+	FES_check_path \$FES_NAMD "namd2"
+
+	if [ \$FES_check_path_ok -lt 1 ]; then
+	    echo 'WARNING: NAMD not properly installed, using empty path!'
+	    FES_NAMD=
+	fi
     fi
 
-    if [ ! -z "\$FES_NAMD" -a ! -x "\$FES_NAMD/namd2" ]; then
-	echo 'WARNING: NAMD is not properly installed, using empty path!'
-	FES_NAMD=
-    fi
 
-
-    echo -n 'DL_POLY directory (path contains execute/DLPOLY.Z)? [] '
+    MS_Printf 'DL_POLY directory (path contains execute/DLPOLY.Z)? [] '
 
     read dlpoly
 
     if [ -n "\$dlpoly" ]; then
 	FES_DLPOLY=\$dlpoly
-    fi
 
-    if [ ! -z "\$FES_DLPOLY" -a ! -x "\$FES_DLPOLY/execute/DLPOLY.Z" ]; then
-	echo 'WARNING: DL_POLY is not properly installed, using empty path!'
-	FES_DLPOLY=
+	FES_check_path \$FES_DLPOLY/execute "DLPOLY.Z"
+
+	if [ \$FES_check_path_ok -lt 1 ]; then
+	    echo 'WARNING: DL_POLY not properly installed, using empty path!'
+	    FES_DLPOLY=
+	fi
     fi
 
 
     if [ -z "\$FES_bits" ]; then
-	FE_make_script 32
-	FE_make_script 64
+	FES_make_script 32
+	FES_make_script 64
     else
-	FE_make_script \$FES_bits
+	FES_make_script \$FES_bits
     fi
 
-    if [ "\$FES_bits" = 64 -o -z "\$FES_bits" ]; then
+    if [ "\$FES_bits" -eq 64 -o -z "\$FES_bits" ]; then
 	ucs=\`\$FES_python -c 'import sys; print sys.maxunicode'\`
 
 	if [ "\$ucs" -gt 65535 ]; then
@@ -297,16 +355,36 @@ _FES_POST
 	    nbytes=2
 	fi
 
-        # FIXME: stronger checks
-	(cd FESetup64/lib
-	    rm -f libboost_python.so.1.57.0
-	    ln -sf libboost_python.so.1.57.0.UCS\$nbytes libboost_python.so.1.57.0
+	curr_dir=\`pwd -P\`
 
-	    cd python2.7/site-packages
-	    rm -f Sire numpy
-	    ln -sf Sire.UCS\$nbytes Sire
-	    ln -sf numpy.UCS\$nbytes numpy)
+	if ! cd FESetup64/lib > /dev/null; then
+	    FES_error "directory FESetup64/lib does not exist."
+	fi
 
+	if [ ! -f libboost_python.so.1.57.0.UCS\$nbytes ]; then
+	    FES_error "libboost_python.so.1.57.0.UCS\$nbytes does not exist."
+	fi
+
+	rm -f libboost_python.so.1.57.0
+	ln -sf libboost_python.so.1.57.0.UCS\$nbytes libboost_python.so.1.57.0
+
+	if ! cd python2.7/site-packages > /dev/null; then
+	    FES_error "directory python2.7/site-packages does not exist."
+	fi
+
+	if [ ! -d Sire.UCS\$nbytes ]; then
+	    FES_error "direcotry Sire.UCS\$nbytes does not exist."
+	fi
+
+	if [ ! -d numpy.UCS\$nbytes ]; then
+	    FES_error "direcotry numpy.UCS\$nbytes does not exist."
+	fi
+
+	rm -f Sire numpy
+	ln -sf Sire.UCS\$nbytes Sire
+	ln -sf numpy.UCS\$nbytes numpy
+
+	cd \$curr_dir
     fi
 }
 # MOD 1 END
@@ -814,7 +892,7 @@ FES_post_install
 
 cat <<_FES_POST
 
-=== Installation of \$label is now complete. ===
+========== Installation of \$label is now complete. ==========
 
 _FES_POST
 # MOD 6 END
