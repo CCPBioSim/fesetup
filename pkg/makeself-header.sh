@@ -9,8 +9,6 @@ cat << EOF  > "$archname"
 FES_install_top=\`pwd\`
 FES_program='FESetup1.1'
 FES_extract_dir='./'
-
-trap FES_Control_C 2
 # MOD 0 END
 
 umask 077
@@ -733,6 +731,7 @@ done
 
 # MOD 4 START
 # James Gebbie and Hannes H Loeffler
+trap FES_Control_C 2
 FES_test_OS 'Linux' \$extract_all
 FES_test_python "\$python_interpreter" '2.7' \$extract_all
 # MOD 4 END
