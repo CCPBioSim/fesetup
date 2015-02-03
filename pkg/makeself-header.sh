@@ -7,7 +7,7 @@ cat << EOF  > "$archname"
 # modifications for FESetup
 # James Gebbie and Hannes H Loeffler (STFC Daresbury, UK) 2015
 FES_install_top=\`pwd\`
-FES_program='FESetup1.1'
+FES_program="$LABEL"
 FES_extract_dir='./'
 # MOD 0 END
 
@@ -77,7 +77,9 @@ FES_test_OS() {
     if [ x"\$overwrite" = x"1" -o -z "\$uname" ]; then
 	MS_Printf "WARNING: system environent check skipped.\n"
 	MS_Printf "Extracting all versions of \$FES_program.\n"
+
 	FES_extract_dir='./'
+
 	return
     fi
 
@@ -344,7 +346,7 @@ _FES_POST
 	FES_make_script \$FES_bits
     fi
 
-    if [ "\$FES_bits" -eq 64 -o -z "\$FES_bits" ]; then
+    if [ "\$FES_bits" = "64" -o -z "\$FES_bits" ]; then
 	ucs=\`\$FES_python -c 'import sys; print sys.maxunicode'\`
 
 	if [ "\$ucs" -gt 65535 ]; then
