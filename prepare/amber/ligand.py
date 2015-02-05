@@ -235,6 +235,17 @@ class Ligand(Common):
         logger.write('SCF has converged with %i preminimisation steps and '
                      'scfconv = %s kcal/mol\n' % (premin, scfconv) )
 
+        # antechamber does not write the optimised  coordinates from sqm.pdb
+        # into const.LIGAND_AC_FILE
+        # FIXME: do not read and write to same file?
+        utils.run_amber(antechamber,
+                        '-i %s -fi ac '
+                        '-o %s -fo ac '
+                        '-a %s -fa pdb -ao crd '
+                        '-s 2 -pf y' %
+                        (const.LIGAND_AC_FILE, const.LIGAND_AC_FILE,
+                         const.SQM_PDB_FILE) )
+
         ngconv = 0
         H_form = 'unknown'
         grad = 'unknown'
@@ -391,15 +402,11 @@ class Ligand(Common):
                 mol_file = const.GAFF_MOL2_FILE
                 antechamber = utils.check_amber('antechamber')
 
-                # read from const.LIGAND_AC_FILE only but take coordinates from
-                # latest created file
                 utils.run_amber(antechamber,
                                 '-i %s -fi ac '
                                 '-o %s -fo mol2 '
-                                '-a %s -fa %s -ao crd '
                                 '-at gaff -s 2 -pf y' %
-                                (const.LIGAND_AC_FILE, mol_file,
-                                 self.mol_file, self.mol_fmt) )
+                                (const.LIGAND_AC_FILE, mol_file) )
             else:
                 mol_file = self.mol_file
 

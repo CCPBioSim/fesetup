@@ -225,7 +225,7 @@ Molecular weight: %f\n''' % (mol.GetFormula(), smiles, inchi_key, self.charge,
 
 
 @report
-def preminimize(self, add_hyd = False, ffield = 'gaff', nsteps = 10):
+def preminimize(self, add_hyd = False, ffield = 'mmff94', nsteps = 10):
     """
     Preminimize mol2 file using the small molecule force fields of OpenBabel.
     Typically usage is to avoid convergence problems with sqm due to a 'bad'
@@ -256,7 +256,7 @@ def preminimize(self, add_hyd = False, ffield = 'gaff', nsteps = 10):
     mol.localopt(forcefield = ffield, steps = nsteps)
 
     logger.write('Writing structure to %s (%s format)' %
-                      (self.mol_file, self.mol_fmt) )
+                 (self.mol_file, self.mol_fmt) )
 
     try:
         mol.write(self.mol_fmt, self.mol_file, overwrite = True)
