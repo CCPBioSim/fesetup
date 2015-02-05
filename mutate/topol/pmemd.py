@@ -197,7 +197,7 @@ class PertTopology(object):
                     (self.frcmod1, mol2_1, leap_extra1) )
 
         # FIXME: clean-up leap input file (ugly overwrite of previous combine)
-        com.create_top(boxtype = 'set', boxfile = 'box.dim',
+        com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                        make_gaff = False,
                        addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
                        addcmd2 = 's = l\n' + leap_extra0 + leap_cmd)
@@ -212,7 +212,7 @@ class PertTopology(object):
             leap_cmd = ('d1 = loadmol2 "%s"\n'
                         's = combine {l d1 p}\n' %
                         mol2_0)
-            com.create_top(boxtype = 'set', boxfile = 'box.dim',
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            make_gaff = False,
                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
                            addcmd2 = leap_cmd)
@@ -225,7 +225,7 @@ class PertTopology(object):
             leap_cmd = ('r1 = loadmol2 "%s"\n'
                         's = combine {l r1 p}\n' %
                         mol2_1)
-            com.create_top(boxtype = 'set', boxfile = 'box.dim',
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            make_gaff = False,
                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
                            addcmd2 = leap_cmd)
