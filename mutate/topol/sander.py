@@ -100,13 +100,11 @@ class PertTopology(object):
         lig0._parm_overwrite = 'state0' + ow_add
 
         if leap_extra:
-            lig0.create_top(boxtype = '',
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+            lig0.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                             addcmd2 = leap_extra %
                             os.path.join(curr_dir, const.LEAP_PERT0_FILE) )
         else:
-            lig0.create_top(boxtype = '',
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n')
+            lig0.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
                               const.MOL2_EXT)
@@ -125,13 +123,11 @@ class PertTopology(object):
         lig1._parm_overwrite = 'state1' + ow_add
 
         if leap_extra:
-            lig1.create_top(boxtype = '',
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+            lig1.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                             addcmd2 = leap_extra %
                             os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
         else:
-            lig1.create_top(boxtype = '',
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n')
+            lig1.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         self.lig0 = lig0
         self.lig1 = lig1
@@ -182,7 +178,7 @@ class PertTopology(object):
 
         if leap_extra:
             com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+                            addcmd = cmd1 + cmd2,
                             addcmd2 = leap_extra %
                             os.path.join(curr_dir, const.LEAP_PERT0_FILE) )
         else:
@@ -201,12 +197,12 @@ class PertTopology(object):
 
         if leap_extra:
             com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+                            addcmd = cmd1 + cmd2,
                             addcmd2 = leap_extra %
                             os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
         else:
             com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n')
+                            addcmd = cmd1 + cmd2)
 
         if self.FE_sub_type == 'dummy':
             top0 = com0._parm_overwrite + com0.TOP_EXT

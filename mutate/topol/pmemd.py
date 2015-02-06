@@ -113,8 +113,7 @@ class PertTopology(object):
                     's = combine {s s1}\n' %
                     (frcmod1, mol2_1, leap_extra1) )
 
-        lig.create_top(boxtype = '',
-                       addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+        lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                        addcmd2 = leap_extra0 + leap_cmd)
 
         # FIXME: residue name will be both the same
@@ -128,8 +127,7 @@ class PertTopology(object):
                         's = combine {s d1}\n' %
                         mol2_0)
 
-            lig.create_top(boxtype = '',
-                           addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
 
             lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_1,
@@ -140,8 +138,7 @@ class PertTopology(object):
             leap_cmd = ('r1 = loadmol2 "%s"\n'
                         's = combine {s r1}\n' %
                         mol2_1)
-            lig.create_top(boxtype = '',
-                           addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
         elif self.FE_sub_type == 'dummy':
             top = lig._parm_overwrite + lig.TOP_EXT
@@ -198,8 +195,7 @@ class PertTopology(object):
 
         # FIXME: clean-up leap input file (ugly overwrite of previous combine)
         com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                       make_gaff = False,
-                       addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+                       make_gaff = False, addcmd = cmd1 + cmd2,
                        addcmd2 = 's = l\n' + leap_extra0 + leap_cmd)
 
         # FIXME: residue name will be both the same
@@ -213,8 +209,7 @@ class PertTopology(object):
                         's = combine {l d1 p}\n' %
                         mol2_0)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           make_gaff = False,
-                           addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+                           make_gaff = False, addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
 
             com = self.ff.Complex(pdb_file, mol2_1)
@@ -226,8 +221,7 @@ class PertTopology(object):
                         's = combine {l r1 p}\n' %
                         mol2_1)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           make_gaff = False,
-                           addcmd = cmd1 + cmd2 + 'set default nocenter on\n',
+                           make_gaff = False, addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
         elif self.FE_sub_type == 'dummy':
             top = com._parm_overwrite + com.TOP_EXT
