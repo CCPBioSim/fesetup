@@ -21,14 +21,24 @@ r"""
 Simple user interface for free energy simulation preparation.
 """
 
-__revision__ = "$Id$"
+from __future__ import print_function
+import sys
 
+if ('%x' % sys.hexversion)[:3] != '207':
+    print ('Python version 2.7 required, you have %i.%i' %
+           sys.version_info[:2], file=sys.stderr)
+    sys.exit(1)
+
+
+__revision__ = "$Id$"
 __version__ = '0.5.0'
 
-vstring = 'FESetup SUI version: %s' % __version__
-print '\n=== %s ===\n' % vstring
 
-import os, sys, shutil, argparse, signal, copy, glob, atexit
+vstring = 'FESetup SUI version: %s' % __version__
+print ('\n=== %s ===\n' % vstring)
+
+
+import os, shutil, argparse, signal, copy, glob, atexit
 from collections import OrderedDict, namedtuple
 
 import warnings                         
@@ -633,7 +643,7 @@ if __name__ == '__main__':
 
     for prot_name in options[SECT_PROT]['molecules']:
         if prot_name not in done:
-            print 'Making protein %s...' % prot_name
+            print ('Making protein %s...' % prot_name)
 
             try:
                 protein, cmds = make_protein(prot_name, ff, options)
@@ -641,7 +651,7 @@ if __name__ == '__main__':
                 done_log.write(prot_name + '\n')
             except errors.SetupError as why:
                 prot_failed.append(prot_name)
-                print 'ERROR: %s failed: %s' % (prot_name, why)
+                print ('ERROR: %s failed: %s' % (prot_name, why))
         else:
             protein, cmds = make_protein(prot_name, ff, options, True)
             proteins[protein] = cmds
@@ -662,7 +672,7 @@ if __name__ == '__main__':
 
     for lig_name in options[SECT_LIG]['molecules']:
         if lig_name not in done:
-            print 'Making ligand %s...' % lig_name
+            print ('Making ligand %s...' % lig_name)
 
             try:
                 ligand, cmds = make_ligand(lig_name, ff, options)
@@ -670,7 +680,7 @@ if __name__ == '__main__':
                 done_log.write(lig_name + '\n')
             except errors.SetupError as why:
                 lig_failed.append(lig_name)
-                print 'ERROR: %s failed: %s' % (lig_name, why)
+                print ('ERROR: %s failed: %s' % (lig_name, why))
         else:
             if not options[SECT_LIG]['file.format']:
                 fmt = os.path.splitext(options[SECT_LIG]['file.name'])[1][1:]
@@ -692,7 +702,7 @@ if __name__ == '__main__':
         except KeyError as why:
             name = pair[0] + const.MORPH_SEP + pair[1]
             morph_failed.append(name)
-            print 'ERROR: %s failed: %s' % (name, why)
+            print ('ERROR: %s failed: %s' % (name, why))
             continue
 
         ligand1 = l1.ref
@@ -706,7 +716,7 @@ if __name__ == '__main__':
                           options[SECT_DEF]['softcore_type'],
                           options[SECT_DEF]['mcs.timeout']) as morph:
 
-            print 'Morphing %s to %s...' % pair
+            print ('Morphing %s to %s...' % pair)
 
             try:
                 morph.setup(cmd1, cmd2)
@@ -715,7 +725,7 @@ if __name__ == '__main__':
                     morph.create_coords(ligand1, cmd1, cmd2)
             except errors.SetupError as why:
                 morph_failed.append(morph.name)
-                print 'ERROR: %s failed: %s' % (morph.name, why)
+                print ('ERROR: %s failed: %s' % (morph.name, why))
 
             morphs.append(morph)
 
@@ -775,7 +785,7 @@ if __name__ == '__main__':
                         done_log.write(name + '\n')
                     except errors.SetupError as why:
                         com_failed.append(name)
-                        print 'ERROR: %s failed: %s' % (name, why)
+                        print ('ERROR: %s failed: %s' % (name, why))
                 else:
                     complex, cmds = make_complex(protein.mol_name, lig_name, ff,
                                                  options, cmds, True)
@@ -813,14 +823,14 @@ if __name__ == '__main__':
                     (com_failed, 'complexes'),
                     (morph_failed, 'morphs') ):
         if failed[0]:
-            print 'ERROR: The following %s have failed:' % failed[1]
+            print ('ERROR: The following %s have failed:' % failed[1])
 
             for name in failed[0]:
-                print ' %s' % name
+                print (' %s' % name)
 
             success = False
 
     if success:
-        print '\n=== All molecules built successfully ===\n'
+        print ('\n=== All molecules built successfully ===\n')
 
 
