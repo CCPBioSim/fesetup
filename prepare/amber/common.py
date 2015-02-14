@@ -218,7 +218,7 @@ class Common(object):
 
             leapin += ''.join(cmd)
 
-        if boxfile is not None:
+        if boxfile:
             with open(boxfile, 'r') as box:
                 for line in box:
                     l = line.lstrip()
@@ -260,12 +260,11 @@ class Common(object):
                 leapin += ('solvateOct s %s %s 0.75\n' %
                            (self.solvent_box, boxlength) )
             elif boxtype == 'rectangular':
-                #leapin += ('solvateBox s %s %s 0.75\nsetBox s centers\n' %
-                #           (self.solvent_box, boxlength) )
                 leapin += ('solvateBox s %s %s 0.75\n' %
                            (self.solvent_box, boxlength) )
-            elif boxtype == 'set':
-                leapin += 'setBox s centers %s\n' % boxdata
+            elif boxtype == 'set':      # assumes coords already centered
+                leapin += ('set default nocenter on\nsetBox s centers %s\n'
+                           % boxdata)
             else:
                 raise errors.SetupError('Unknown box type: %s' % boxtype)
         else:

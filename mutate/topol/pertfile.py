@@ -117,7 +117,7 @@ class PertTopology(object):
 
         com.ligand_fmt = 'mol2'
         com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                       addcmd = cmd1 + cmd2 + 'set default nocenter on\n')
+                       addcmd = cmd1 + cmd2)
 
         patch_element(com.amber_top, lig_morph, self.lig_initial,
                       self.lig_final, self.atom_map)
