@@ -65,6 +65,9 @@ GUS_HEADER = '''\
  $GUESS  GUESS=HUCKEL $END
 '''
 
+GB_MAX_STEP = 500
+GB_MAX_ITER = 10
+GB_MAX_CHARGE = 0.001                   # FIXME: this may be problematic
 
 GB_LEAP_IN = '''\
 source leaprc.gaff
@@ -73,10 +76,6 @@ mods = loadAmberParams "%s"
 s = loadmol2 "%s"
 saveAmberParm s "%s" "%s"
 quit'''
-
-GB_MAX_STEP = 500
-GB_MAX_ITER = 10
-GB_MAX_CHARGE = 0.001
 
 # FIXME: check drms
 GB_MIN_IN = '''Minimise whole system
@@ -120,6 +119,7 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
     :type sqm_extra: string
     :param antechamber: the antechamber executable
     :type antechamber: string
+    :returns: bool if converged or not
     """
 
     tleap = utils.check_amber('tleap')
@@ -153,7 +153,7 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
 
     first = True
 
-    # FIXME: better error checks!
+    # FIXME: more robust error checking!
     for i in range(0, GB_MAX_ITER):
         leap_script = GB_LEAP_IN % (frcmod_file, mol2_file, top, crd)
 
@@ -186,7 +186,25 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
                         '-o %s -fo mol2'
                         % (charge, sqm_nml, tmp_mol2, mol2_file) )
 
-        # convergence test
+        # geometry converged?
+        found = False
+        nstep = 0
+
+        with open(mdout, 'r') as sander_out:
+            for line in sander_out:
+                if line.startswith('   NSTEP'):
+                    found = True
+                    continue
+
+                if found:
+                    nstep = int(line.split()[0])
+                    found = False
+
+        if nstep < GB_MAX_STEP:
+            converged = True
+            break
+
+        # charges convergenced?
         utils.run_amber(antechamber,
                         '-i %s -fi mol2 '
                         '-o %s -fo mol2 '
@@ -216,7 +234,6 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
                 converged = False
                 break
 
-        # FIXME: also check for geometry convergence
         if converged:
             break
 
@@ -335,12 +352,11 @@ class Ligand(Common):
                     (0, '1.0d-9', 1, 500, 1000, ''),
                     (50, '1.0d-9', 1, 500, 1000, ''),
                     (50, '1.0d-9', 0, 500, 1000, '')
-                    # for ZINC03814826/28/31/38; ZINC03814832 can't be converged
-                    # Some of those "break": proton transfer, "decarboxylation"
                     )
             else:
                 # harder cases like ZINC03814826/28/31/32/38 may be parameterised
-                # with a GB model and a more elaborate name list
+                # with a GB model and a more elaborate name list, vshift=0.1
+                # may later be of use for some cases too
                 sqm_strategy = (
                     #(0, '1.0d-10', 1, 1000, 0, ''),
                     #(50, '1.0d-10', 1, 1000, 0, ''),
