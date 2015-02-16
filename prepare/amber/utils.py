@@ -127,7 +127,7 @@ def run_amber(program, params):
     return False
 
 
-def run_leap(top, crd, program = 'tleap', script = 'leap.in'):
+def run_leap(top, crd, program = 'tleap', script = ''):
     """
     Simple wrapper to execute the AMBER leap program.
 

@@ -66,6 +66,171 @@ GUS_HEADER = '''\
 '''
 
 
+GB_LEAP_IN = '''\
+source leaprc.gaff
+set default PBRadii mbondi2
+mods = loadAmberParams "%s"
+s = loadmol2 "%s"
+saveAmberParm s "%s" "%s"
+quit'''
+
+GB_MAX_STEP = 500
+GB_MAX_ITER = 10
+GB_MAX_CHARGE = 0.001
+
+# FIXME: check drms
+GB_MIN_IN = '''Minimise whole system
+ &cntrl
+   imin = 1, ntmin = 1, drms = 0.005,
+   maxcyc = %i, ncyc = 50,
+   igb = 2, ntb = 0, cut = 9999.0,
+   intdiel = 4.0, extdiel = 78.5, saltcon = 0.0,
+   rgbmax = 10.0, gbsa = 0,
+   ntpr = %i, ntwr = %i,
+   ifqnt = 1,
+ /
+ &qmmm
+  qmmask = '*',
+  qmcharge = %i,
+  spin = 1,
+  qm_theory = 'AM1',
+  qmcut = 9999.0,
+  printcharges = 1,
+  %s
+ /
+'''
+
+def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
+                    sqm_extra, antechamber):
+    """
+    Compute AM1/BCC charges using a GB model via the sander QM/MM
+    interface.
+
+    :param ac_file: the input AC file
+    :type ac_file: string
+    :param frcmod_file: the initial frcmod file
+    :type frcmod_file: string
+    :param charge: the total charge
+    :type charge: int
+    :param scfconv: SCF convergence criterion for sander and sqm
+    :type scfconv: string
+    :param tight: whether to use tight convergence or not
+    :type tight: int
+    :param sqm_extra: extra parameters for sander and sqm
+    :type sqm_extra: string
+    :param antechamber: the antechamber executable
+    :type antechamber: string
+    """
+
+    tleap = utils.check_amber('tleap')
+    sander = utils.check_amber('sander')
+
+    step = 0
+
+    fmt = '%s%03i%s'
+    minin = const.GB_PREFIX + os.extsep + 'in'
+    top = const.GB_PREFIX + os.extsep + 'parm7'
+    crd = const.GB_PREFIX + os.extsep + 'rst7'
+    ch_file = const.GB_PREFIX + os.extsep + 'charges'
+    tmp_mol2 = const.GB_PREFIX + '_tmp' + os.extsep + 'mol2'
+    mol2_file = fmt % (const.GB_PREFIX, step, os.extsep + 'mol2')
+
+    sqm_nml = ("qm_theory='AM1',tight_p_conv=%i,"
+               "scfconv=%s,maxcyc=0,itrmax=1000,pseudo_diag=1,"
+               "%s" % (tight, scfconv, sqm_extra + ',') )
+
+    sqm_params='scfconv=%s,tight_p_conv=%i,%s' % (scfconv, tight, sqm_extra)
+
+
+    utils.run_amber(antechamber,
+                    '-i %s -fi ac '
+                    '-o %s -fo mol2' % (ac_file, mol2_file) )
+
+    # FIXME: may want to change maxcyc
+    with open(minin, 'w') as min:
+        min.write(GB_MIN_IN % (GB_MAX_STEP, GB_MAX_STEP, GB_MAX_STEP,
+                               charge, sqm_params) )
+
+    first = True
+
+    # FIXME: better error checks!
+    for i in range(0, GB_MAX_ITER):
+        leap_script = GB_LEAP_IN % (frcmod_file, mol2_file, top, crd)
+
+        utils.run_leap(top, crd, 'tleap', leap_script)
+
+        step += 1
+        mdout = fmt % (const.GB_PREFIX, step, os.extsep + 'out')
+        rstrt = fmt % (const.GB_PREFIX, step, os.extsep + 'rst7')
+
+        utils.run_amber(sander, '-O -i %s -c %s -p %s -o %s '
+                        '-r %s -inf %s' % (minin, crd, top, mdout, rstrt,
+                                           const.GB_PREFIX + os.extsep +
+                                           'info') )
+
+        # work-around for AmberTools14 antechamber which does not
+        # write the coordinates from the rst7 to sqm.pdb
+        utils.run_amber(antechamber,
+                        '-i %s -fi ac '
+                        '-a %s -fa rst -ao crd '
+                        '-o %s -fo mol2' %
+                        (ac_file, rstrt, tmp_mol2) )
+
+        mol2_file = fmt % (const.GB_PREFIX, step, os.extsep + 'mol2')
+
+        # NOTE: only -c bcc (and -c resp) symmetrise charges
+        utils.run_amber(antechamber,
+                        '-c bcc -nc %i -at gaff -j 4 -s 2 -eq 2 -rn LIG '
+                        '-ek "%s" '
+                        '-i %s -fi mol2 '
+                        '-o %s -fo mol2'
+                        % (charge, sqm_nml, tmp_mol2, mol2_file) )
+
+        # convergence test
+        utils.run_amber(antechamber,
+                        '-i %s -fi mol2 '
+                        '-o %s -fo mol2 '
+                        '-cf %s -c wc '
+                        '-s 2 -pf y' %
+                        (mol2_file, tmp_mol2, ch_file) )
+
+        charges = []
+
+        with open(ch_file, 'r') as infile:
+            for line in infile:
+                elems = line.split()
+    
+                for elem in elems:
+                    chg = float(elem)
+                    charges.append(chg)
+
+        if first:
+            old_charges = charges
+            first = False
+            continue
+
+        converged = True
+
+        for ch1, ch2 in zip(charges, old_charges):
+            if (math.fabs(ch1) - math.fabs(ch2) ) > GB_MAX_CHARGE:
+                converged = False
+                break
+
+        # FIXME: also check for geometry convergence
+        if converged:
+            break
+
+        old_charges = charges
+
+    # FIXME: do not read and write to the same AC file?
+    utils.run_amber(antechamber,
+                    '-i %s -fi mol2 '
+                    '-o %s -fo ac ' %
+                    (mol2_file, ac_file) )
+
+    return converged
+    
+
 class Ligand(Common):
     """The ligand setup class."""
 
@@ -119,12 +284,14 @@ class Ligand(Common):
 
 
     @report
-    def param(self, sqm_strategy = None):
+    def param(self, gb_charges = False, sqm_strategy = None):
         """
         Compute symmetrized AM1/BCC charges and generate missing forcefield
-        parameters. Runs antechamber, respgen, parmchk. Finally generated MOL2
-        file is in Sybyl format.  GAFF atom names are needed internally by AMBER.
+        parameters. Runs antechamber, parmchk. Finally generated MOL2 file
+        is in Sybyl format.  GAFF atom names are needed internally by AMBER.
 
+        :param gb_charges: use a GB model for parameterisation
+        :type gb_charges: bool
         :param sqm_strategy: a strategy patter using preminimize() and setting
            the SCF convergence criterion for sqm
         :type sqm_strategy: list of 2-tuples
@@ -161,31 +328,42 @@ class Ligand(Common):
         #       structure is "too" distorted and no bonding information, etc. are
         #       available a priori.
         if not sqm_strategy:
-            sqm_strategy = (
-                (0, '1.0d-10', 1, 1, 0, 1000),
-                (50, '1.0d-10', 1, 1, 0, 1000),
-                (0, '1.0d-9', 1, 1, 0, 1000),
-                (50, '1.0d-9', 1, 1, 0, 1000),
-                (50, '1.0d-9', 0, 1, 0, 1000)
-                # If the molecule has not converged yet there may be some deeper
-                # problem.  Thus no attempt at a more elaborate protocol, e.g.
-                #   scfconv=1.0d-9,vshift=0.1,ndiis_attempts=200,ndiis_matrices=6
-                # for ZINC03814826/28/31/38; ZINC03814832 can't be converged
-                # Some of those "break": proton transfer, "decarboxylation"
-                )
+            if not gb_charges:
+                sqm_strategy = (
+                    (0, '1.0d-10', 1, 500, 1000, ''),
+                    (50, '1.0d-10', 1, 500, 1000, ''),
+                    (0, '1.0d-9', 1, 500, 1000, ''),
+                    (50, '1.0d-9', 1, 500, 1000, ''),
+                    (50, '1.0d-9', 0, 500, 1000, '')
+                    # for ZINC03814826/28/31/38; ZINC03814832 can't be converged
+                    # Some of those "break": proton transfer, "decarboxylation"
+                    )
+            else:
+                # harder cases like ZINC03814826/28/31/32/38 may be parameterised
+                # with a GB model and a more elaborate name list
+                sqm_strategy = (
+                    #(0, '1.0d-10', 1, 1000, 0, ''),
+                    #(50, '1.0d-10', 1, 1000, 0, ''),
+                    (0, '1.0d-9', 1, 1000, 0,
+                     'ndiis_attempts=100'),
+                    (50, '1.0d-9', 1, 1000, 0,
+                     'ndiis_attempts=200,ndiis_matrices=10'),
+                    (50, '1.0d-9', 0, 1000, 0,
+                     'ndiis_attempts=200,ndiis_matrices=20')
+                    )
 
         logger.write('Optimizing structure and creating AM1/BCC charges')
 
-        for premin, scfconv, tight, psdiag, ndiisa, maxcyc in sqm_strategy:
+        for premin, scfconv, tight, itrmax, maxcyc, sqm_extra in sqm_strategy:
             converged = False
 
             if premin:
                 self.preminimize(nsteps = premin)
-            
+
             sqm_nlv = ("qm_theory='AM1',grms_tol=0.0002,tight_p_conv=%i,\n  "
-                       "scfconv=%s,itrmax=500,pseudo_diag=%i,\n  "
-                       "ndiis_attempts=%i,maxcyc=%i,\n" %
-                       (tight, scfconv, psdiag, ndiisa, maxcyc) )
+                       "scfconv=%s,itrmax=%i,pseudo_diag=1,\n  "
+                       "maxcyc=%i,\n%s" %
+                       (tight, scfconv, itrmax, maxcyc, sqm_extra) )
             ek = ['-ek "%s"' % sqm_nlv]  # sqm namelist variables
 
             # FIXME: Buffering messes with the stdout output order of
@@ -232,12 +410,52 @@ class Ligand(Common):
                 logger.write('Error: failed to produce atom charges\n')
                 raise errors.SetupError('failed to produce atom charges')
 
-        logger.write('SCF has converged with %i preminimisation steps and '
-                     'scfconv = %s kcal/mol\n' % (premin, scfconv) )
+        if not gb_charges:
+            logger.write('SCF has converged with %i preminimisation steps and '
+                         'scfconv = %s kcal/mol\n' % (premin, scfconv) )
+
+            ngconv = 0
+            H_form = 'unknown'
+            grad = 'unknown'
+
+            with open(SQM_OUT, 'r') as sqm:
+                for line in sqm:
+                    if line.startswith('xmin'):
+                        ngconv = int(line[4:10].strip() )
+                        H_form = line[10:33].strip()
+                        grad = line[33:].strip()
+
+            if ngconv >= maxcyc:
+                logger.write('Warning: maximum number of geometry optimisation '
+                             'steps reached (%i), gradient = %s '
+                             '(grms_tol=0.0002), check %s file\n'
+                             % (maxcyc, grad, SQM_OUT) )
+            else:
+                logger.write('Geometry has converged after %i steps, heat of '
+                             'formation: %s and gradient = %s\n' %
+                             (ngconv, H_form, grad) )
+        else:
+            if self.parmchk_version > 1:
+                parmchk = utils.check_amber('parmchk%s' %
+                                            str(self.parmchk_version) )
+            else:
+                parmchk = utils.check_amber('parmchk')
+
+            utils.run_amber(parmchk, '-i %s -f ac -o %s' %
+                            (const.LIGAND_AC_FILE, const.GB_FRCMOD_FILE) )
+
+            converged = _calc_gb_charge(const.LIGAND_AC_FILE,
+                                        const.GB_FRCMOD_FILE, self.charge,
+                                        scfconv, tight, sqm_extra,
+                                        antechamber)
+
+            if not converged:
+                logger.write('Error: GB parameterisation failed\n')
+                raise errors.SetupError('failed to produce atom charges')
 
         # antechamber does not write the optimised  coordinates from sqm.pdb
         # into const.LIGAND_AC_FILE
-        # FIXME: do not read and write to same file?
+        # FIXME: do not read and write to the same AC file?
         utils.run_amber(antechamber,
                         '-i %s -fi ac '
                         '-o %s -fo ac '
@@ -245,27 +463,6 @@ class Ligand(Common):
                         '-s 2 -pf y' %
                         (const.LIGAND_AC_FILE, const.LIGAND_AC_FILE,
                          const.SQM_PDB_FILE) )
-
-        ngconv = 0
-        H_form = 'unknown'
-        grad = 'unknown'
-
-        with open(SQM_OUT, 'r') as sqm:
-            for line in sqm:
-                if line.startswith('xmin'):
-                    ngconv = int(line[4:10].strip() )
-                    H_form = line[10:33].strip()
-                    grad = line[33:].strip()
-
-        if ngconv >= maxcyc:
-            logger.write('Warning: maximum number of geometry optimisation '
-                         'steps reached (%i), gradient = %s '
-                         '(grms_tol=0.0002), check %s file\n'
-                         % (maxcyc, grad, SQM_OUT) )
-        else:
-            logger.write('Geometry has converged after %i steps, heat of '
-                         'formation: %s and gradient = %s\n' %
-                         (ngconv, H_form, grad) )
 
 
         self._parmchk(const.LIGAND_AC_FILE, 'ac', self.frcmod)
@@ -300,8 +497,8 @@ class Ligand(Common):
         utils.run_amber(antechamber,
                         '-i %s -fi ac '
                         '-o %s -fo ac '
-                        '-cf %s -c rc'
-                        ' -s 2 -pf y' %
+                        '-cf %s -c rc '
+                        '-s 2 -pf y' %
                         (const.LIGAND_AC_FILE, const.CORR_AC_FILE,
                          const.CORR_CH_FILE) )
 

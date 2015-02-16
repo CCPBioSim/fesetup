@@ -187,7 +187,7 @@ def make_ligand(name, ff, opts, short = False):
             # everything
             ligand.prepare('mol2', lig['add_hydrogens'], lig['calc_charge'],
                            lig['correct_for_pH'], lig['pH'])
-            ligand.param()
+            ligand.param(lig['gb_charges'])
         else: # FIXME: ugly
             ligand.prepare('', lig['add_hydrogens'], lig['calc_charge'],
                            lig['correct_for_pH'], lig['pH'])
@@ -520,6 +520,7 @@ defaults[SECT_LIG] = {
     'conf_search.conj_econv': (1.0E-6, (float, ) ),
     'conf_search.ffield': ('mmff94', None),
     'calc_charge': (False, ('bool', ) ),
+    'gb_charges': (False, ('bool', ) ),
     'add_hydrogens': (False, ('bool', ) ),
     'correct_for_pH': (False, ('bool', ) ),
     'pH': (7.4, (float, ) ),
