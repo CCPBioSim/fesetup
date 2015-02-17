@@ -238,8 +238,8 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None):
     if isotope_map:
         _params.update(atomCompare = 'isotopes')
 
-        max_idx1 = mol1.GetNumAtoms() - 1
-        max_idx2 = mol2.GetNumAtoms() - 1
+        max_idx1 = mol1.GetNumAtoms()
+        max_idx2 = mol2.GetNumAtoms()
 
         icnt = 0
 
@@ -252,9 +252,9 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None):
 
             if idx1 > max_idx1 or idx2 > max_idx2 or idx1 < 0 or idx2 < 0:
                 logger.write('Error: indices out of bounds (%i, %i)' %
-                             (max_idx1 + 1, max_idx2 + 1) )
+                             (max_idx1, max_idx2) )
                 raise errors.SetupError('Mapping indices out of bounds (%i, %i)'
-                                        % (max_idx1 + 1, max_idx2 + 1) )
+                                        % (max_idx1, max_idx2) )
 
             # FIXME: guard against non-existing indices
             atom1 = mol1.GetAtomWithIdx(idx1-1)

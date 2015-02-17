@@ -66,7 +66,7 @@ GUS_HEADER = '''\
 '''
 
 GB_MAX_STEP = 500
-GB_MAX_ITER = 10
+GB_MAX_ITER = 20
 GB_MAX_CHARGE = 0.001                   # FIXME: this may be problematic
 
 GB_LEAP_IN = '''\
@@ -103,7 +103,9 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
                     sqm_extra, antechamber):
     """
     Compute AM1/BCC charges using a GB model via the sander QM/MM
-    interface.
+    interface. So far, this does not prevent zwitterions from 'folding'
+    but helps/enables wave function convergence, also - but not only -
+    because sander does not terminate when SCF does not converge.
 
     :param ac_file: the input AC file
     :type ac_file: string
@@ -208,8 +210,7 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
         utils.run_amber(antechamber,
                         '-i %s -fi mol2 '
                         '-o %s -fo mol2 '
-                        '-cf %s -c wc '
-                        '-s 2 -pf y' %
+                        '-cf %s -c wc -s 2 ' %
                         (mol2_file, tmp_mol2, ch_file) )
 
         charges = []
@@ -242,7 +243,7 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
     # FIXME: do not read and write to the same AC file?
     utils.run_amber(antechamber,
                     '-i %s -fi mol2 '
-                    '-o %s -fo ac ' %
+                    '-o %s -fo ac -pf y ' %
                     (mol2_file, ac_file) )
 
     return converged
