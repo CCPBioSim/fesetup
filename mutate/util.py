@@ -383,7 +383,7 @@ def split_system(mols):
     """Create new Sire molecule with first residue (=ligand) deleted.
 
     :param mols: system to be split
-    :type mols: Sire.Mol.Molecule
+    :type mols: Sire.Mol.Molecules
     :returns: ligand, rest of system
     :rtype: Sire.Mol.Molecule, Sire.Mol.MoleculeGroup
     """
@@ -393,7 +393,7 @@ def split_system(mols):
 
     lig = mols.at(moln[0]).molecule()
 
-    rest = Sire.Mol.MoleculeGroup(mols)
+    rest = Sire.Mol.Molecules(mols)
     rest.remove(moln[0])
 
     return lig, rest

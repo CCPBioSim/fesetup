@@ -324,7 +324,50 @@ class Morph(object):
 
         atoms_initial = lig.atoms()
 
-        Sire.IO.PDB().write(rest, REST_PDB_NAME)
+        # not using
+        # Sire.IO.PDB().write(rest, REST_PDB_NAME)
+        # because out of order and creates CONECTs for atoms > 99999
+        with open(REST_PDB_NAME, 'w') as pdb:
+            moln = rest.molNums()
+            moln.sort()
+
+            serial = 0
+            resSeq = 0
+
+            pdb.write('REMARK   Created with FESetup\n')
+
+            # pseudo-PDB for leap
+            for i in moln:
+                mol = rest.at(i).molecule()
+
+                ridx_old = -9999
+
+                for atom in mol.atoms():
+                    atom_name = str(atom.name().value() )
+                    ridx = atom.residue().index().value()
+                    coords = atom.property('coordinates')
+                    elem = str(atom.property('element').symbol() )
+
+                    if ridx != ridx_old:
+                        resSeq += 1
+                        ridx_old = ridx
+
+                    if len(atom_name) < 4:
+                        atom_name = ' %-3s' % atom_name
+
+                    pdb.write('ATOM  %5i %4s %-3s  %4i    %8.3f%8.3f%8.3f'
+                              '                      %2s\n'%
+                              ( (serial % 99999) + 1, atom_name,
+                                atom.residue().name().value(),
+                                (resSeq % 9999) + 1,
+                                coords[0], coords[1], coords[2], elem) )
+
+                    serial += 1
+
+                pdb.write('TER\n')
+
+            pdb.write('END\n')
+
 
         self.lig_morph = self.lig_morph.edit()
 
