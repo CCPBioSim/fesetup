@@ -470,17 +470,6 @@ class Ligand(Common):
                 logger.write('Error: GB parameterisation failed\n')
                 raise errors.SetupError('failed to produce atom charges')
 
-        # antechamber does not write the optimised  coordinates from sqm.pdb
-        # into const.LIGAND_AC_FILE
-        # FIXME: do not read and write to the same AC file?
-        utils.run_amber(antechamber,
-                        '-i %s -fi ac '
-                        '-o %s -fo ac '
-                        '-a %s -fa pdb -ao crd '
-                        '-s 2 -pf y' %
-                        (const.LIGAND_AC_FILE, const.LIGAND_AC_FILE,
-                         const.SQM_PDB_FILE) )
-
 
         self._parmchk(const.LIGAND_AC_FILE, 'ac', self.frcmod)
 

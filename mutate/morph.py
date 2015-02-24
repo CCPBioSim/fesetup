@@ -339,30 +339,28 @@ class Morph(object):
             # pseudo-PDB for leap
             for i in moln:
                 mol = rest.at(i).molecule()
-
                 ridx_old = -9999
 
                 for atom in mol.atoms():
+                    serial = (serial % 99999) + 1
                     atom_name = str(atom.name().value() )
                     ridx = atom.residue().index().value()
                     coords = atom.property('coordinates')
                     elem = str(atom.property('element').symbol() )
 
-                    if ridx != ridx_old:
-                        resSeq += 1
-                        ridx_old = ridx
-
                     if len(atom_name) < 4:
                         atom_name = ' %-3s' % atom_name
 
-                    pdb.write('ATOM  %5i %4s %-3s  %4i    %8.3f%8.3f%8.3f'
-                              '                      %2s\n'%
-                              ( (serial % 99999) + 1, atom_name,
-                                atom.residue().name().value(),
-                                (resSeq % 9999) + 1,
-                                coords[0], coords[1], coords[2], elem) )
+                    if ridx != ridx_old:
+                        resSeq = (resSeq % 9999) + 1
+                        ridx_old = ridx
 
-                    serial += 1
+                    pdb.write('ATOM  %5i %4s %-3s  %4i    %8.3f%8.3f%8.3f'
+                              '                      %2s\n' %
+                              (serial, atom_name,
+                               atom.residue().name().value(), resSeq,
+                               coords[0], coords[1], coords[2],
+                               elem) )
 
                 pdb.write('TER\n')
 
