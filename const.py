@@ -113,10 +113,6 @@ BASE_MAXDIHEDRALVAR = 5
 
 BOX_DIMS = 'box.dim'
 
-FLAT_RINGS_FILE = 'flatrings.pdb'
-
-COMPLEX_EXTRACT_PDB = 'extr_from_comp.pdb'
-
 MAX_CHARGE = 1.0
 MAX_CHARGE_DIFF = 0.01
 TINY_CHARGE = 0.01
@@ -124,7 +120,6 @@ TINY_CHARGE = 0.01
 RE_SIRE_ERROR_STR = r'(Sire\w+?::\w+)'
 
 SSBOND_FILE = 'ssbonds'
-PROTONATED_PDB_FILE = 'protonated.pdb'
 PROPKA_OUT_FILE = 'propka.dat'
 
 LEAP_IN = 'leap.in'
@@ -140,19 +135,28 @@ MCS_MOL_FILE = 'mcs.mol2'
 MORPH_NAME = 'MORPH'
 
 PDB_EXT = os.extsep + 'pdb'
+PRMTOP_EXT = os.extsep + 'parm7'
+INPCRD_EXT = os.extsep + 'rst7'
 MOL2_EXT = os.extsep + 'mol2'
 MODEL_EXT = os.extsep + 'model'
 
+FLAT_RINGS_FILE = 'flatrings' + PDB_EXT
+PROTONATED_PDB_FILE = 'protonated' + PDB_EXT
+
+NOT_FIRST_TOP = 'not_first' + PRMTOP_EXT
+NOT_FIRST_CRD = 'not_first' + INPCRD_EXT
+NOT_FIRST_PDB = 'not_first' + PDB_EXT
+
 DLFIELD_UDFF_NAME = 'dl_field.udff'
-DLFIELD_PDB_NAME = 'dl_field.pdb'
+DLFIELD_PDB_NAME = 'dl_field' + PDB_EXT
 RSTAR_CONV = math.pow(2.0, 1.0 / 6.0) / 2.0
 
 GROMACS_GRO_EXT = os.extsep + 'gro'
 GROMACS_ITP_EXT = os.extsep + 'itp'
 GROMACS_TOP_EXT = os.extsep + 'top'
 GROMACS_POSRES_PREFIX = 'posres_'
-GROMACS_PERT_ITP = 'pert.itp'
-GROMACS_PERT_ATP = 'pert.atp'
+GROMACS_PERT_ITP = 'pert' + GROMACS_ITP_EXT
+GROMACS_PERT_ATP = 'pert' + os.extsep + 'atp'
 
 RAD2DEG = 180.0 / math.pi
 AMBER_VELCONV = 20.455                  # AMBER time in 1/20.455 ps

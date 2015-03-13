@@ -181,7 +181,8 @@ class Common(object):
 
 
     def _amber_top_common(self, boxtype = '', boxlength = '10.0',
-                          boxfile = None, align = False, neutralize = False):
+                          boxfile = None, align = False, neutralize = False,
+                          remove_first = False):
         """Common scripting commands for leap.  Internal function only."""
 
         leapin = ''
@@ -286,8 +287,17 @@ class Common(object):
             elif self.charge > 0.0:
                 leapin += 'addions s Cl- %i\n' % nions
 
-        leapin += 'saveAmberParm s "%s" "%s"\nsavepdb s "%s"\nquit\n' \
-                  % (self.amber_top, self.amber_crd, self.amber_pdb)
+        leapin += ('saveAmberParm s "%s" "%s"\nsavepdb s "%s"\n' %
+                   (self.amber_top, self.amber_crd, self.amber_pdb) )
+
+        if remove_first:
+            # NOTE: this only removes the first unit!
+            leapin += ('remove s s.1\nsaveAmberParm s "%s" "%s"\n'
+                       'savepdb s "%s"\n' % (const.NOT_FIRST_TOP,
+                                             const.NOT_FIRST_CRD,
+                                             const.NOT_FIRST_PDB) )
+
+        leapin += 'quit\n'
 
         self.sander_crd = self.amber_crd
 

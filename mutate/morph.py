@@ -82,6 +82,10 @@ class Morph(object):
 
         self.topdir = os.getcwd()
 
+        self.initial_dir = os.path.join(initial.topdir, initial.workdir,
+                                        initial.mol_name)
+        self.final_dir = os.path.join(final.topdir, final.workdir,
+                                      final.mol_name)
         self.initial_name = initial.mol_name
         self.final_name = final.mol_name
 
@@ -327,6 +331,11 @@ class Morph(object):
         # not using
         # Sire.IO.PDB().write(rest, REST_PDB_NAME)
         # because out of order and creates CONECTs for atoms > 99999
+        # also: we can't use const.NOT_FIRST_PDB because leap has the strange
+        # habit of centering a file saved with "savepdb" such that the origin
+        # is in the center contrary to the prmtop which has it in one box
+        # corner unless "set default nocenter on" is used (and coordinates
+        # stay unmodified)
         with open(REST_PDB_NAME, 'w') as pdb:
             moln = rest.molNums()
             moln.sort()
@@ -344,8 +353,12 @@ class Morph(object):
                 for atom in mol.atoms():
                     serial = (serial % 99999) + 1
                     atom_name = str(atom.name().value() )
+                    resName =  atom.residue().name().value()
                     ridx = atom.residue().index().value()
-                    coords = atom.property('coordinates')
+                    coords = atom.property('coordinates')  # Math.Vector
+                    x = coords.x()
+                    y = coords.y()
+                    z = coords.z()
                     elem = str(atom.property('element').symbol() )
 
                     if len(atom_name) < 4:
@@ -357,9 +370,7 @@ class Morph(object):
 
                     pdb.write('ATOM  %5i %4s %-3s  %4i    %8.3f%8.3f%8.3f'
                               '                      %2s\n' %
-                              (serial, atom_name,
-                               atom.residue().name().value(), resSeq,
-                               coords[0], coords[1], coords[2],
+                              (serial, atom_name, resName, resSeq, x, y, z,
                                elem) )
 
                 pdb.write('TER\n')

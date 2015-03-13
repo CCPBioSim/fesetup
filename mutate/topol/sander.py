@@ -183,7 +183,7 @@ class PertTopology(object):
                             os.path.join(curr_dir, const.LEAP_PERT0_FILE) )
         else:
             com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2 + 'set default nocenter on\n')
+                            addcmd = cmd1 + cmd2)
 
         mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
                               const.MOL2_EXT)

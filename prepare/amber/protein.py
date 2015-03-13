@@ -122,7 +122,7 @@ class Protein(Common):
     @report
     def create_top(self, boxtype = '', boxlength = 10.0, boxfile = None,
                    align = False, neutralize = False, addcmd = '',
-                   addcmd2 = ''):
+                   addcmd2 = '', remove_first = False):
         """
         Generate an AMBER topology file via leap.
 
@@ -131,11 +131,13 @@ class Protein(Common):
         :param boxfile: name of file containing box dimensions
         :param align: align solute along the principal axes
         :param neutralize: neutralise the system
+        :param remove_first: noop! (remove first unit/residue)
         :type boxtype: string
         :type boxlength: float
         :type boxfile: string
         :type align: bool
         :type neutralize: bool
+        :type remove_first: bool
         :raises: SetupError
         """
 
@@ -158,6 +160,6 @@ s = loadpdb "%s"\n
 %s''' % (self.ff_cmd, self.solvent_load, addcmd, self.mol_file, addcmd2)
 
         leapin += self._amber_top_common(boxtype, boxlength, boxfile, align,
-                                         neutralize)
+                                         neutralize,  remove_first = False)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)

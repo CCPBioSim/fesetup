@@ -216,7 +216,7 @@ def make_ligand(name, ff, opts, short = False):
             ligand.create_top(boxtype = lig['box.type'],
                               boxlength = lig['box.length'],
                               neutralize = lig['neutralize'],
-                              addcmd = load_cmds)
+                              addcmd = load_cmds, remove_first = False)
 
             restr_force = lig['min.restr_force']
             nsteps = lig['min.nsteps']
@@ -312,7 +312,7 @@ def make_protein(name, ff, opts, short = False):
                                boxlength = prot['box.length'],
                                neutralize = prot['neutralize'],
                                align = prot['align_axes'],
-                               addcmd = load_cmds)
+                               addcmd = load_cmds, remove_first = True)
 
             restr_force = prot['min.restr_force']
             nsteps = prot['min.nsteps']
@@ -396,7 +396,7 @@ def make_complex(prot, lig, ff, opts, load_cmds, short = False):
                                boxlength = com['box.length'],
                                neutralize = com['neutralize'],
                                align = com['align_axes'],
-                               addcmd = load_cmds)
+                               addcmd = load_cmds, remove_first = True)
 
             restr_force = com['min.restr_force']
             nsteps = com['min.nsteps']

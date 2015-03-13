@@ -566,7 +566,7 @@ class Ligand(Common):
     @report
     def create_top(self, boxtype = '', boxlength = '10.0', boxfile = None,
                    align = False, neutralize = False, addcmd = '',
-                   addcmd2 = ''):
+                   addcmd2 = '', remove_first = False):
         """
         Generate an AMBER topology file via leap. Leap requires atom names in
         GAFF format to match against GAFF force field database.  Finally
@@ -578,12 +578,14 @@ class Ligand(Common):
         :param align: align solute along the principal axes
         :param neutralize: neutralise the system
         :param addcmd: inject additional leap commands
+        :param remove_first: remove first unit/residue
         :type boxtype: string
         :type boxlength: float
         :type boxfile: string
         :type align: bool
         :type neutralize: bool
         :type addcmd: string
+        :type remove_first: bool
         """
 
         # we allow the user to have their own leap input file which is used
@@ -629,7 +631,8 @@ savemol2 s leap.mol2 1
            addcmd2)
 
         leapin += self._amber_top_common(boxtype, boxlength, boxfile, align,
-                                         neutralize)
+                                         neutralize,
+                                         remove_first = remove_first)
 
 
         # Strangely, sleap does not create sander compatible top files with

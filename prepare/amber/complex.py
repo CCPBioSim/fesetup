@@ -149,7 +149,7 @@ class Complex(Common):
     @report
     def create_top(self, boxtype = '', boxlength = 10.0, boxfile = None,
                    align = False, neutralize = False, make_gaff = True,
-                   addcmd = '', addcmd2 = ''):
+                   addcmd = '', addcmd2 = '', remove_first = False):
         """Generate an AMBER topology file via leap.
 
         :param boxtype: rectangular, octahedron or set (set dimensions explicitly)
@@ -159,6 +159,7 @@ class Complex(Common):
         :param neutralize: neutralise the system
         :param make_gaff: force GAFF fromat of the ligand
         :param addcmd: inject additional leap commands
+        :param remove_first: remove first unit/residue
         :type boxtype: string
         :type boxlength: float
         :type boxfile: string
@@ -166,6 +167,7 @@ class Complex(Common):
         :type neutralize: bool
         :type make_gaff: bool
         :type addcmd: string
+        :type remove_first: bool
         """
 
         # ensure ligand is in MOL2/GAFF format
@@ -209,7 +211,8 @@ s = combine { l p }
         #        when tip4pew is used the frcmod files are only loaded after
         #        reading PDB and MOL2
         leapin += self._amber_top_common(boxtype, boxlength, boxfile, align,
-                                         neutralize)
+                                         neutralize,
+                                         remove_first = remove_first)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)
 
