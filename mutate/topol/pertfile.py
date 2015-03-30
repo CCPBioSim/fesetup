@@ -300,7 +300,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     morph_natoms = old_morph.nAtoms()
 
     for atom in old_morph.atoms():
-        #print atom.property("initial_charge"), atom.property("final_charge")
         if ( (atom.property("initial_ambertype") !=
               atom.property("final_ambertype") )
              or (atom.property("initial_charge") !=
@@ -461,7 +460,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
             pertfile.write(outstr)
 
-        #print outstr
 
     # Now angles...
 
@@ -633,7 +631,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                                         'because the atom mapping would open '
                                         'up a ring in the intiial state.')
 
-            # Check if all atoms are dummies in initial torsion
             allidummy = (at0.name().value().startsWith("DU") and
                          at1.name().value().startsWith("DU") and
                          at2.name().value().startsWith("DU") and
@@ -785,6 +782,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             iat1 = lig_initial.select(iimproper.atom1() ).index()
             iat2 = lig_initial.select(iimproper.atom2() ).index()
             iat3 = lig_initial.select(iimproper.atom3() ).index()
+
             # Need different matching rules
             if ( ( at0i == iat0 or at0i == iat1 or at0i == iat2 or at0i == iat3) and
                  ( at1i == iat0 or at1i == iat1 or at1i == iat2 or at1i == iat3) and
@@ -794,6 +792,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 ipot = params_initial.getParams(iimproper)
                 unmapped_iimpropers.remove(iimproper)
                 break
+
         if ipot is None:
             if (at0.name().value().startsWith("DU") or
                 at1.name().value().startsWith("DU") or
@@ -807,7 +806,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                                         'because the atom mapping would open '
                                         'up a ring in the intiial state.')
 
-            # Check if all atoms are dummies in initial improper
             allidummy = (at0.name().value().startsWith("DU") and
                          at1.name().value().startsWith("DU") and
                          at2.name().value().startsWith("DU") and
@@ -889,7 +887,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 at3.name().value() not in zz_atoms):
                 samepotential = False
             else:
-                raise errors.SetupError('BUG: The initial and morph imporpers '
+                raise errors.SetupError('BUG: The initial and morph impropers '
                                         'are different, but the potential does '
                                         'not involve a dummy atom.')
 
