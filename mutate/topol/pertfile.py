@@ -152,15 +152,17 @@ def patch_element(parmtop, lig_morph, lig_initial, lig_final, atom_map):
         if num < 0:
             midx = Sire.Mol.AtomIdx(idx)
             mname = lig_morph.select(midx).name()
+            fidx = util.search_by_index(midx, atom_map)
 
             if mname.value().startsWith('DU'):
-                nn = util.search_by_index(midx, atom_map)
-                atom = lig_final.select(nn)
+                atom = lig_final.select(fidx)
+                mass = atom.property('mass').value()
             else:
                 atom = lig_initial.select(midx)
+                mass = max(atom.property('mass').value(),
+                           lig_final.select(fidx).property('mass').value() )
 
             atnum = atom.property('element').nProtons()
-            mass = atom.property('mass').value()
 
             parm.parm_data['ATOMIC_NUMBER'][idx] = atnum
             parm.parm_data['MASS'][idx] = mass
@@ -931,29 +933,28 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         fat2 = lig_final.select( fimproper.atom2() ).index()
         fat3 = lig_final.select( fimproper.atom3() ).index()
 
+        at0_info = util.search_atominfo(fat0, reverse_atom_map)
+        at1_info = util.search_atominfo(fat1, reverse_atom_map)
+        at2_info = util.search_atominfo(fat2, reverse_atom_map)
+        at3_info = util.search_atominfo(fat3, reverse_atom_map)
+
         fpot = params_final.getParams(fimproper)
-        ipot = [ 0.0, 0.0, 0.0 ]
 
-        reversemap_at0 = util.search_atominfo(fat0, reverse_atom_map)
-        reversemap_at1 = util.search_atominfo(fat1, reverse_atom_map)
-        reversemap_at2 = util.search_atominfo(fat2, reverse_atom_map)
-        reversemap_at3 = util.search_atominfo(fat3, reverse_atom_map)
+        if (not at0_info.atom and not at1_info.atom and
+            not at2_info.atom and not at3_info.atom):
+            ipot = fpot
+        else:
+            ipot = [0.0, 0.0, 0.0]
 
-        ipotstr = ""
-        for val in ipot:
-            ipotstr += "%s " % val
-        fpotstr = ""
-        for val in fpot:
-            fpotstr += "%s " % val
         outstr = "\timproper\n"
-
-        outstr += "\t\tatom0   %s\n" % reversemap_at0.name.value()
-        outstr += "\t\tatom1   %s\n" % reversemap_at1.name.value()
-        outstr += "\t\tatom2   %s\n" % reversemap_at2.name.value()
-        outstr += "\t\tatom3   %s\n" % reversemap_at3.name.value()
-        outstr += "\t\tinitial_form %s\n" % ipotstr
-        outstr += "\t\tfinal_form %s\n" % fpotstr
+        outstr += "\t\tatom0   %s\n" % at0_info.name.value()
+        outstr += "\t\tatom1   %s\n" % at1_info.name.value()
+        outstr += "\t\tatom2   %s\n" % at2_info.name.value()
+        outstr += "\t\tatom3   %s\n" % at3_info.name.value()
+        outstr += "\t\tinitial_form %s\n" % ' '.join(str(i) for i in ipot)
+        outstr += "\t\tfinal_form %s\n" % ' '.join(str(f) for f in fpot)
         outstr += "\tendimproper\n"
+
         pertfile.write(outstr)
 
     #
@@ -983,28 +984,18 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         logger.write('%s %s %s %s' % (iat0, iat1, iat2, iat3) )
 
         ipot = params_initial.getParams(iimproper)
-        fpot = [ 0.0, 0.0, 0.0 ]
-
-        ipotstr = ""
-
-        for val in ipot:
-            ipotstr += "%s " % val
-
-        fpotstr = ""
-
-        for val in fpot:
-            fpotstr += "%s " % val
+        fpot = [0.0, 0.0, 0.0]
 
         outstr = "\timproper\n"
         outstr += "\t\tatom0   %s\n" % iat0.name().value()
         outstr += "\t\tatom1   %s\n" % iat1.name().value()
         outstr += "\t\tatom2   %s\n" % iat2.name().value()
         outstr += "\t\tatom3   %s\n" % iat3.name().value()
-        outstr += "\t\tinitial_form %s\n" % ipotstr
-        outstr += "\t\tfinal_form %s\n" % fpotstr
+        outstr += "\t\tinitial_form %s\n" % ' '.join(str(i) for i in ipot)
+        outstr += "\t\tfinal_form %s\n" % ' '.join(str(f) for f in fpot)
         outstr += "\tendimproper\n"
+
         pertfile.write(outstr)
 
-    outstr = "endmolecule\n"
-    pertfile.write(outstr)
+    pertfile.write('endmolecule\n')
     pertfile.close()

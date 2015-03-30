@@ -25,7 +25,7 @@ Actual functionality and utility functions for the Morph class.
 __revision__ = "$Id$"
 
 
-import os, re, glob
+import sys, os, re, glob, math
 import cPickle as pickle
 from collections import OrderedDict, defaultdict
 
@@ -210,7 +210,7 @@ def create_isotope_map(filename):
 _params = dict(maximize = 'atoms', bondCompare = 'any',
                completeRingsOnly = True)
 
-def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None):
+def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
     """
     Maximum common substructure search via RDKit/fmcs.
 
@@ -222,6 +222,8 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None):
     :type maxtime: float
     :param isotope_map: explicit user atom mapping
     :type isotope_map: dict
+    :param selec: selection method for multiple MCS
+    :type selec: string
     :raises: SetupError
     :returns: index map
     :rtype: dict
@@ -293,8 +295,50 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None):
 
     p = rdkit.Chem.MolFromSmarts(mcs.smarts)
 
-    m1 = mol1.GetSubstructMatch(p)
-    m2 = mol2.GetSubstructMatch(p)
+    # NOTE: experimental!
+    #       current problem: GetSubstructMatches() does not give all matches!
+    #       won't work if: identical mols,
+    if selec == 'distance':
+        min_dist = []
+        RMSD = sys.float_info.max
+        cnf1 = mol1.GetConformer()
+        cnf2 = mol2.GetConformer()
+
+        for m1 in mol1.GetSubstructMatches(p, uniquify = False,
+                                           useChirality = False,
+                                           useQueryQueryMatches = True):
+            for m2 in mol2.GetSubstructMatches(p, uniquify = False,
+                                               useChirality = False,
+                                               useQueryQueryMatches = True):
+                dist = 0.0
+                #print m1, m2
+
+                for idx1, idx2 in zip(m1, m2):
+                    coord1 = cnf1.GetAtomPosition(idx1)
+                    coord2 = cnf2.GetAtomPosition(idx2)
+
+                    x1 = coord1.x
+                    y1 = coord1.y
+                    z1 = coord1.z
+
+                    x2 = coord2.x
+                    y2 = coord2.y
+                    z2 = coord2.z
+
+                    dist += (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2
+
+                tmp = math.sqrt(dist / len(m1) )
+
+                if tmp < RMSD:
+                    RMSD = tmp
+                    mx1 = m1
+                    mx2 = m2
+
+        m1 = mx1
+        m2 = mx2
+    else:
+        m1 = mol1.GetSubstructMatch(p)
+        m2 = mol2.GetSubstructMatch(p)
 
     # the following doesn't work because rdkit claims that indices are
     # not existing
@@ -399,7 +443,8 @@ def split_system(mols):
     return lig, rest
 
 
-def map_atoms(lig_initial, lig_final, timeout, isotope_map = None):
+def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
+              mcs_sel = ''):
     """
     Compute the atom mapping between initial and final state using MCSS.
     Creates lig_morph, appends to atom_map and reverse_atom_map.
@@ -427,7 +472,7 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None):
     mol1 = write_mol2(lig_initial, notypes = True)
     mol2 = write_mol2(lig_final, notypes = True)
 
-    index_map = mcss(mol1, mol2, timeout, isotope_map)
+    index_map = mcss(mol1, mol2, timeout, isotope_map, mcs_sel)
 
     if not index_map:
         raise errors.SetupError('MCSS error')

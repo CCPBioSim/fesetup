@@ -46,7 +46,7 @@ WD_TABLE = {'pertfile': 'sire'}
 class Morph(object):
     """The morphing class."""
     def __init__(self, initial, final, forcefield, FE_type = 'pertfile',
-                 softcore_type = '', mcs_timeout = 60.0):
+                 softcore_type = '', mcs_timeout = 60.0, mcs_sel = ''):
         """
         :param initial: the initial state of the morph pair
         :type initial: either Ligand or Complex
@@ -132,6 +132,7 @@ class Morph(object):
         self.dummy_idx = []
 
         self.mcs_timeout = mcs_timeout
+        self.mcs_sel = mcs_sel
 
 
     # context manager used to keep track of directory changes
@@ -213,7 +214,7 @@ class Morph(object):
 
         (lig_morph, self.atom_map, self.reverse_atom_map) = \
                     util.map_atoms(lig_initial, lig_final, self.mcs_timeout,
-                                   isotope_map)
+                                   isotope_map, self.mcs_sel)
 
         logger.write('\nAtom mapping between initial and final states:')
 
