@@ -295,25 +295,64 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
 
     p = rdkit.Chem.MolFromSmarts(mcs.smarts)
 
+    conv = ob.OBConversion()
+    conv.SetInAndOutFormats('mol2', 'mol2')
+
+    # NOTE: this relies on a modified Openbabel MOL2 writer
+    conv.AddOption('r', ob.OBConversion.OUTOPTIONS)  # do not append resnum
+
+    obmol1 = ob.OBMol()
+    #obmol2 = ob.OBMol()
+
+    errlev = ob.obErrorLog.GetOutputLevel()
+    ob.obErrorLog.SetOutputLevel(0)
+
+    conv.ReadString(obmol1, mol2str_1)
+    #conv.ReadString(obmol2, mol2str_2)
+
+    ob.obErrorLog.SetOutputLevel(errlev)
+
+
     # NOTE: experimental!
-    #       current problem: GetSubstructMatches() does not give all matches!
-    #       won't work if: identical mols,
+    #       current problem: do not get all matches when hydrogens!
+    #       won't work if MCS does not contain binding mode conformation
     if selec == 'distance':
+        # OpenBabel version:
+#         pat1 = ob.OBSmartsPattern()
+#         pat2 = ob.OBSmartsPattern()
+
+#         pat1.Init(mcs.smarts)
+#         pat2.Init(mcs.smarts)
+
+#         pat1.Match(obmol1)
+#         pat2.Match(obmol2)
+
+#         for m1 in pat1.GetMapList():
+#             print m1
+
         min_dist = []
         RMSD = sys.float_info.max
-        cnf1 = mol1.GetConformer()
-        cnf2 = mol2.GetConformer()
 
-        for m1 in mol1.GetSubstructMatches(p, uniquify = False,
+        mol_noH1 = rdkit.Chem.RemoveHs(mol1)
+        mol_noH2 = rdkit.Chem.RemoveHs(mol2)
+
+        # FIXME: order of atoms in mol without hydrogens can be different!
+        mcs = rdkit.Chem.MCS.FindMCS( (mol_noH1, mol_noH2), **_params)
+        p_noH = rdkit.Chem.MolFromSmarts(mcs.smarts)
+
+        cnf1 = mol_noH1.GetConformer()
+        cnf2 = mol_noH2.GetConformer()
+
+        for m_noH1 in mol_noH1.GetSubstructMatches(p_noH, uniquify = False,
                                            useChirality = False,
                                            useQueryQueryMatches = True):
-            for m2 in mol2.GetSubstructMatches(p, uniquify = False,
+            for m_noH2 in mol_noH2.GetSubstructMatches(p_noH, uniquify = False,
                                                useChirality = False,
                                                useQueryQueryMatches = True):
                 dist = 0.0
-                #print m1, m2
+                #print m_noH1, m_noH2
 
-                for idx1, idx2 in zip(m1, m2):
+                for idx1, idx2 in zip(m_noH1, m_noH2):
                     coord1 = cnf1.GetAtomPosition(idx1)
                     coord2 = cnf2.GetAtomPosition(idx2)
 
@@ -327,71 +366,65 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
 
                     dist += (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2
 
-                tmp = math.sqrt(dist / len(m1) )
+                tmp = math.sqrt(dist / len(m_noH1) )
+                #print tmp
 
                 if tmp < RMSD:
                     RMSD = tmp
-                    mx1 = m1
-                    mx2 = m2
+                    mx1 = m_noH1
+                    mx2 = m_noH2
 
-        m1 = mx1
-        m2 = mx2
+        m1 = mol1.GetSubstructMatch(p)
+        m2 = mol2.GetSubstructMatch(p)
+
+        mapping = dict()
+
+        #print mx1, mx2
+
+        # FIXME: order of atoms in mol without hydrogens can be different!
+        for a, b in zip(m1, m2):
+            if a in mx1:
+                mapping[a] = mx2[mx1.index(a)]
+            else:
+                mapping[a] = b
+
+        print mapping
     else:
         m1 = mol1.GetSubstructMatch(p)
         m2 = mol2.GetSubstructMatch(p)
 
-    # the following doesn't work because rdkit claims that indices are
-    # not existing
-#     em = rdkit.Chem.EditableMol(mol1)
+        mapping = dict(zip(m1, m2) )
 
-#     for atom in em.GetMol().GetAtoms():
-#         print atom.GetIdx(),
-#     print
-
-#     for atom in mol1.GetAtoms():
-#         idx = atom.GetIdx()
-
-#         if idx not in m1:
-#             print 'd', idx
-#             em.RemoveAtom(idx)          # some idx not existing???
-
-    conv = ob.OBConversion()
-    conv.SetInAndOutFormats('mol2', 'mol2')
-
-    # NOTE: this relies on a modified Openbabel MOL2 writer
-    conv.AddOption('r', ob.OBConversion.OUTOPTIONS)  # do not append resnum
-
-    obmol = ob.OBMol()
-
-    errlev = ob.obErrorLog.GetOutputLevel()
-    ob.obErrorLog.SetOutputLevel(0)
-
-    conv.ReadString(obmol, mol2str_1)
-
-    ob.obErrorLog.SetOutputLevel(errlev)
+    em = rdkit.Chem.EditableMol(mol1)
+    for idx in range(len(m1), -1, -1):
+        if idx not in m1:
+            em.RemoveAtom(idx)
+    # RDKit cannot write mol2 files
+    # kekulize is True by default and leads to exceptions
+    rdkit.Chem.MolToMolFile(em.GetMol(), 'mcs.mol', kekulize = False)
 
     delete_atoms = []
 
-    for atom in ob.OBMolAtomIter(obmol):
+    for atom in ob.OBMolAtomIter(obmol1):
         idx = atom.GetIdx() - 1
 
         if idx not in m1:
             delete_atoms.append(atom)
 
-    obmol.BeginModify()
+    obmol1.BeginModify()
 
     for idx in delete_atoms:
-        obmol.DeleteAtom(idx)
+        obmol1.DeleteAtom(idx)
 
-    obmol.EndModify()
+    obmol1.EndModify()
 
-    conv.WriteFile(obmol, const.MCS_MOL_FILE)
+    conv.WriteFile(obmol1, const.MCS_MOL_FILE)
 
     with open(const.MCS_MAP_FILE, 'wb') as pkl:
         pickle.dump(m1, pkl, 0)
         pickle.dump(m2, pkl, 0)
 
-    return dict(zip(m1, m2) )
+    return mapping
 
 
 def search_crd(system):
