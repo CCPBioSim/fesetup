@@ -116,7 +116,7 @@ class PertTopology(object):
         com.frcmod = self.frcmod
 
         com.ligand_fmt = 'mol2'
-        com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+        com.create_top(boxtype = 'set',
                        addcmd = cmd1 + cmd2)
 
         patch_element(com.amber_top, lig_morph, self.lig_initial,

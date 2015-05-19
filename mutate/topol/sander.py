@@ -177,12 +177,12 @@ class PertTopology(object):
         com0.ligand_fmt = 'mol2'
 
         if leap_extra:
-            com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+            com0.create_top(boxtype = 'set',
                             addcmd = cmd1 + cmd2,
                             addcmd2 = leap_extra %
                             os.path.join(curr_dir, const.LEAP_PERT0_FILE) )
         else:
-            com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+            com0.create_top(boxtype = 'set',
                             addcmd = cmd1 + cmd2)
 
         mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
@@ -196,12 +196,12 @@ class PertTopology(object):
         com1._parm_overwrite = 'state1' + ow_add
 
         if leap_extra:
-            com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+            com1.create_top(boxtype = 'set',
                             addcmd = cmd1 + cmd2,
                             addcmd2 = leap_extra %
                             os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
         else:
-            com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+            com1.create_top(boxtype = 'set',
                             addcmd = cmd1 + cmd2)
 
         if self.FE_sub_type == 'dummy':

@@ -219,6 +219,9 @@ class Common(object):
 
             leapin += ''.join(cmd)
 
+
+        boxdata = None
+
         if boxfile:
             with open(boxfile, 'r') as box:
                 for line in box:
@@ -264,8 +267,11 @@ class Common(object):
                 leapin += ('solvateBox s %s %s 0.75\n' %
                            (self.solvent_box, boxlength) )
             elif boxtype == 'set':      # assumes coords already centered
-                leapin += ('set default nocenter on\nsetBox s centers %s\n'
-                           % boxdata)
+                if boxdata:
+                    leapin += ('set default nocenter on\nsetBox s centers %s\n'
+                               % boxdata)
+                else:
+                    leapin += 'setBox s vdw\n'
             else:
                 raise errors.SetupError('Unknown box type: %s' % boxtype)
         else:
