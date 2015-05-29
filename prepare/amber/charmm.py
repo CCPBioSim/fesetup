@@ -101,7 +101,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                                      weight) )
 
 
-    def writePrmPsf(self, prmname, psfname):
+    def writePrmPsf(self, rtfname, prmname, psfname):
         """Write prm and psf files.
 
         ATOM                             (Flexible paramters only)
@@ -134,7 +134,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
         atoms = []
         bonds = []
         angles = []
-        dihedrals = set()
+        dihedrals = []
         impropers = []
         groups = []
 
@@ -164,6 +164,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 mass = atom.property('mass').value()
                 lj = atom.property('LJ')
 
+                if amber_type[0].islower():
+                  amber_type = 'G' + amber_type.upper()
+
                 atoms.append( (atomno, segid, resid, res, atom_type,
                                amber_type, charge, mass) )
                 atom_params[amber_type] = (mass, lj)
@@ -178,6 +181,12 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 name1 = str(mol.select(at1).property('ambertype') )
                 k, r = params.getParams(bond)
 
+                if name0[0].islower():
+                  name0 = 'G' + name0.upper()
+
+                if name1[0].islower():
+                  name1 = 'G' + name1.upper()
+
                 bonds.append( (at0.value() + 1 + offset,
                                at1.value() + 1 + offset) )
                 bond_params[name0, name1] = (k, r)
@@ -190,6 +199,15 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 name1 = str(mol.select(at1).property('ambertype') )
                 name2 = str(mol.select(at2).property('ambertype') )
                 k, theta = params.getParams(angle)
+
+                if name0[0].islower():
+                  name0 = 'G' + name0.upper()
+
+                if name1[0].islower():
+                  name1 = 'G' + name1.upper()
+
+                if name2[0].islower():
+                  name2 = 'G' + name2.upper()
 
                 angles.append( (at0.value() + 1 + offset,
                                 at1.value() + 1 + offset,
@@ -209,6 +227,18 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 name2 = str(mol.select(at2).property('ambertype') )
                 name3 = str(mol.select(at3).property('ambertype') )
 
+                if name0[0].islower():
+                  name0 = 'G' + name0.upper()
+
+                if name1[0].islower():
+                  name1 = 'G' + name1.upper()
+
+                if name2[0].islower():
+                  name2 = 'G' + name2.upper()
+
+                if name3[0].islower():
+                  name3 = 'G' + name3.upper()
+
                 p = params.getParams(dihedral)
                 terms = []
 
@@ -218,12 +248,14 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
                 #sf = intrascale.get(at0, at3)
 
-                dihedrals.add( (at0.value() + 1 + offset,
+                dihedrals.append( (at0.value() + 1 + offset,
                                 at1.value() + 1 + offset,
                                 at2.value() + 1 + offset,
                                 at3.value() + 1 + offset) )
 
                 dihedral_params[name0, name1, name2, name3] = terms
+
+            dihedrals.sort()
 
             for dihedral in params.getAllImpropers():
                 at0 = dihedral.atom0()
@@ -235,6 +267,18 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 name1 = str(mol.select(at1).property('ambertype') )
                 name2 = str(mol.select(at2).property('ambertype') )
                 name3 = str(mol.select(at3).property('ambertype') )
+
+                if name0[0].islower():
+                  name0 = 'G' + name0.upper()
+
+                if name1[0].islower():
+                  name1 = 'G' + name1.upper()
+
+                if name2[0].islower():
+                  name2 = 'G' + name2.upper()
+
+                if name3[0].islower():
+                  name3 = 'G' + name3.upper()
 
                 term = params.getParams(dihedral)
 
@@ -377,13 +421,20 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
         atomno = 0
 
-        with open(prmname, 'w') as prm:
-            prm.write('* created by FESetup\n')
+        with open(rtfname, 'w') as prm:
+            prm.write('* created by FESetup\n'
+                      '* minimal RTF\n'
+                      '*\n'
+                      '36 1\n\n')
 
-            prm.write('\nATOMS\n')
             for atom, param in atom_params.iteritems():
                 atomno += 1
                 prm.write('MASS %5i %-6s %9.5f\n' % (atomno, atom, param[0]) )
+
+            prm.write('\nEND\n')
+
+        with open(prmname, 'w') as prm:
+            prm.write('* created by FESetup\n')
 
             prm.write('\nBONDS\n')
             for names, params in bond_params.iteritems():
@@ -457,5 +508,5 @@ if __name__ == '__main__':
 
     top = CharmmTop(sys.argv[1], sys.argv[2])
     top.writeCrd('test.crd')
-    top.writePrmPsf('test.prm', 'test.psf')
+    top.writePrmPsf('test.rtf', 'test.prm', 'test.psf')
  
