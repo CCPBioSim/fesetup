@@ -191,6 +191,8 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                                at1.value() + 1 + offset) )
                 bond_params[name0, name1] = (k, r)
 
+            bonds.sort()
+
             for angle in params.getAllAngles():  # Sire.Mol.AngleID
                 at0 = angle.atom0()  # Sire.Mol.AtomIdx!
                 at1 = angle.atom1()
@@ -220,7 +222,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 at0 = dihedral.atom0()  # Sire.Mol.AtomIdx!
                 at1 = dihedral.atom1()
                 at2 = dihedral.atom2()
-                at3 = dihedral.atom2()
+                at3 = dihedral.atom3()
 
                 name0 = str(mol.select(at0).property('ambertype') )
                 name1 = str(mol.select(at1).property('ambertype') )
@@ -249,9 +251,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 #sf = intrascale.get(at0, at3)
 
                 dihedrals.append( (at0.value() + 1 + offset,
-                                at1.value() + 1 + offset,
-                                at2.value() + 1 + offset,
-                                at3.value() + 1 + offset) )
+                                   at1.value() + 1 + offset,
+                                   at2.value() + 1 + offset,
+                                   at3.value() + 1 + offset) )
 
                 dihedral_params[name0, name1, name2, name3] = terms
 
@@ -261,7 +263,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 at0 = dihedral.atom0()
                 at1 = dihedral.atom1()
                 at2 = dihedral.atom2()
-                at3 = dihedral.atom2()
+                at3 = dihedral.atom3()
 
                 name0 = str(mol.select(at0).property('ambertype') )
                 name1 = str(mol.select(at1).property('ambertype') )
