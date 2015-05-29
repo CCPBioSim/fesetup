@@ -389,7 +389,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                psf.write('%10i' % 0)
 
                if not (i + 1) % 8:
-                    psf.write('\n')
+                    psf.write('\n\n')
 
             if (i + 1) % 8:
                 psf.write('\n')
