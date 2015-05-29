@@ -26,9 +26,10 @@ __revision__ = "$Id: gromacs.py 395 2015-01-26 10:45:12Z halx $"
 
 
 
-import os
+import os, math
 
 import Sire.IO
+import Sire.MM
 
 from FESetup import const, errors, logger
 
@@ -130,103 +131,161 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
         """
 
-        with open(prmname, 'w') as prm:
-            pass
-
+        atoms = []
         bonds = []
         angles = []
-        dihedrals = []
+        dihedrals = set()
         impropers = []
         groups = []
+
+        atom_params = {}
+        bond_params = {}
+        angle_params = {}
+        dihedral_params = {}
+        improper_params = {}
+        nonbonded_params = []
 
         offset = 0
         atomno = 0
 
+        for num in self.mol_numbers:
+            mol = self.mols.at(num).molecule()
+            natoms = mol.nAtoms()
+
+            for atom in mol.atoms():
+                atomno += 1
+                resno = atom.residue().number().value()
+                res = str(atom.residue().name().value() )
+                atom_type = str( atom.name().value() )
+                amber_type = str(atom.property('ambertype') )
+                segid = 'X'  # FIXME
+                resid = str(resno)  # FIXME
+                charge = atom.property('charge').value()
+                mass = atom.property('mass').value()
+                lj = atom.property('LJ')
+
+                atoms.append( (atomno, segid, resid, res, atom_type,
+                               amber_type, charge, mass) )
+                atom_params[amber_type] = (mass, lj)
+
+
+            params = mol.property('amberparameters') # Sire.Mol.AmberParameters
+
+            for bond in params.getAllBonds():  # Sire.Mol.BondID
+                at0 = bond.atom0()  # Sire.Mol.AtomIdx!
+                at1 = bond.atom1()
+                name0 = str(mol.select(at0).property('ambertype') )
+                name1 = str(mol.select(at1).property('ambertype') )
+                k, r = params.getParams(bond)
+
+                bonds.append( (at0.value() + 1 + offset,
+                               at1.value() + 1 + offset) )
+                bond_params[name0, name1] = (k, r)
+
+            for angle in params.getAllAngles():  # Sire.Mol.AngleID
+                at0 = angle.atom0()  # Sire.Mol.AtomIdx!
+                at1 = angle.atom1()
+                at2 = angle.atom2()
+                name0 = str(mol.select(at0).property('ambertype') )
+                name1 = str(mol.select(at1).property('ambertype') )
+                name2 = str(mol.select(at2).property('ambertype') )
+                k, theta = params.getParams(angle)
+
+                angles.append( (at0.value() + 1 + offset,
+                                at1.value() + 1 + offset,
+                                at2.value() + 1 + offset) )
+                angle_params[name0, name1, name2] = (k, theta * const.RAD2DEG)
+
+            angles.sort()
+
+            for dihedral in params.getAllDihedrals(): # Sire.Mol.DihedralID
+                at0 = dihedral.atom0()  # Sire.Mol.AtomIdx!
+                at1 = dihedral.atom1()
+                at2 = dihedral.atom2()
+                at3 = dihedral.atom2()
+
+                name0 = str(mol.select(at0).property('ambertype') )
+                name1 = str(mol.select(at1).property('ambertype') )
+                name2 = str(mol.select(at2).property('ambertype') )
+                name3 = str(mol.select(at3).property('ambertype') )
+
+                p = params.getParams(dihedral)
+                terms = []
+
+                n = 3
+                for i in range(0, len(p), n):       # k, np, phase
+                    terms.append(p[i:i+n])
+
+                #sf = intrascale.get(at0, at3)
+
+                dihedrals.add( (at0.value() + 1 + offset,
+                                at1.value() + 1 + offset,
+                                at2.value() + 1 + offset,
+                                at3.value() + 1 + offset) )
+
+                dihedral_params[name0, name1, name2, name3] = terms
+
+            for dihedral in params.getAllImpropers():
+                at0 = dihedral.atom0()
+                at1 = dihedral.atom1()
+                at2 = dihedral.atom2()
+                at3 = dihedral.atom2()
+
+                name0 = str(mol.select(at0).property('ambertype') )
+                name1 = str(mol.select(at1).property('ambertype') )
+                name2 = str(mol.select(at2).property('ambertype') )
+                name3 = str(mol.select(at3).property('ambertype') )
+
+                term = params.getParams(dihedral)
+
+                impropers.append( (at0.value() + 1 + offset,
+                                   at1.value() + 1 + offset,
+                                   at2.value() + 1 + offset,
+                                   at3.value() + 1 + offset) )
+
+                improper_params[name0, name1, name2, name3] = term
+
+            impropers.sort()
+
+            # groups: base pointer charge type (1=neutral,2=charged),
+            #         entire group fixed?
+            for residue in mol.residues():
+                charge = 0.0
+                first = True
+
+                for atom in residue.atoms():
+                    if first:
+                        gp_base = atom.index().value() + offset
+                        first = False
+
+                    charge += atom.property('charge').value()
+
+                if charge > 0.0:
+                    gp_type = 2
+                else:
+                    gp_type = 1
+
+                groups.append( (gp_base, gp_type) )
+
+            offset += natoms
+
+
+        #####
         with open(psfname, 'w') as psf:
-            psf.write('PSF EXT\n         1\n* Created by FESetup\n%10i\n' %
+            psf.write('PSF EXT\n\n'
+                      '        1 !NTITLE\n'
+                      '* Created by FESetup\n'
+                      '\n%10i !NATOMS\n' %
                       self.tot_natoms)
 
+            # I10,1X,A8,1X,A8,1X,A8,1X,A8,1X,A6,1X,2G14.6,I8,2G14.6
             afmt = '%10i %-8s %-8s %-8s %-8s %-6s %14.6g%14.6g%8i\n'
 
-            for num in self.mol_numbers:
-                mol = self.mols.at(num).molecule()
-                natoms = mol.nAtoms()
+            for atom in atoms:
+                psf.write(afmt % (atom[0], atom[1], atom[2], atom[3], atom[4],
+                                  atom[5], atom[6], atom[7], 0.0) )
 
-                for atom in mol.atoms():
-                    atomno += 1
-                    resno = atom.residue().number().value()
-                    res = str(atom.residue().name().value() )
-                    atom_type = str( atom.name().value() )
-                    amber_type = str(atom.property('ambertype') )
-                    segid = 'X'  # FIXME
-                    resid = str(resno)  # FIXME
-                    charge = atom.property('charge').value()
-                    mass = atom.property('mass').value()
-
-                    psf.write(afmt % (atomno, segid, resid, res, atom_type,
-                                     amber_type, charge, mass, 0.0) )
-
-                params = mol.property('amberparameters') # Sire.Mol.AmberParameters
-
-                for bond in params.getAllBonds():  # Sire.Mol.BondID
-                    at0 = bond.atom0()  # Sire.Mol.AtomIdx!
-                    at1 = bond.atom1()
-                    bonds.append( (at0.value() + 1 + offset,
-                                   at1.value() + 1 + offset) )
-
-                for angle in params.getAllAngles():  # Sire.Mol.AngleID
-                    at0 = angle.atom0()  # Sire.Mol.AtomIdx!
-                    at1 = angle.atom1()
-                    at2 = angle.atom2()
-                    angles.append( (at0.value() + 1 + offset,
-                                    at1.value() + 1 + offset,
-                                    at2.value() + 1 + offset) )
-
-                for dihedral in params.getAllDihedrals(): # Sire.Mol.DihedralID
-                    at0 = dihedral.atom0()  # Sire.Mol.AtomIdx!
-                    at1 = dihedral.atom1()
-                    at2 = dihedral.atom2()
-                    at3 = dihedral.atom2()
-                    dihedrals.append( (at0.value() + 1 + offset,
-                                       at1.value() + 1 + offset,
-                                       at2.value() + 1 + offset,
-                                       at3.value() + 1 + offset) )
-
-                for dihedral in params.getAllImpropers():
-                    at0 = dihedral.atom0()
-                    at1 = dihedral.atom1()
-                    at2 = dihedral.atom2()
-                    at3 = dihedral.atom2()
-                    impropers.append( (at0.value() + 1 + offset,
-                                       at1.value() + 1 + offset,
-                                       at2.value() + 1 + offset,
-                                       at3.value() + 1 + offset) )
-
-                # groups: base pointer charge type (1=neutral,2=charged),
-                #         entire group fixed?
-                for residue in mol.residues():
-                    charge = 0.0
-                    first = True
-
-                    for atom in residue.atoms():
-                        if first:
-                            gp_base = atom.index().value() + offset
-                            first = False
-
-                        charge += atom.property('charge').value()
-
-                    if charge > 0.0:
-                        gp_type = 2
-                    else:
-                        gp_type = 1
-
-                    groups.append( (gp_base, gp_type) )
-
-                offset += natoms
-
-
-            #####
-            psf.write('%10i bonds\n' % len(bonds) )
+            psf.write('\n%10i !NBONDS\n' % len(bonds) )
 
             for i, bond_pair in enumerate(bonds):
                 psf.write('%10i%10i' % (bond_pair[0], bond_pair[1]) )
@@ -237,7 +296,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 4:
                 psf.write('\n')
 
-            psf.write('%10i angles\n' % len(angles) )
+            psf.write('\n%10i !NTHETA\n' % len(angles) )
     
             for i, angle_triple in enumerate(angles):
                 psf.write('%10i%10i%10i' % (angle_triple[0],
@@ -250,9 +309,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 3:
                 psf.write('\n')
 
-            psf.write('%10i dihedrals\n' % len(dihedrals) )
+            psf.write('\n%10i !NPHI\n' % len(dihedrals) )
     
-            for i, dihedral_quadruple in enumerate(dihedrals):
+            for i, dihedral_quadruple in enumerate(sorted(dihedrals) ):
                 psf.write('%10i%10i%10i%10i' % (dihedral_quadruple[0],
                                                 dihedral_quadruple[1],
                                                 dihedral_quadruple[2],
@@ -264,7 +323,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 2:
                 psf.write('\n')
 
-            psf.write('%10i impropers\n' % len(impropers) )
+            psf.write('\n%10i !NIMPHI\n' % len(impropers) )
     
             for i, dihedral_quadruple in enumerate(impropers):
                 psf.write('%10i%10i%10i%10i' % (dihedral_quadruple[0],
@@ -278,8 +337,8 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 2:
                 psf.write('\n')
 
-            psf.write('%10i donors\n%10i acceptors\n' % (0, 0) )
-            psf.write('%10i non-bonded exclusions\n' % 0)
+            psf.write('\n%10i !NDON\n%10i !NACC\n' % (0, 0) )
+            psf.write('\n%10i !NNB\n\n' % 0)
 
             # iblo (exclusion pointer): one entry for each atom
             for i in range(0, self.tot_natoms):
@@ -291,7 +350,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 8:
                 psf.write('\n')
 
-            psf.write('%10i%10i group and ST2\n' % (len(groups), 0) )
+            psf.write('\n%10i%10i !NGRP NST2\n' % (len(groups), 0) )
 
             for i, group in enumerate(groups):
                 psf.write('%10i%10i%10i' % (group[0], group[1], 0) )
@@ -303,7 +362,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 psf.write('\n')
 
             # molnt?
-            psf.write('%10i molnt\n' % 1)
+            psf.write('\n%10i !MOLNT\n' % 1)
 
             for i in range(0, self.tot_natoms):
                psf.write('%10i' % 1)
@@ -314,8 +373,54 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 8:
                 psf.write('\n')
 
-            psf.write('%10i%10i lone pairs\n' % (0, 0) )
+            psf.write('\n%10i%10i !NUMLP NUMLPH\n' % (0, 0) )
 
+        atomno = 0
+
+        with open(prmname, 'w') as prm:
+            prm.write('* created by FESetup\n')
+
+            prm.write('\nATOMS\n')
+            for atom, param in atom_params.iteritems():
+                atomno += 1
+                prm.write('MASS %5i %-6s %9.5f\n' % (atomno, atom, param[0]) )
+
+            prm.write('\nBONDS\n')
+            for names, params in bond_params.iteritems():
+                prm.write('%-6s %-6s %7.2f %10.4f\n' % (names[0], names[1],
+                                                        params[0], params[1]) )
+
+            prm.write('\nTHETAS\n')
+            for names, params in angle_params.iteritems():
+                prm.write('%-6s %-6s %-6s %7.2f %10.4f\n' %
+                          (names[0], names[1], names[2],
+                           params[0], params[1]) )
+
+            prm.write('\nPHI\n')
+            for names, terms in dihedral_params.iteritems():
+                for term in terms:
+                    prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
+                              (names[0], names[1], names[2], names[3],
+                               term[0], term[1], term[2] * const.RAD2DEG) )
+
+            prm.write('\nIMPHI\n')
+            for names, term in improper_params.iteritems():
+                prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
+                          (names[0], names[1], names[2], names[3],
+                           term[0], term[1], term[2] * const.RAD2DEG) )
+
+            prm.write('''
+NONBONDED  NBXMOD 5  GROUP SWITCH CDIEL -
+     CUTNB 14.0  CTOFNB 12.0  CTONNB 10.0  EPS 1.0  E14FAC 0.83333333  WMIN 1.4
+''')
+            for atom, param in atom_params.iteritems():
+                epsilon = -param[1].epsilon().value()
+                sigma = param[1].sigma().value() * const.RSTAR_CONV
+                prm.write('%-6s %3.1f %9.6f %9.4f %3.1f %9.6f %9.4f\n' %
+                          (atom, 0.0, epsilon, sigma,
+                                 0.0, epsilon / 2.0, sigma) )
+
+            prm.write('\nEND\n')
 
 
     def unwrap(self, coords, boxx, boxy, boxz):
