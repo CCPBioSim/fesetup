@@ -498,7 +498,7 @@ class Ligand(Common):
 
         with open(const.CORR_CH_FILE, 'w') as chfile:
            for charge in charges:
-               chfile.write('%f\n' % charge)
+               chfile.write('%.9f\n' % charge)
 
         utils.run_amber(antechamber,
                         '-i %s -fi ac '
