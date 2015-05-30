@@ -354,7 +354,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 2:
                 psf.write('\n')
 
-            psf.write('\n%10i !NDON\n%10i !NACC\n' % (0, 0) )
+            psf.write('\n%10i !NDON\n\n\n%10i !NACC\n\n' % (0, 0) )
             psf.write('\n%10i !NNB\n\n' % 0)
 
             # iblo (exclusion pointer): one entry for each atom
@@ -362,7 +362,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                psf.write('%10i' % 0)
 
                if not (i + 1) % 8:
-                    psf.write('\n\n')
+                    psf.write('\n')
 
             if (i + 1) % 8:
                 psf.write('\n')
@@ -376,18 +376,6 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                     psf.write('\n')
 
             if (i + 1) % 3:
-                psf.write('\n')
-
-            # molnt?
-            psf.write('\n%10i !MOLNT\n' % 1)
-
-            for i in range(0, self.tot_natoms):
-               psf.write('%10i' % 1)
-
-               if not (i + 1) % 8:
-                    psf.write('\n')
-
-            if (i + 1) % 8:
                 psf.write('\n')
 
             psf.write('\n%10i%10i !NUMLP NUMLPH\n' % (0, 0) )
