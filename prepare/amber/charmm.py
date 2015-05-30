@@ -446,7 +446,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             for n, p in angle_params.iteritems():
                 visited.add(n)
 
-                if n[0] == n[2] or (n[2], n[1], n[0]) not in visited:
+                if (n[2], n[1], n[0]) not in visited:
                     prm.write('%-6s %-6s %-6s %7.2f %10.4f\n' %
                               (n[0], n[1], n[2], p[0], p[1]) )
 
@@ -456,7 +456,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             for n, terms in dihedral_params.iteritems():
                 visited.add(n)
 
-                if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
+                if (n[3], n[2], n[1], n[0]) not in visited:
                     for term in terms:
                         prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
                                   (n[0], n[1], n[2], n[3],
@@ -468,7 +468,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             for n, term in improper_params.iteritems():
                 visited.add(n)
 
-                if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
+                if (n[3], n[2], n[1], n[0]) not in visited:
                     prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
                               (n[0], n[1], n[2], n[3],
                                term[0], term[1], term[2] * const.RAD2DEG) )
