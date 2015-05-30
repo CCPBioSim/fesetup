@@ -306,7 +306,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
                     charge += atom.property('charge').value()
 
-                if charge > 0.0:
+                if charge > 0.01: # FIXME
                     gp_type = 2
                 else:
                     gp_type = 1
@@ -321,7 +321,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             psf.write('PSF EXT\n\n'
                       '        1 !NTITLE\n'
                       '* Created by FESetup\n'
-                      '\n%10i !NATOMS\n' %
+                      '\n%10i !NATOM\n' %
                       self.tot_natoms)
 
             # I10,1X,A8,1X,A8,1X,A8,1X,A8,1X,A6,1X,2G14.6,I8,2G14.6
@@ -331,10 +331,10 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 psf.write(afmt % (atom[0], atom[1], atom[2], atom[3], atom[4],
                                   atom[5], atom[6], atom[7], 0.0) )
 
-            psf.write('\n%10i !NBONDS\n' % len(bonds) )
+            psf.write('\n%10i !NBOND\n' % len(bonds) )
 
-            for i, bond_pair in enumerate(bonds):
-                psf.write('%10i%10i' % (bond_pair[0], bond_pair[1]) )
+            for i, bp in enumerate(bonds):
+                psf.write('%10i%10i' % (bp[0], bp[1]) )
 
                 if not (i + 1) % 4:
                     psf.write('\n')
@@ -344,10 +344,8 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             psf.write('\n%10i !NTHETA\n' % len(angles) )
     
-            for i, angle_triple in enumerate(angles):
-                psf.write('%10i%10i%10i' % (angle_triple[0],
-                                            angle_triple[1],
-                                            angle_triple[2]) )
+            for i, at in enumerate(angles):
+                psf.write('%10i%10i%10i' % (at[0], at[1], at[2]) )
 
                 if not (i + 1) % 3:
                     psf.write('\n')
@@ -357,11 +355,8 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             psf.write('\n%10i !NPHI\n' % len(dihedrals) )
     
-            for i, dihedral_quadruple in enumerate(sorted(dihedrals) ):
-                psf.write('%10i%10i%10i%10i' % (dihedral_quadruple[0],
-                                                dihedral_quadruple[1],
-                                                dihedral_quadruple[2],
-                                                dihedral_quadruple[3]) )
+            for i, dq in enumerate(sorted(dihedrals) ):
+                psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
 
                 if not (i + 1) % 2:
                     psf.write('\n')
@@ -371,11 +366,8 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             psf.write('\n%10i !NIMPHI\n' % len(impropers) )
     
-            for i, dihedral_quadruple in enumerate(impropers):
-                psf.write('%10i%10i%10i%10i' % (dihedral_quadruple[0],
-                                                dihedral_quadruple[1],
-                                                dihedral_quadruple[2],
-                                                dihedral_quadruple[3]) )
+            for i, dq in enumerate(impropers):
+                psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
 
                 if not (i + 1) % 2:
                     psf.write('\n')
@@ -439,28 +431,47 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             prm.write('* created by FESetup\n')
 
             prm.write('\nBONDS\n')
-            for names, params in bond_params.iteritems():
-                prm.write('%-6s %-6s %7.2f %10.4f\n' % (names[0], names[1],
-                                                        params[0], params[1]) )
+            visited = set()
+
+            for n, p in bond_params.iteritems():
+                visited.add(n)
+
+                if n[0] == n[1] or (n[1], n[0]) not in visited:
+                    prm.write('%-6s %-6s %7.2f %10.4f\n' % (n[0], n[1],
+                                                            p[0], p[1]) )
 
             prm.write('\nTHETAS\n')
-            for names, params in angle_params.iteritems():
-                prm.write('%-6s %-6s %-6s %7.2f %10.4f\n' %
-                          (names[0], names[1], names[2],
-                           params[0], params[1]) )
+            visited = set()
+
+            for n, p in angle_params.iteritems():
+                visited.add(n)
+
+                if n[0] == n[2] or (n[2], n[1], n[0]) not in visited:
+                    prm.write('%-6s %-6s %-6s %7.2f %10.4f\n' %
+                              (n[0], n[1], n[2], p[0], p[1]) )
 
             prm.write('\nPHI\n')
-            for names, terms in dihedral_params.iteritems():
-                for term in terms:
-                    prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
-                              (names[0], names[1], names[2], names[3],
-                               term[0], term[1], term[2] * const.RAD2DEG) )
+            visited = set()
+
+            for n, terms in dihedral_params.iteritems():
+                visited.add(n)
+
+                if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
+                    for term in terms:
+                        prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
+                                  (n[0], n[1], n[2], n[3],
+                                   term[0], term[1], term[2] * const.RAD2DEG) )
 
             prm.write('\nIMPHI\n')
-            for names, term in improper_params.iteritems():
-                prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
-                          (names[0], names[1], names[2], names[3],
-                           term[0], term[1], term[2] * const.RAD2DEG) )
+            visited = set()
+
+            for n, term in improper_params.iteritems():
+                visited.add(n)
+
+                if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
+                    prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
+                              (n[0], n[1], n[2], n[3],
+                               term[0], term[1], term[2] * const.RAD2DEG) )
 
             prm.write('''
 NONBONDED  NBXMOD 5  GROUP SWITCH CDIEL -
