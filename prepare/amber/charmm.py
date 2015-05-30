@@ -34,6 +34,23 @@ import Sire.MM
 from FESetup import const, errors, logger
 
 
+prefix = 'G'
+num_prefix = 'X'
+
+
+
+def _check_type(s):
+    """Check atom types."""
+
+    if s[0].islower():
+      s = prefix + s.upper()
+    elif s[0].isdigit():
+      s = num_prefix + s.upper()
+
+    return s
+
+
+
 class CharmmTop(object):
     """Basic CHARMM prm and psf writer."""
 
@@ -164,8 +181,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 mass = atom.property('mass').value()
                 lj = atom.property('LJ')
 
-                if amber_type[0].islower():
-                  amber_type = 'G' + amber_type.upper()
+                amber_type = _check_type(amber_type)
 
                 atoms.append( (atomno, segid, resid, res, atom_type,
                                amber_type, charge, mass) )
@@ -177,15 +193,10 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             for bond in params.getAllBonds():  # Sire.Mol.BondID
                 at0 = bond.atom0()  # Sire.Mol.AtomIdx!
                 at1 = bond.atom1()
-                name0 = str(mol.select(at0).property('ambertype') )
-                name1 = str(mol.select(at1).property('ambertype') )
+
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
                 k, r = params.getParams(bond)
-
-                if name0[0].islower():
-                  name0 = 'G' + name0.upper()
-
-                if name1[0].islower():
-                  name1 = 'G' + name1.upper()
 
                 bonds.append( (at0.value() + 1 + offset,
                                at1.value() + 1 + offset) )
@@ -197,19 +208,11 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 at0 = angle.atom0()  # Sire.Mol.AtomIdx!
                 at1 = angle.atom1()
                 at2 = angle.atom2()
-                name0 = str(mol.select(at0).property('ambertype') )
-                name1 = str(mol.select(at1).property('ambertype') )
-                name2 = str(mol.select(at2).property('ambertype') )
                 k, theta = params.getParams(angle)
 
-                if name0[0].islower():
-                  name0 = 'G' + name0.upper()
-
-                if name1[0].islower():
-                  name1 = 'G' + name1.upper()
-
-                if name2[0].islower():
-                  name2 = 'G' + name2.upper()
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
+                name2 = _check_type(str(mol.select(at2).property('ambertype')))
 
                 angles.append( (at0.value() + 1 + offset,
                                 at1.value() + 1 + offset,
@@ -224,22 +227,10 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                 at2 = dihedral.atom2()
                 at3 = dihedral.atom3()
 
-                name0 = str(mol.select(at0).property('ambertype') )
-                name1 = str(mol.select(at1).property('ambertype') )
-                name2 = str(mol.select(at2).property('ambertype') )
-                name3 = str(mol.select(at3).property('ambertype') )
-
-                if name0[0].islower():
-                  name0 = 'G' + name0.upper()
-
-                if name1[0].islower():
-                  name1 = 'G' + name1.upper()
-
-                if name2[0].islower():
-                  name2 = 'G' + name2.upper()
-
-                if name3[0].islower():
-                  name3 = 'G' + name3.upper()
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
+                name2 = _check_type(str(mol.select(at2).property('ambertype')))
+                name3 = _check_type(str(mol.select(at3).property('ambertype')))
 
                 p = params.getParams(dihedral)
                 terms = []
@@ -259,30 +250,18 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             dihedrals.sort()
 
-            for dihedral in params.getAllImpropers():
-                at0 = dihedral.atom0()
-                at1 = dihedral.atom1()
-                at2 = dihedral.atom2()
-                at3 = dihedral.atom3()
+            for improper in params.getAllImpropers():
+                at0 = improper.atom0()
+                at1 = improper.atom1()
+                at2 = improper.atom2()
+                at3 = improper.atom3()
 
-                name0 = str(mol.select(at0).property('ambertype') )
-                name1 = str(mol.select(at1).property('ambertype') )
-                name2 = str(mol.select(at2).property('ambertype') )
-                name3 = str(mol.select(at3).property('ambertype') )
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
+                name2 = _check_type(str(mol.select(at2).property('ambertype')))
+                name3 = _check_type(str(mol.select(at3).property('ambertype')))
 
-                if name0[0].islower():
-                  name0 = 'G' + name0.upper()
-
-                if name1[0].islower():
-                  name1 = 'G' + name1.upper()
-
-                if name2[0].islower():
-                  name2 = 'G' + name2.upper()
-
-                if name3[0].islower():
-                  name3 = 'G' + name3.upper()
-
-                term = params.getParams(dihedral)
+                term = params.getParams(improper)
 
                 impropers.append( (at0.value() + 1 + offset,
                                    at1.value() + 1 + offset,
@@ -446,7 +425,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             for n, p in angle_params.iteritems():
                 visited.add(n)
 
-                if (n[2], n[1], n[0]) not in visited:
+                if n[0] == n[2] or (n[2], n[1], n[0]) not in visited:
                     prm.write('%-6s %-6s %-6s %7.2f %10.4f\n' %
                               (n[0], n[1], n[2], p[0], p[1]) )
 
@@ -456,7 +435,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             for n, terms in dihedral_params.iteritems():
                 visited.add(n)
 
-                if (n[3], n[2], n[1], n[0]) not in visited:
+                if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
                     for term in terms:
                         prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
                                   (n[0], n[1], n[2], n[3],
@@ -468,7 +447,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             for n, term in improper_params.iteritems():
                 visited.add(n)
 
-                if (n[3], n[2], n[1], n[0]) not in visited:
+                if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
                     prm.write('%-6s %-6s %-6s %-6s %10.4f %4i %10.4f\n' %
                               (n[0], n[1], n[2], n[3],
                                term[0], term[1], term[2] * const.RAD2DEG) )
