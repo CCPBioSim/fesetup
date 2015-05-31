@@ -105,13 +105,21 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
                 for atom in mol.atoms():
                     atomno += 1
-                    resno = atom.residue().number().value()
-                    res = str(atom.residue().name().value() )
+                    residue = atom.residue()
+                    resno = residue.number().value()
+                    res = str(residue.name().value() )
                     atom_type = str( atom.name().value() )
                     coords = atom.property('coordinates')
-                    segid = 'X'  # FIXME
                     resid = str(resno)  # FIXME
                     weight = 0.0
+
+                    # FIXME: water name, large residues
+                    if residue.name().value() == 'WAT':
+                        segid = 'W'
+                        res = 'TIP3'
+                    else:
+                        segid = 'X'  # FIXME
+
 
                     crd.write(fmt % (atomno, resno, res, atom_type, coords[0],
                                      coords[1], coords[2], segid, resid,
@@ -171,15 +179,22 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             for atom in mol.atoms():
                 atomno += 1
-                resno = atom.residue().number().value()
-                res = str(atom.residue().name().value() )
-                atom_type = str( atom.name().value() )
+                residue = atom.residue()
+                resno = residue.number().value()
+                res = str(residue.name().value() )
+                atom_type = str(atom.name().value() )
                 amber_type = str(atom.property('ambertype') )
-                segid = 'X'  # FIXME
                 resid = str(resno)  # FIXME
                 charge = atom.property('charge').value()
                 mass = atom.property('mass').value()
                 lj = atom.property('LJ')
+
+                # FIXME: water name, large residues
+                if residue.name().value() == 'WAT':
+                    segid = 'W'
+                    res = 'TIP3'
+                else:
+                    segid = 'X'  # FIXME
 
                 amber_type = _check_type(amber_type)
 
@@ -304,7 +319,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                       self.tot_natoms)
 
             # I10,1X,A8,1X,A8,1X,A8,1X,A8,1X,A6,1X,2G14.6,I8,2G14.6
-            afmt = '%10i %-8s %-8s %-8s %-8s %-6s %14.6g%14.6g%8i\n'
+            afmt = '%10i %-8s %-8s %-8s %-8s %-6s %14.6f%14.6f%8i\n'
 
             for atom in atoms:
                 psf.write(afmt % (atom[0], atom[1], atom[2], atom[3], atom[4],
@@ -380,13 +395,14 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             psf.write('\n%10i%10i !NUMLP NUMLPH\n' % (0, 0) )
 
-        atomno = 0
 
         with open(rtfname, 'w') as prm:
             prm.write('* created by FESetup\n'
                       '* minimal RTF\n'
                       '*\n'
                       '36 1\n\n')
+
+            atomno = 0
 
             for atom, param in atom_params.iteritems():
                 atomno += 1
@@ -395,7 +411,15 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             prm.write('\nEND\n')
 
         with open(prmname, 'w') as prm:
-            prm.write('* created by FESetup\n')
+            prm.write('* created by FESetup\n*\n')
+
+            prm.write('\nATOMS\n')
+
+            atomno = 0
+
+            for atom, param in atom_params.iteritems():
+                atomno += 1
+                prm.write('MASS %5i %-6s %9.5f\n' % (atomno, atom, param[0]) )
 
             prm.write('\nBONDS\n')
             visited = set()
@@ -407,7 +431,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                     prm.write('%-6s %-6s %7.2f %10.4f\n' % (n[0], n[1],
                                                             p[0], p[1]) )
 
-            prm.write('\nTHETAS\n')
+            prm.write('\nANGLES\n')
+            prm.write('HW  OW  HW  100.0  104.52 !TIP3P water\n'
+                      'OW  HW  HW    0.0  127.74 !TIP3P water\n')
             visited = set()
 
             for n, p in angle_params.iteritems():
@@ -417,7 +443,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                     prm.write('%-6s %-6s %-6s %7.2f %10.4f\n' %
                               (n[0], n[1], n[2], p[0], p[1]) )
 
-            prm.write('\nPHI\n')
+            prm.write('\nDIHEDRALS\n')
             visited = set()
 
             for n, terms in dihedral_params.iteritems():
@@ -429,7 +455,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                                   (n[0], n[1], n[2], n[3],
                                    term[0], term[1], term[2] * const.RAD2DEG) )
 
-            prm.write('\nIMPHI\n')
+            prm.write('\nIMPROPER\n')
             visited = set()
 
             for n, term in improper_params.iteritems():
