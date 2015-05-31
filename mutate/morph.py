@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler, Julien Michel
+#  Copyright (C) 2012-2015  Hannes H Loeffler, Julien Michel
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -275,7 +275,7 @@ class Morph(object):
 
 
     @report
-    def create_coords(self, system, cmd1, cmd2):
+    def create_coords(self, system, cmd1, cmd2, sys_rev = None):
         """
         Wrapper for the actual topology creation code.
 
@@ -285,6 +285,9 @@ class Morph(object):
            The ligand coordinates are computed while the coordinates of the rest
            of the system are taken from the unperturbed solvated system.
         :type system: either Ligand or Complex
+        :param sys_rev: optional 2nd system to determine box size from
+        :tyoe sys_rev: only Ligand at the moment passed in from dGrep.py
+
         """
 
         os.chdir(self.dst)        # FIXME: kludge to allow non-context use
@@ -321,11 +324,45 @@ class Morph(object):
             raise errors.SetupError('error opening %s/%s: %s' %
                                     (crd, top, error) )
 
+        # FIXME: another kludge, working only for ligand but not complex
+        if sys_rev:
+            top2 = os.path.join(sys_rev.dst, 'solvated.parm7')
+            crd2 = util.search_crd(sys_rev)
+
+            natoms = []
+            boxdims = []
+
+            for inpcrd in crd, crd2:
+                with open(inpcrd, 'rb') as inp:
+                    for ln, line in enumerate(inp):
+                        if ln == 1:
+                            natoms.append(line.split()[0])
+
+                        # FIXME: replace with read(), assumes box data is present
+                        dims = line
+
+                boxdims.append(dims)
+
+            if natoms[1] > natoms[0]:
+                try:
+                    mols2 = Sire.IO.Amber().readCrdTop(crd2, top2)[0]
+                except UserWarning as error:
+                    raise errors.SetupError('error opening %s/%s: %s' %
+                                            (crd2, top2, error) )
+
+                with open(const.BOX_DIMS, 'w') as boxfile:
+                    boxfile.write(boxdims[1])
+
+                rest = util.split_system(mols2)[1]
+                crd = crd2
+
         lig, rest = util.split_system(mols)
 
         if lig.nAtoms() != (len(self.atom_map) - len(self.dummy_idx) ):
             raise errors.SetupError('reference state has wrong number of '
                                     'atoms')
+
+        logger.write('Using %s for coordinate file creation' % crd)
 
         atoms_initial = lig.atoms()
 

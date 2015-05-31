@@ -42,9 +42,9 @@ num_prefix = 'X'
 def _check_type(s):
     """Check atom types."""
 
-    if s[0].islower():
+    if any(c.islower() for c in s):
       s = prefix + s.upper()
-    elif s[0].isdigit():
+    elif not s[0].isalpha():
       s = num_prefix + s.upper()
 
     return s
