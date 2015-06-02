@@ -22,7 +22,7 @@ Generates CHARMM prm, psf and cord files from AMBER parmtop and inpcrd.
 Only the extended format is supported but CMAP and CHEQ are not.
 '''
 
-__revision__ = "$Id: gromacs.py 395 2015-01-26 10:45:12Z halx $"
+__revision__ = "$Id$"
 
 
 
@@ -115,7 +115,6 @@ class CharmmTop(object):
             mol = mols.at(num).molecule()
             natoms = mol.nAtoms()
             segcnt += 1
-            
 
             for atom in mol.atoms():
                 atomno += 1
@@ -251,13 +250,17 @@ class CharmmTop(object):
 
     def writeCrd(self, filename):
         """Write crd coordinate file.
+
 * Expanded format for more than 100000 atoms (upto 10**10) and with
-upto 8 character PSF IDs. (versions c31a1 and later)
+up to 8 character PSF IDs. (versions c31a1 and later)
          title
          NATOM (I10)
          ATOMNO RESNO   RES  TYPE  X     Y     Z   SEGID RESID Weighting
            I10   I10 2X A8 2X A8       3F20.10     2X A8 2X A8 F20.10
-        """
+
+           :param filename: output file name for cord file
+           :type filename: string
+         """
 
         fmt = '%10i%10i  %-8s  %-8s%20.10f%20.10f%20.10f  %-8s  %-8s%20.10f\n'
         weight = 0.0
@@ -304,10 +307,13 @@ upto 8 character PSF IDs. (versions c31a1 and later)
         NBFIX
          atom_i* atom_j*  emin rmin [ emin14 [ rmin14 ]]
 
+         :param rtfname: output file name for RTF file
+         :type rtfname: string
+         :param prmname: output file name for PRM file
+         :type prmname: string
+         :param psfname: output file name for PSF file
+         :type psfname: string
         """
-
-        offset = 0
-        atomno = 0
 
         with open(psfname, 'w') as psf:
             psf.write('PSF EXT\n\n'
@@ -515,6 +521,6 @@ if __name__ == '__main__':
 
     top = CharmmTop()
     top.readParm(sys.argv[1], sys.argv[2])
-    top.writeCrd('test.crd')
+    top.writeCrd('test.cor')            # vmd expects cor for CHARMM ASCII
     top.writePrmPsf('test.rtf', 'test.prm', 'test.psf')
  
