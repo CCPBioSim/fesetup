@@ -54,7 +54,34 @@ def _check_type(s):
 class CharmmTop(object):
     """Basic CHARMM prm and psf writer."""
 
-    def __init__(self, parmtop, inpcrd):
+    def __init__(self):
+        self.atoms = []
+        self.bonds = []
+        self.angles = []
+        self.dihedrals = []
+        self.impropers = []
+        self.groups = []
+
+        self.atom_params = {}
+        self.bond_params = {}
+        self.angle_params = {}
+        self.dihedral_params = {}
+        self.improper_params = {}
+        self.nonbonded_params = []
+
+
+    def readParm(self, parmtop, inpcrd):
+        """
+        Extract topology and coordinate information from AMBER parmtop and
+        inpcrd.  Store data internally.
+
+        :param parmtop: parmtop file name
+        :type parmtop: string
+        :param inpcrd: inpcrd file name
+        :type inprcd: string
+        :raises: SetupError
+        """
+
         amber = Sire.IO.Amber()
 
         try:
@@ -74,13 +101,152 @@ class CharmmTop(object):
 
         self.box_dims = x, y, z
 
-        self.mol_numbers = mols.molNums()
-        self.mol_numbers.sort()
+        mol_numbers = mols.molNums()
+        mol_numbers.sort()
 
         self.tot_natoms = sum(mols.at(num).molecule().nAtoms()
-                              for num in self.mol_numbers)
+                              for num in mol_numbers)
 
-        self.mols = mols
+        segcnt = ord('A') - 1
+        atomno = 0
+        offset = 0
+
+        for num in mol_numbers:
+            mol = mols.at(num).molecule()
+            natoms = mol.nAtoms()
+            segcnt += 1
+            
+
+            for atom in mol.atoms():
+                atomno += 1
+                residue = atom.residue()
+                resno = residue.number().value()
+                res = str(residue.name().value() )
+                atom_type = str(atom.name().value() )
+                amber_type = str(atom.property('ambertype') )
+                resid = str(resno)  # FIXME
+                charge = atom.property('charge').value()
+                mass = atom.property('mass').value()
+                lj = atom.property('LJ')
+                coords = atom.property('coordinates')
+
+                # FIXME: water name, large segments
+                if residue.name().value() == 'WAT':
+                    segid = 'W'  # FIXME
+                    res = 'TIP3'
+                else:
+                    segid = chr(segcnt)  # FIXME: check for overflow
+
+                amber_type = _check_type(amber_type)
+
+                self.atoms.append( (atomno, resno, segid, resid, res, atom_type,
+                                    amber_type, charge, mass, coords) )
+                self.atom_params[amber_type] = (mass, lj)
+
+
+            params = mol.property('amberparameters') # Sire.Mol.AmberParameters
+
+            for bond in params.getAllBonds():  # Sire.Mol.BondID
+                at0 = bond.atom0()  # Sire.Mol.AtomIdx!
+                at1 = bond.atom1()
+
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
+                k, r = params.getParams(bond)
+
+                self.bonds.append( (at0.value() + 1 + offset,
+                               at1.value() + 1 + offset) )
+                self.bond_params[name0, name1] = (k, r)
+
+            self.bonds.sort()
+
+            for angle in params.getAllAngles():  # Sire.Mol.AngleID
+                at0 = angle.atom0()  # Sire.Mol.AtomIdx!
+                at1 = angle.atom1()
+                at2 = angle.atom2()
+                k, theta = params.getParams(angle)
+
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
+                name2 = _check_type(str(mol.select(at2).property('ambertype')))
+
+                self.angles.append( (at0.value() + 1 + offset,
+                                     at1.value() + 1 + offset,
+                                     at2.value() + 1 + offset) )
+                self.angle_params[name0, name1, name2] = (k, theta * const.RAD2DEG)
+
+            self.angles.sort()
+
+            for dihedral in params.getAllDihedrals(): # Sire.Mol.DihedralID
+                at0 = dihedral.atom0()  # Sire.Mol.AtomIdx!
+                at1 = dihedral.atom1()
+                at2 = dihedral.atom2()
+                at3 = dihedral.atom3()
+
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
+                name2 = _check_type(str(mol.select(at2).property('ambertype')))
+                name3 = _check_type(str(mol.select(at3).property('ambertype')))
+
+                p = params.getParams(dihedral)
+                terms = []
+
+                n = 3
+                for i in range(0, len(p), n):       # k, np, phase
+                    terms.append(p[i:i+n])
+
+                self.dihedrals.append( (at0.value() + 1 + offset,
+                                        at1.value() + 1 + offset,
+                                        at2.value() + 1 + offset,
+                                        at3.value() + 1 + offset) )
+
+                self.dihedral_params[name0, name1, name2, name3] = terms
+
+            self.dihedrals.sort()
+
+            for improper in params.getAllImpropers():
+                at0 = improper.atom0()
+                at1 = improper.atom1()
+                at2 = improper.atom2()
+                at3 = improper.atom3()
+
+                name0 = _check_type(str(mol.select(at0).property('ambertype')))
+                name1 = _check_type(str(mol.select(at1).property('ambertype')))
+                name2 = _check_type(str(mol.select(at2).property('ambertype')))
+                name3 = _check_type(str(mol.select(at3).property('ambertype')))
+
+                term = params.getParams(improper)
+
+                self.impropers.append( (at0.value() + 1 + offset,
+                                   at1.value() + 1 + offset,
+                                   at2.value() + 1 + offset,
+                                   at3.value() + 1 + offset) )
+
+                self.improper_params[name0, name1, name2, name3] = term
+
+            self.impropers.sort()
+
+            # groups: base pointer charge type (1=neutral,2=charged),
+            #         entire group fixed?
+            for residue in mol.residues():
+                charge = 0.0
+                first = True
+
+                for atom in residue.atoms():
+                    if first:
+                        gp_base = atom.index().value() + offset
+                        first = False
+
+                    charge += atom.property('charge').value()
+
+                if charge > 0.01: # FIXME
+                    gp_type = 2
+                else:
+                    gp_type = 1
+
+                self.groups.append( (gp_base, gp_type) )
+
+            offset += natoms
 
 
     def writeCrd(self, filename):
@@ -94,36 +260,20 @@ upto 8 character PSF IDs. (versions c31a1 and later)
         """
 
         fmt = '%10i%10i  %-8s  %-8s%20.10f%20.10f%20.10f  %-8s  %-8s%20.10f\n'
-        atomno = 0
+        weight = 0.0
 
         with open(filename, 'w') as crd:
             crd.write('* Created by FESetup\n*\n%10i  EXT\n' % self.tot_natoms)
 
-            for num in self.mol_numbers:
-                mol = self.mols.at(num).molecule()
-                natoms = mol.nAtoms()
-
-                for atom in mol.atoms():
-                    atomno += 1
-                    residue = atom.residue()
-                    resno = residue.number().value()
-                    res = str(residue.name().value() )
-                    atom_type = str( atom.name().value() )
-                    coords = atom.property('coordinates')
-                    resid = str(resno)  # FIXME
-                    weight = 0.0
-
-                    # FIXME: water name, large residues
-                    if residue.name().value() == 'WAT':
-                        segid = 'W'
-                        res = 'TIP3'
-                    else:
-                        segid = 'X'  # FIXME
-
-
-                    crd.write(fmt % (atomno, resno, res, atom_type, coords[0],
-                                     coords[1], coords[2], segid, resid,
-                                     weight) )
+            for atom in self.atoms:
+                crd.write(fmt % (atom[0], atom[1], atom[4], atom[5], atom[9][0],
+                                 atom[9][1], atom[9][2], atom[2], atom[3],
+                                 weight) )
+                
+                
+                #crd.write(fmt % (atomno, resno, res, atom_type, coords[0],
+                #                 coords[1], coords[2], segid, resid,
+                #                 weight) )
 
 
     def writePrmPsf(self, rtfname, prmname, psfname):
@@ -156,161 +306,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
         """
 
-        atoms = []
-        bonds = []
-        angles = []
-        dihedrals = []
-        impropers = []
-        groups = []
-
-        atom_params = {}
-        bond_params = {}
-        angle_params = {}
-        dihedral_params = {}
-        improper_params = {}
-        nonbonded_params = []
-
         offset = 0
         atomno = 0
 
-        for num in self.mol_numbers:
-            mol = self.mols.at(num).molecule()
-            natoms = mol.nAtoms()
-
-            for atom in mol.atoms():
-                atomno += 1
-                residue = atom.residue()
-                resno = residue.number().value()
-                res = str(residue.name().value() )
-                atom_type = str(atom.name().value() )
-                amber_type = str(atom.property('ambertype') )
-                resid = str(resno)  # FIXME
-                charge = atom.property('charge').value()
-                mass = atom.property('mass').value()
-                lj = atom.property('LJ')
-
-                # FIXME: water name, large residues
-                if residue.name().value() == 'WAT':
-                    segid = 'W'
-                    res = 'TIP3'
-                else:
-                    segid = 'X'  # FIXME
-
-                amber_type = _check_type(amber_type)
-
-                atoms.append( (atomno, segid, resid, res, atom_type,
-                               amber_type, charge, mass) )
-                atom_params[amber_type] = (mass, lj)
-
-
-            params = mol.property('amberparameters') # Sire.Mol.AmberParameters
-
-            for bond in params.getAllBonds():  # Sire.Mol.BondID
-                at0 = bond.atom0()  # Sire.Mol.AtomIdx!
-                at1 = bond.atom1()
-
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
-                k, r = params.getParams(bond)
-
-                bonds.append( (at0.value() + 1 + offset,
-                               at1.value() + 1 + offset) )
-                bond_params[name0, name1] = (k, r)
-
-            bonds.sort()
-
-            for angle in params.getAllAngles():  # Sire.Mol.AngleID
-                at0 = angle.atom0()  # Sire.Mol.AtomIdx!
-                at1 = angle.atom1()
-                at2 = angle.atom2()
-                k, theta = params.getParams(angle)
-
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
-                name2 = _check_type(str(mol.select(at2).property('ambertype')))
-
-                angles.append( (at0.value() + 1 + offset,
-                                at1.value() + 1 + offset,
-                                at2.value() + 1 + offset) )
-                angle_params[name0, name1, name2] = (k, theta * const.RAD2DEG)
-
-            angles.sort()
-
-            for dihedral in params.getAllDihedrals(): # Sire.Mol.DihedralID
-                at0 = dihedral.atom0()  # Sire.Mol.AtomIdx!
-                at1 = dihedral.atom1()
-                at2 = dihedral.atom2()
-                at3 = dihedral.atom3()
-
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
-                name2 = _check_type(str(mol.select(at2).property('ambertype')))
-                name3 = _check_type(str(mol.select(at3).property('ambertype')))
-
-                p = params.getParams(dihedral)
-                terms = []
-
-                n = 3
-                for i in range(0, len(p), n):       # k, np, phase
-                    terms.append(p[i:i+n])
-
-                #sf = intrascale.get(at0, at3)
-
-                dihedrals.append( (at0.value() + 1 + offset,
-                                   at1.value() + 1 + offset,
-                                   at2.value() + 1 + offset,
-                                   at3.value() + 1 + offset) )
-
-                dihedral_params[name0, name1, name2, name3] = terms
-
-            dihedrals.sort()
-
-            for improper in params.getAllImpropers():
-                at0 = improper.atom0()
-                at1 = improper.atom1()
-                at2 = improper.atom2()
-                at3 = improper.atom3()
-
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
-                name2 = _check_type(str(mol.select(at2).property('ambertype')))
-                name3 = _check_type(str(mol.select(at3).property('ambertype')))
-
-                term = params.getParams(improper)
-
-                impropers.append( (at0.value() + 1 + offset,
-                                   at1.value() + 1 + offset,
-                                   at2.value() + 1 + offset,
-                                   at3.value() + 1 + offset) )
-
-                improper_params[name0, name1, name2, name3] = term
-
-            impropers.sort()
-
-            # groups: base pointer charge type (1=neutral,2=charged),
-            #         entire group fixed?
-            for residue in mol.residues():
-                charge = 0.0
-                first = True
-
-                for atom in residue.atoms():
-                    if first:
-                        gp_base = atom.index().value() + offset
-                        first = False
-
-                    charge += atom.property('charge').value()
-
-                if charge > 0.01: # FIXME
-                    gp_type = 2
-                else:
-                    gp_type = 1
-
-                groups.append( (gp_base, gp_type) )
-
-            offset += natoms
-
-
-        #####
         with open(psfname, 'w') as psf:
             psf.write('PSF EXT\n\n'
                       '        1 !NTITLE\n'
@@ -321,13 +319,13 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             # I10,1X,A8,1X,A8,1X,A8,1X,A8,1X,A6,1X,2G14.6,I8,2G14.6
             afmt = '%10i %-8s %-8s %-8s %-8s %-6s %14.6f%14.6f%8i\n'
 
-            for atom in atoms:
-                psf.write(afmt % (atom[0], atom[1], atom[2], atom[3], atom[4],
-                                  atom[5], atom[6], atom[7], 0.0) )
+            for atom in self.atoms:
+                psf.write(afmt % (atom[0], atom[2], atom[3], atom[4], atom[5],
+                                  atom[6], atom[7], atom[8], 0.0) )
 
-            psf.write('\n%10i !NBOND\n' % len(bonds) )
+            psf.write('\n%10i !NBOND\n' % len(self.bonds) )
 
-            for i, bp in enumerate(bonds):
+            for i, bp in enumerate(self.bonds):
                 psf.write('%10i%10i' % (bp[0], bp[1]) )
 
                 if not (i + 1) % 4:
@@ -336,9 +334,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 4:
                 psf.write('\n')
 
-            psf.write('\n%10i !NTHETA\n' % len(angles) )
+            psf.write('\n%10i !NTHETA\n' % len(self.angles) )
     
-            for i, at in enumerate(angles):
+            for i, at in enumerate(self.angles):
                 psf.write('%10i%10i%10i' % (at[0], at[1], at[2]) )
 
                 if not (i + 1) % 3:
@@ -347,9 +345,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 3:
                 psf.write('\n')
 
-            psf.write('\n%10i !NPHI\n' % len(dihedrals) )
+            psf.write('\n%10i !NPHI\n' % len(self.dihedrals) )
     
-            for i, dq in enumerate(sorted(dihedrals) ):
+            for i, dq in enumerate(sorted(self.dihedrals) ):
                 psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
 
                 if not (i + 1) % 2:
@@ -358,9 +356,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 2:
                 psf.write('\n')
 
-            psf.write('\n%10i !NIMPHI\n' % len(impropers) )
+            psf.write('\n%10i !NIMPHI\n' % len(self.impropers) )
     
-            for i, dq in enumerate(impropers):
+            for i, dq in enumerate(self.impropers):
                 psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
 
                 if not (i + 1) % 2:
@@ -382,9 +380,9 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 8:
                 psf.write('\n')
 
-            psf.write('\n%10i%10i !NGRP NST2\n' % (len(groups), 0) )
+            psf.write('\n%10i%10i !NGRP NST2\n' % (len(self.groups), 0) )
 
-            for i, group in enumerate(groups):
+            for i, group in enumerate(self.groups):
                 psf.write('%10i%10i%10i' % (group[0], group[1], 0) )
 
                 if not (i + 1) % 3:
@@ -404,7 +402,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             atomno = 0
 
-            for atom, param in atom_params.iteritems():
+            for atom, param in self.atom_params.iteritems():
                 atomno += 1
                 prm.write('MASS %5i %-6s %9.5f\n' % (atomno, atom, param[0]) )
 
@@ -417,14 +415,14 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 
             atomno = 0
 
-            for atom, param in atom_params.iteritems():
+            for atom, param in self.atom_params.iteritems():
                 atomno += 1
                 prm.write('MASS %5i %-6s %9.5f\n' % (atomno, atom, param[0]) )
 
             prm.write('\nBONDS\n')
             visited = set()
 
-            for n, p in bond_params.iteritems():
+            for n, p in self.bond_params.iteritems():
                 visited.add(n)
 
                 if n[0] == n[1] or (n[1], n[0]) not in visited:
@@ -436,7 +434,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
                       'OW  HW  HW    0.0  127.74 !TIP3P water\n')
             visited = set()
 
-            for n, p in angle_params.iteritems():
+            for n, p in self.angle_params.iteritems():
                 visited.add(n)
 
                 if n[0] == n[2] or (n[2], n[1], n[0]) not in visited:
@@ -446,7 +444,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             prm.write('\nDIHEDRALS\n')
             visited = set()
 
-            for n, terms in dihedral_params.iteritems():
+            for n, terms in self.dihedral_params.iteritems():
                 visited.add(n)
 
                 if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
@@ -458,7 +456,7 @@ upto 8 character PSF IDs. (versions c31a1 and later)
             prm.write('\nIMPROPER\n')
             visited = set()
 
-            for n, term in improper_params.iteritems():
+            for n, term in self.improper_params.iteritems():
                 visited.add(n)
 
                 if n[0] == n[3] or (n[3], n[2], n[1], n[0]) not in visited:
@@ -470,9 +468,12 @@ upto 8 character PSF IDs. (versions c31a1 and later)
 NONBONDED  NBXMOD 5  GROUP SWITCH CDIEL -
      CUTNB 14.0  CTOFNB 12.0  CTONNB 10.0  EPS 1.0  E14FAC 0.83333333  WMIN 1.4
 ''')
-            for atom, param in atom_params.iteritems():
+            for atom, param in self.atom_params.iteritems():
                 epsilon = -param[1].epsilon().value()
                 sigma = param[1].sigma().value() * const.RSTAR_CONV
+
+                # FIXME: support other scalings too? but only one scale factor
+                #        electrostatic factor for electrostatics!
                 prm.write('%-6s %3.1f %9.6f %9.4f %3.1f %9.6f %9.4f\n' %
                           (atom, 0.0, epsilon, sigma,
                                  0.0, epsilon / 2.0, sigma) )
@@ -512,7 +513,8 @@ if __name__ == '__main__':
         sys.exit('Usage: %s prmtop inpcrd' % sys.argv[0])
 
 
-    top = CharmmTop(sys.argv[1], sys.argv[2])
+    top = CharmmTop()
+    top.readParm(sys.argv[1], sys.argv[2])
     top.writeCrd('test.crd')
     top.writePrmPsf('test.rtf', 'test.prm', 'test.psf')
  
