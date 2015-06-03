@@ -329,7 +329,8 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                 psf.write(afmt % (atom[0], atom[2], atom[3], atom[4], atom[5],
                                   atom[6], atom[7], atom[8], 0.0) )
 
-            psf.write('\n%10i !NBOND\n' % len(self.bonds) )
+            l = len(self.bonds)
+            psf.write('\n%10i !NBOND\n' % l)
 
             for i, bp in enumerate(self.bonds):
                 psf.write('%10i%10i' % (bp[0], bp[1]) )
@@ -337,10 +338,11 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                 if not (i + 1) % 4:
                     psf.write('\n')
 
-            if (i + 1) % 4:
+            if (i + 1) % 4 or l < 1:
                 psf.write('\n')
 
-            psf.write('\n%10i !NTHETA\n' % len(self.angles) )
+            l = len(self.angles)
+            psf.write('\n%10i !NTHETA\n' % l)
     
             for i, at in enumerate(self.angles):
                 psf.write('%10i%10i%10i' % (at[0], at[1], at[2]) )
@@ -348,10 +350,11 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                 if not (i + 1) % 3:
                     psf.write('\n')
 
-            if (i + 1) % 3:
+            if (i + 1) % 3 or l < 1:
                 psf.write('\n')
 
-            psf.write('\n%10i !NPHI\n' % len(self.dihedrals) )
+            l = len(self.dihedrals)
+            psf.write('\n%10i !NPHI\n' % l)
     
             for i, dq in enumerate(sorted(self.dihedrals) ):
                 psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
@@ -359,10 +362,12 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                 if not (i + 1) % 2:
                     psf.write('\n')
 
-            if (i + 1) % 2:
+            if (i + 1) % 2 or l < 1:
                 psf.write('\n')
 
-            psf.write('\n%10i !NIMPHI\n' % len(self.impropers) )
+
+            l = len(self.impropers)
+            psf.write('\n%10i !NIMPHI\n' % l)
     
             for i, dq in enumerate(self.impropers):
                 psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
@@ -370,7 +375,7 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                 if not (i + 1) % 2:
                     psf.write('\n')
 
-            if (i + 1) % 2:
+            if (i + 1) % 2 or l < 1:
                 psf.write('\n')
 
             psf.write('\n%10i !NDON\n\n\n%10i !NACC\n\n' % (0, 0) )
@@ -386,7 +391,8 @@ up to 8 character PSF IDs. (versions c31a1 and later)
             if (i + 1) % 8:
                 psf.write('\n')
 
-            psf.write('\n%10i%10i !NGRP NST2\n' % (len(self.groups), 0) )
+            l = len(self.groups)
+            psf.write('\n%10i%10i !NGRP NST2\n' % (l, 0) )
 
             for i, group in enumerate(self.groups):
                 psf.write('%10i%10i%10i' % (group[0], group[1], 0) )
@@ -394,7 +400,7 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                 if not (i + 1) % 3:
                     psf.write('\n')
 
-            if (i + 1) % 3:
+            if (i + 1) % 3 or l < 1:
                 psf.write('\n')
 
             psf.write('\n%10i%10i !NUMLP NUMLPH\n' % (0, 0) )
