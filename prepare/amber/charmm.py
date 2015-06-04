@@ -34,21 +34,46 @@ import Sire.MM
 from FESetup import const, errors, logger
 
 
-prefix = 'G'
-num_prefix = 'X'
 
-
+_prefix = 'G'
+_num_prefix = 'X'
 
 def _check_type(s):
-    """Check atom types."""
+    """Check atom types and uppercase and prefix if necessary."""
 
     if any(c.islower() for c in s):
-      s = prefix + s.upper()
+      s = _prefix + s.upper()
     elif not s[0].isalpha():
-      s = num_prefix + s.upper()
+      s = _num_prefix + s.upper()
 
     return s
 
+def _psf_format(fileh, data):
+    """Format PSF lines."""
+
+    # ugly...
+    if type(data) == int:
+        ld = data
+        data = (0 for i in xrange(0, data) )
+    else:
+        ld = len(data)
+
+    for i, datum in enumerate(data):
+        try:
+            l2 = len(datum)
+        except TypeError:
+            l2 = 1
+
+        fileh.write('%10i' * l2 % datum)
+
+        # NOTE: assuming fixed length of 1,2,3,4 but not more
+        mult = int(math.ceil(80.0 / (l2 * 10) ) )
+
+        if not (i + 1) % mult:
+            fileh.write('\n')
+
+    if (i + 1) % mult or ld < 1:
+        fileh.write('\n')
 
 
 class CharmmTop(object):
@@ -243,7 +268,7 @@ class CharmmTop(object):
                 else:
                     gp_type = 1
 
-                self.groups.append( (gp_base, gp_type) )
+                self.groups.append( (gp_base, gp_type, 0) )
 
             offset += natoms
 
@@ -273,14 +298,9 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                                  atom[9][1], atom[9][2], atom[2], atom[3],
                                  weight) )
                 
-                
-                #crd.write(fmt % (atomno, resno, res, atom_type, coords[0],
-                #                 coords[1], coords[2], segid, resid,
-                #                 weight) )
-
 
     def writePrmPsf(self, rtfname, prmname, psfname):
-        """Write prm and psf files.
+        """Write RTF/PRM/PSF files.
 
         ATOM                             (Flexible paramters only)
          MASS   code   type   mass       (Flexible paramters only)
@@ -329,111 +349,55 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                 psf.write(afmt % (atom[0], atom[2], atom[3], atom[4], atom[5],
                                   atom[6], atom[7], atom[8], 0.0) )
 
-            l = len(self.bonds)
-            psf.write('\n%10i !NBOND\n' % l)
+            psf.write('\n%10i !NBOND\n' % len(self.bonds) )
+            _psf_format(psf, self.bonds)
 
-            for i, bp in enumerate(self.bonds):
-                psf.write('%10i%10i' % (bp[0], bp[1]) )
-
-                if not (i + 1) % 4:
-                    psf.write('\n')
-
-            if (i + 1) % 4 or l < 1:
-                psf.write('\n')
-
-            l = len(self.angles)
-            psf.write('\n%10i !NTHETA\n' % l)
+            psf.write('\n%10i !NTHETA\n' % len(self.angles) )
+            _psf_format(psf, self.angles)
     
-            for i, at in enumerate(self.angles):
-                psf.write('%10i%10i%10i' % (at[0], at[1], at[2]) )
-
-                if not (i + 1) % 3:
-                    psf.write('\n')
-
-            if (i + 1) % 3 or l < 1:
-                psf.write('\n')
-
-            l = len(self.dihedrals)
-            psf.write('\n%10i !NPHI\n' % l)
+            psf.write('\n%10i !NPHI\n' % len(self.dihedrals) )
+            _psf_format(psf, self.dihedrals)
     
-            for i, dq in enumerate(sorted(self.dihedrals) ):
-                psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
-
-                if not (i + 1) % 2:
-                    psf.write('\n')
-
-            if (i + 1) % 2 or l < 1:
-                psf.write('\n')
-
-
-            l = len(self.impropers)
-            psf.write('\n%10i !NIMPHI\n' % l)
+            psf.write('\n%10i !NIMPHI\n' % len(self.impropers) )
+            _psf_format(psf, self.impropers)
     
-            for i, dq in enumerate(self.impropers):
-                psf.write('%10i%10i%10i%10i' % (dq[0], dq[1], dq[2], dq[3]) )
-
-                if not (i + 1) % 2:
-                    psf.write('\n')
-
-            if (i + 1) % 2 or l < 1:
-                psf.write('\n')
-
-            psf.write('\n%10i !NDON\n\n\n%10i !NACC\n\n' % (0, 0) )
-            psf.write('\n%10i !NNB\n\n' % 0)
+            psf.write('\n%10i !NDON\n\n\n'
+                      '%10i !NACC\n\n'
+                      '\n%10i !NNB\n\n' % (0, 0, 0) )
 
             # iblo (exclusion pointer): one entry for each atom
-            for i in range(0, self.tot_natoms):
-               psf.write('%10i' % 0)
+            _psf_format(psf, self.tot_natoms)
 
-               if not (i + 1) % 8:
-                    psf.write('\n')
-
-            if (i + 1) % 8:
-                psf.write('\n')
-
-            l = len(self.groups)
-            psf.write('\n%10i%10i !NGRP NST2\n' % (l, 0) )
-
-            for i, group in enumerate(self.groups):
-                psf.write('%10i%10i%10i' % (group[0], group[1], 0) )
-
-                if not (i + 1) % 3:
-                    psf.write('\n')
-
-            if (i + 1) % 3 or l < 1:
-                psf.write('\n')
+            psf.write('\n%10i%10i !NGRP NST2\n' % (len(self.groups), 0) )
+            _psf_format(psf, self.groups)
 
             psf.write('\n%10i%10i !NUMLP NUMLPH\n' % (0, 0) )
 
 
-        with open(rtfname, 'w') as prm:
-            prm.write('* created by FESetup\n'
-                      '* minimal RTF\n'
-                      '*\n'
-                      '36 1\n\n')
-
-            atomno = 0
-
-            for atom, param in self.atom_params.iteritems():
-                atomno += 1
-                prm.write('MASS %5i %-6s %9.5f\n' % (atomno, atom, param[0]) )
-
-            prm.write('\nEND\n')
-
         with open(prmname, 'w') as prm:
-            prm.write('* created by FESetup\n*\n')
+            prm.write('* created by FESetup\n*\n'
+                      '\nATOMS\n')
 
-            prm.write('\nATOMS\n')
+            tidx = 0
 
-            atomno = 0
+            with open(rtfname, 'w') as rtf:
+                rtf.write('* created by FESetup\n'
+                          '* minimal RTF\n'
+                          '*\n'
+                          '36 1\n\n')
 
-            for atom, param in self.atom_params.iteritems():
-                atomno += 1
-                prm.write('MASS %5i %-6s %9.5f\n' % (atomno, atom, param[0]) )
+                for atom, param in self.atom_params.iteritems():
+                    tidx += 1
+                    line = 'MASS %5i %-6s %9.5f\n' % (tidx, atom, param[0])
+                    prm.write(line)
+                    rtf.write(line)
+
+                rtf.write('\nEND\n')
 
             prm.write('\nBONDS\n')
             visited = set()
 
+            # FIXME: check all duplicate elimination if correct
             for n, p in self.bond_params.iteritems():
                 visited.add(n)
 
