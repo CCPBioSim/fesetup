@@ -58,6 +58,9 @@ def _psf_format(fileh, data):
     else:
         ld = len(data)
 
+    i = 0
+    mult = 1
+
     for i, datum in enumerate(data):
         try:
             l2 = len(datum)

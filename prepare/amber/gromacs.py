@@ -496,11 +496,11 @@ class GromacsTop(object):
 
             for line in self.coords:
                 atnum += 1
-                gro.write('%5d%-5s%5s%5d%12.7f%12.7f%12.7f\n' %
+                gro.write('%5d%-5.5s%5.5s%5d %13.8f %13.8f %13.8f\n' %
                           (line[:3] + (atnum,) + line[3:]) )
                 atnum %= 99999
 
-            gro.write('%.5f %.5f %.5f\n' % self.box_dims)
+            gro.write('%.7f %.7f %.7f\n' % self.box_dims)
 
 
     # FIXME: #include 'atomtypes.itp'
