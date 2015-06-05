@@ -496,7 +496,7 @@ class GromacsTop(object):
 
             for line in self.coords:
                 atnum += 1
-                gro.write('%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n' %
+                gro.write('%5d%-5s%5s%5d%12.7f%12.7f%12.7f\n' %
                           (line[:3] + (atnum,) + line[3:]) )
                 atnum %= 99999
 
