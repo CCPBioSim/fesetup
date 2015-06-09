@@ -302,38 +302,9 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                                  weight) )
                 
 
-    def writePrmPsf(self, rtfname, prmname, psfname):
+    def writePsf(self, psfname):
         """Write RTF/PRM/PSF files.
 
-        ATOM                             (Flexible paramters only)
-         MASS   code   type   mass       (Flexible paramters only)
-
-        EQUIvalence                      (Flexible paramters only)
-         group  atom [ repeat(atom) ]    (Flexible paramters only)
-
-        BOND
-         atom atom force_constant distance
-
-        ANGLe or THETA
-         atom atom atom force_constant theta_min UB_force_constant UB_rmin
-
-        DIHE or PHI
-         atom atom atom atom force_constant periodicity phase
-
-        IMPRoper or IMPHI
-         atom atom atom atom force_constant periodicity phase
-
-        NBONd or NONB  [nonbond-defaults]
-         atom* polarizability  e  vdW_radius -
-              [1-4 polarizability  e  vdW_radius]
-
-        NBFIX
-         atom_i* atom_j*  emin rmin [ emin14 [ rmin14 ]]
-
-         :param rtfname: output file name for RTF file
-         :type rtfname: string
-         :param prmname: output file name for PRM file
-         :type prmname: string
          :param psfname: output file name for PSF file
          :type psfname: string
         """
@@ -376,6 +347,40 @@ up to 8 character PSF IDs. (versions c31a1 and later)
 
             psf.write('\n%10i%10i !NUMLP NUMLPH\n' % (0, 0) )
 
+
+    def writeRtfPrm(self, rtfname, prmname):
+        """Write RTF/PRM files.
+
+        ATOM                             (Flexible paramters only)
+         MASS   code   type   mass       (Flexible paramters only)
+
+        EQUIvalence                      (Flexible paramters only)
+         group  atom [ repeat(atom) ]    (Flexible paramters only)
+
+        BOND
+         atom atom force_constant distance
+
+        ANGLe or THETA
+         atom atom atom force_constant theta_min UB_force_constant UB_rmin
+
+        DIHE or PHI
+         atom atom atom atom force_constant periodicity phase
+
+        IMPRoper or IMPHI
+         atom atom atom atom force_constant periodicity phase
+
+        NBONd or NONB  [nonbond-defaults]
+         atom* polarizability  e  vdW_radius -
+              [1-4 polarizability  e  vdW_radius]
+
+        NBFIX
+         atom_i* atom_j*  emin rmin [ emin14 [ rmin14 ]]
+
+         :param rtfname: output file name for RTF file
+         :type rtfname: string
+         :param prmname: output file name for PRM file
+         :type prmname: string
+        """
 
         with open(prmname, 'w') as prm:
             prm.write('* created by FESetup\n*\n'
@@ -488,12 +493,18 @@ if __name__ == '__main__':
 
     nargs = len(sys.argv)
 
-    if nargs != 3:
-        sys.exit('Usage: %s prmtop inpcrd' % sys.argv[0])
-
-
-    top = CharmmTop()
-    top.readParm(sys.argv[1], sys.argv[2])
-    top.writeCrd('test.cor')            # vmd expects cor for CHARMM ASCII
-    top.writePrmPsf('test.rtf', 'test.prm', 'test.psf')
+    if nargs == 3:
+        top = CharmmTop()
+        top.readParm(sys.argv[1], sys.argv[2])
+        top.writeRtfPrm('test.rtf', 'test.prm')
+        top.writePsf('test.psf')
+        top.writeCrd('test.cor')            # vmd expects cor for CHARMM ASCII
+    elif nargs == 5:
+        top0 = CharmmTop()
+        top0.readParm(sys.argv[1], sys.argv[2])
+        
+        top1 = CharmmTop()
+        top1.readParm(sys.argv[3], sys.argv[4])
+    else:
+        sys.exit('Usage: %s prmtop inpcrd [parmtop2 inpcrd2' % sys.argv[0])
  
