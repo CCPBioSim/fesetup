@@ -95,7 +95,6 @@ class CharmmTop(object):
         self.angle_params = {}
         self.dihedral_params = {}
         self.improper_params = {}
-        self.nonbonded_params = []
 
 
     def readParm(self, parmtop, inpcrd):
@@ -465,26 +464,23 @@ NONBONDED  NBXMOD 5  GROUP SWITCH CDIEL -
             prm.write('\nEND\n')
 
 
-    def unwrap(self, coords, boxx, boxy, boxz):
+    def combine(self, other):
         """
-        Unwrap coordinates because Gromacs uses atom-based wrapping.
-
-        The current code assumes largest molecule is not larger than the
-        box minus an arbitrary buffer.  Possible alternative: check all
-        bonds an move atom if bond length is larger than half the box
-        length.
-
-        :param coords: flat list of coordinates
-        :type coords: list
-        :param boxx: box dimension in x direction
-        :type boxx: float
-        :param boxy: box dimension in y direction
-        :type boxy: float
-        :param boxz: box dimension in z direction
-        :type boxz: float
+        Combine parameters from two tops.  Note: this will _extend_ self
+        with the parameters from the other top!
+        
+        :param other: the second top
+        :type other: CharmmTop
         """
 
-        pass
+        for spard, opard in (
+            (self.atom_params, other.atom_params),
+            (self.bond_params, other.bond_params),
+            (self.angle_params, other.angle_params),
+            (self.dihedral_params, other.dihedral_params),
+            (self.improper_params, other.improper_params)
+            ):
+            spard.update(opard)
 
 
 
@@ -502,9 +498,16 @@ if __name__ == '__main__':
     elif nargs == 5:
         top0 = CharmmTop()
         top0.readParm(sys.argv[1], sys.argv[2])
+        top0.writePsf('state0.psf')
+        top0.writeCrd('state0.cor')
         
         top1 = CharmmTop()
         top1.readParm(sys.argv[3], sys.argv[4])
+        top1.writePsf('state1.psf')
+        top1.writeCrd('state1.cor')
+
+        top0.combine(top1)              # adds parms from top1 to top0!
+        top0.writeRtfPrm('combined.rtf', 'combined.prm')
     else:
         sys.exit('Usage: %s prmtop inpcrd [parmtop2 inpcrd2' % sys.argv[0])
  
