@@ -71,7 +71,7 @@ class PertTopology(object):
             leap_extra0 = ''
             leap_extra1 = ''
             ow_add = '_sc'
-        else:
+        elif self.FE_sub_type == 'dummy':
             state0 = lig_morph
             state1 = amber_dummy(lig_morph, self.con_morph,
                                  self.lig_final, self.atom_map)
@@ -81,6 +81,8 @@ class PertTopology(object):
             leap_extra1 = ('source "%s"\n' %
                            os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
             ow_add = '_dummy'
+        else:
+            raise NotImplementedError
 
 
         mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
@@ -229,7 +231,7 @@ class PertTopology(object):
                         (self.frcmod1, mol2_1, leap_extra1) )
 
             # FIXME: clean-up leap input file (ugly overwrite of previous combine)
-            com.create_top(boxtype = 'set',
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            make_gaff = False, addcmd = cmd1 + cmd2,
                            addcmd2 = 's = l\n' + leap_extra0 + leap_cmd)
 
@@ -252,8 +254,8 @@ class PertTopology(object):
                         's = combine {l int p}\n' %
                         mol2_int)
 
-            com.create_top(boxtype = 'set', addcmd = cmd1 + cmd2,
-                           addcmd2 = leap_cmd)
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+                           addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
 
             com = self.ff.Complex(pdb_file, mol2_int)
             com.ligand_fmt = 'mol2'
@@ -263,8 +265,8 @@ class PertTopology(object):
             leap_cmd = ('s2 = loadmol2 "%s"\n'
                         's = combine {l s2 p}\n' %
                         mol2_1)
-            com.create_top(boxtype = 'set', addcmd = cmd1 + cmd2,
-                           addcmd2 = leap_cmd)
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+                           addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
         # FIXME: residue name will be both the same
         elif self.FE_sub_type == 'softcore3':
             com = self.ff.Complex(pdb_file, mol2_0)
@@ -275,7 +277,7 @@ class PertTopology(object):
             leap_cmd = ('d1 = loadmol2 "%s"\n'
                         's = combine {l d1 p}\n' %
                         mol2_0)
-            com.create_top(boxtype = 'set',
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            make_gaff = False, addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
 
@@ -287,7 +289,7 @@ class PertTopology(object):
             leap_cmd = ('r1 = loadmol2 "%s"\n'
                         's = combine {l r1 p}\n' %
                         mol2_1)
-            com.create_top(boxtype = 'set',
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            make_gaff = False, addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
         elif self.FE_sub_type == 'dummy':

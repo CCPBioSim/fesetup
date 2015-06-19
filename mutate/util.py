@@ -54,8 +54,8 @@ PMEMD_SC_VDW = 'vdw.in'
 PMEMD_SC_RECHARGE = 'recharge.in'
 PMEMD_SC_TWOSTEP_1 = '2step_1.in'
 PMEMD_SC_TWOSTEP_2 = '2step_2.in'
-SANDER_SC_ONESTEP0 = 'state0_onestep.in'
-SANDER_SC_ONESTEP1 = 'state1_onestep.in'
+SANDER_SC0 = 'state0.in'
+SANDER_SC1 = 'state1.in'
 
 class _AtomInfo(object):
     """Simple struct to store Atom info."""
@@ -1187,15 +1187,15 @@ def amber_input(atoms_initial, atoms_final, atom_map, sc_type, style = '',
                                      noshakemask = ':%s' % const.LIGAND1_NAME,
                                      scmask1 = '', scmask2 = '') )
 
-    elif style == '':                   # sander/softcore
+    elif style == 'sander':             # sander/softcore
         tmpl = COMMON_TEMPLATE % SANDER_TEMPLATE
         tmpl = tmpl.format(dt = dt, ntb = ntb, press = press,
                            noshakemask = ':%s' % const.LIGAND_NAME,
                            crgmask = '', ifsc = ifsc,
                            scmask = '{scmask}')
 
-        for filen, mask in ( (SANDER_SC_ONESTEP0, mask0),
-                             (SANDER_SC_ONESTEP1, mask1) ):
+        for filen, mask in ( (SANDER_SC0, mask0),
+                             (SANDER_SC1, mask1) ):
             mask_str = ','.join(mask)
 
             if mask_str:
@@ -1632,14 +1632,14 @@ def amber_softcore(lig_morph, lig_final, atom_map):
     return state0.commit(), state1.commit()
 
 
-def transfer_charges(lig_morph, lig_final, atom_map):
+def transfer_charges(lig_morph, lig_ref, atom_map):
     """
     Transfer charges from the final state to the initial state.
 
     :param lig_morph: the morph molecule
     :type lig_morph: Sire.Mol.CutGroup
-    :param lig_final: the final state molecule
-    :type lig_final: Sire.Mol.Molecule
+    :param lig_ref: the final state molecule
+    :type lig_ref: Sire.Mol.Molecule
     :param atom_map: the forward atom map
     :type atom_map: dict of _AtomInfo to _AtomInfo
     :returns: initial state molecule, final state molecule
@@ -1649,16 +1649,33 @@ def transfer_charges(lig_morph, lig_final, atom_map):
     mol_m = Sire.Mol.Molecule(lig_morph)
     mol = mol_m.edit()                  # MolEditor
 
+
+    fdummies = False
+
     for iinfo, finfo in atom_map.items():
-        new = mol.atom(iinfo.index)            # AtomEditor
+        istr = iinfo.name.value()
+        fstr = finfo.name.value()
+        iidx = iinfo.index
 
         if not finfo.atom:
-            charge = 0.0 * Sire.Units.mod_electron
-        else:
-            base = lig_final.atoms().select(finfo.index)
-            charge = base.property('charge')
+            fdummies = True
 
-        new.setProperty('charge', charge)
+
+    for iinfo, finfo in atom_map.items():
+        new = mol.atom(iinfo.index)     # AtomEditor
+
+        if fdummies:
+            if not finfo.atom:
+                charge = 0.0 * Sire.Units.mod_electron
+            else:
+                base = lig_ref.atoms().select(finfo.index)
+                charge = base.property('charge')
+
+                new.setProperty('charge', charge)
+        else:
+             base = lig_ref.atoms().select(finfo.index)
+             ambertype = '%s' % base.property('ambertype')
+             new.setProperty('ambertype', ambertype)
 
         mol = new.molecule()            # MolEditor
 
