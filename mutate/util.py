@@ -1673,8 +1673,9 @@ def transfer_charges(lig_morph, lig_ref, atom_map):
 
                 new.setProperty('charge', charge)
         else:
-             base = lig_ref.atoms().select(finfo.index)
+             base = lig_ref.atoms().select(finfo.index)  # Atom
              ambertype = '%s' % base.property('ambertype')
+             new.rename(base.name() )
              new.setProperty('ambertype', ambertype)
 
         mol = new.molecule()            # MolEditor
