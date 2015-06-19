@@ -52,6 +52,8 @@ PMEMD_SC_ONESTEP = 'onestep.in'
 PMEMD_SC_DECHARGE = 'decharge.in'
 PMEMD_SC_VDW = 'vdw.in'
 PMEMD_SC_RECHARGE = 'recharge.in'
+PMEMD_SC_TWOSTEP_1 = '2step_1.in'
+PMEMD_SC_TWOSTEP_2 = '2step_2.in'
 SANDER_SC_ONESTEP0 = 'state0_onestep.in'
 SANDER_SC_ONESTEP1 = 'state1_onestep.in'
 
@@ -986,10 +988,10 @@ COMMON_TEMPLATE = '''TI, NpT
  ntt = 3, temp0 = 298.0, gamma_ln = 2.0, ig = -1,
  ntb = {ntb},
  {press},
- ntwe = 10000, ntwx = 10000, ntpr = 10000, ntwr = 50000,
+ ntwe = 10000, ntwx = 10000, ntpr = 10000, ntwr = 50000, ntave = 50000,
  ioutfm = 1, iwrap = 1, ntxo = 2,
 
- ntc = 2, ntf = 1, tishake = 0,
+ ntc = 2, ntf = 1,
  noshakemask = '{noshakemask}',
 
  icfe = 1, ifsc = {ifsc}, clambda = %%L%%, scalpha = 0.5, scbeta = 12.0,
@@ -1089,6 +1091,60 @@ def amber_input(atoms_initial, atoms_final, atom_map, sc_type, style = '',
 
         with open(PMEMD_SC_ONESTEP, 'w') as stfile:
             stfile.write(tmpl)
+
+    elif style == 'softcore2':          # pmemd14 3-step
+        # FIXME: also for sander!
+        idummies = False
+        fdummies = False
+
+        for iinfo, finfo in atom_map.items():
+            istr = iinfo.name.value()
+            fstr = finfo.name.value()
+            iidx = iinfo.index
+
+            if not iinfo.atom:
+                idummies = True
+
+            if not finfo.atom:
+                fdummies = True
+
+        if idummies and fdummies:
+            raise errors.SetupError('2-step protocol cannot be used with '
+                                    'dummies in both states')
+        mask_str0 = ','.join(mask0)
+        mask_str1 = ','.join(mask1)
+
+        if mask_str0:
+            mask_str0 = ':1@%s' % mask_str0
+
+        if mask_str1:
+            mask_str1 = ':2@%s' % mask_str1
+
+        if fdummies:
+            ifsc1, ifsc2 = 0, 1
+            m0, m1, m2, m3 = '', '', mask_str0, mask_str1
+        else:
+            ifsc1, ifsc2 = 1, 0
+            m0, m1, m2, m3 =  mask_str0, mask_str1, '', ''
+
+        tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
+        tmpl1 = tmpl.format(dt = dt, ntb = ntb, press = press,
+                            noshakemask = ':1,2',
+                            crgmask = '', ifsc = ifsc1,
+                            timask1 = ':1', timask2 = ':2',
+                            scmask1 = m0, scmask2 = m1)
+        tmpl2 = tmpl.format(dt = dt, ntb = ntb, press = press,
+                            noshakemask = ':1,2',
+                            crgmask = '', ifsc = ifsc2,
+                            timask1 = ':1' , timask2 = ':2',
+                            scmask1 = m2, scmask2 = m3)
+
+        with open(PMEMD_SC_TWOSTEP_1, 'w') as stfile:
+            stfile.write(tmpl1)
+
+        with open(PMEMD_SC_TWOSTEP_2, 'w') as stfile:
+            stfile.write(tmpl2)
+
     elif style == 'softcore3':          # pmemd14 3-step
         mask_str0 = ','.join(mask0)
         mask_str1 = ','.join(mask1)
@@ -1574,3 +1630,37 @@ def amber_softcore(lig_morph, lig_final, atom_map):
             state1 = state1.remove(idx).commit().edit()
 
     return state0.commit(), state1.commit()
+
+
+def transfer_charges(lig_morph, lig_final, atom_map):
+    """
+    Transfer charges from the final state to the initial state.
+
+    :param lig_morph: the morph molecule
+    :type lig_morph: Sire.Mol.CutGroup
+    :param lig_final: the final state molecule
+    :type lig_final: Sire.Mol.Molecule
+    :param atom_map: the forward atom map
+    :type atom_map: dict of _AtomInfo to _AtomInfo
+    :returns: initial state molecule, final state molecule
+    :rtype: Sire.Mol.Molecule, Sire.Mol.Molecule
+    """
+
+    mol_m = Sire.Mol.Molecule(lig_morph)
+    mol = mol_m.edit()                  # MolEditor
+
+    for iinfo, finfo in atom_map.items():
+        new = mol.atom(iinfo.index)            # AtomEditor
+
+        if not finfo.atom:
+            charge = 0.0 * Sire.Units.mod_electron
+        else:
+            base = lig_final.atoms().select(finfo.index)
+            charge = base.property('charge')
+
+        new.setProperty('charge', charge)
+
+        mol = new.molecule()            # MolEditor
+
+
+    return mol.commit()

@@ -310,8 +310,9 @@ up to 8 character PSF IDs. (versions c31a1 and later)
 
         with open(psfname, 'w') as psf:
             psf.write('PSF EXT\n\n'
-                      '        1 !NTITLE\n'
+                      '        2 !NTITLE\n'
                       '* Created by FESetup\n'
+                      '* Note: this PSF is not suitable for domdec\n'
                       '\n%10i !NATOM\n' %
                       self.tot_natoms)
 
@@ -448,8 +449,8 @@ up to 8 character PSF IDs. (versions c31a1 and later)
                                term[0], term[1], term[2] * const.RAD2DEG) )
 
             prm.write('''
-NONBONDED  NBXMOD 5  GROUP SWITCH CDIEL -
-     CUTNB 14.0  CTOFNB 12.0  CTONNB 10.0  EPS 1.0  E14FAC 0.83333333  WMIN 1.4
+NONBONDED  NBXMOD 5  ATOM CDIEL VATOM VSWITCH -
+  CTONNB 8.0 CTOFNB 10.0  CUTNB 12.0  EPS 1.0  E14FAC 0.83333333  WMIN 1.4
 ''')
             for atom, param in self.atom_params.iteritems():
                 epsilon = -param[1].epsilon().value()

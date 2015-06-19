@@ -59,14 +59,14 @@ class PertTopology(object):
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
 
+
         if self.FE_sub_type[:8] == 'softcore':
             util.amber_input(self.atoms_initial, self.atoms_final,
                              self.atom_map, self.sc_type, self.FE_sub_type,
                              True)
 
-            state0, state1 = \
-                    util.amber_softcore(lig_morph, self.lig_final,
-                                        self.atom_map)
+            state0, state1 = util.amber_softcore(lig_morph, self.lig_final,
+                                                  self.atom_map)
 
             leap_extra0 = ''
             leap_extra1 = ''
@@ -81,6 +81,7 @@ class PertTopology(object):
             leap_extra1 = ('source "%s"\n' %
                            os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
             ow_add = '_dummy'
+
 
         mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
                               const.MOL2_EXT)
@@ -107,17 +108,50 @@ class PertTopology(object):
 
         lig._parm_overwrite = 'pmemd' + ow_add
 
-        leap_cmd = ('mods1 = loadAmberParams "%s"\n'
-                    's1 = loadmol2 "%s"\n'
-                    '%s'
-                    's = combine {s s1}\n' %
-                    (frcmod1, mol2_1, leap_extra1) )
+        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        's1 = loadmol2 "%s"\n'
+                        '%s'
+                        's = combine {s s1}\n' %
+                        (frcmod1, mol2_1, leap_extra1) )
 
-        lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
-                       addcmd2 = leap_extra0 + leap_cmd)
+            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
+                           addcmd2 = leap_extra0 + leap_cmd)
 
+        if self.FE_sub_type == 'softcore2':
+            ow_add = '_int'
+            
+            int_state = util.transfer_charges(lig_morph, self.lig_final,
+                                              self.atom_map)
+
+            mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
+                                    const.MOL2_EXT)
+            util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
+
+            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_0,
+                             start_fmt = 'mol2', frcmod = frcmod0)
+            lig.set_atomtype('gaff')
+            lig._parm_overwrite = 'pmemd_sc_2step_1'
+
+            leap_cmd = ('int = loadmol2 "%s"\n'
+                        's = combine {s int}\n' %
+                        mol2_int)
+
+            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
+                           addcmd2 = leap_cmd)
+
+            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_int,
+                             start_fmt = 'mol2', frcmod = frcmod1)
+            lig.set_atomtype('gaff')
+            lig._parm_overwrite = 'pmemd_sc_2step_2'
+
+            leap_cmd = ('s2 = loadmol2 "%s"\n'
+                        's = combine {s s2}\n' %
+                        mol2_1)
+            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
+                           addcmd2 = leap_cmd)
         # FIXME: residue name will be both the same
-        if self.FE_sub_type == 'softcore3':
+        elif self.FE_sub_type == 'softcore3':
             lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_0,
                              start_fmt = 'mol2', frcmod = frcmod0)
             lig.set_atomtype('gaff')
@@ -187,19 +221,52 @@ class PertTopology(object):
         com.frcmod = self.frcmod0
         com._parm_overwrite = 'pmemd' + ow_add
 
-        leap_cmd = ('mods1 = loadAmberParams "%s"\n'
-                    's1 = loadmol2 "%s"\n'
-                    '%s'
-                    's = combine {l s1 p}\n' %
-                    (self.frcmod1, mol2_1, leap_extra1) )
+        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        's1 = loadmol2 "%s"\n'
+                        '%s'
+                        's = combine {l s1 p}\n' %
+                        (self.frcmod1, mol2_1, leap_extra1) )
 
-        # FIXME: clean-up leap input file (ugly overwrite of previous combine)
-        com.create_top(boxtype = 'set',
-                       make_gaff = False, addcmd = cmd1 + cmd2,
-                       addcmd2 = 's = l\n' + leap_extra0 + leap_cmd)
+            # FIXME: clean-up leap input file (ugly overwrite of previous combine)
+            com.create_top(boxtype = 'set',
+                           make_gaff = False, addcmd = cmd1 + cmd2,
+                           addcmd2 = 's = l\n' + leap_extra0 + leap_cmd)
 
+        if self.FE_sub_type == 'softcore2':
+            ow_add = '_int'
+            
+            int_state = util.transfer_charges(lig_morph, self.lig_final,
+                                              self.atom_map)
+
+            mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
+                                    const.MOL2_EXT)
+            util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
+
+            com = self.ff.Complex(pdb_file, mol2_0)
+            com.ligand_fmt = 'mol2'
+            com.frcmod = self.frcmod0
+            com._parm_overwrite = 'pmemd_sc_2step_1'
+
+            leap_cmd = ('int = loadmol2 "%s"\n'
+                        's = combine {l int p}\n' %
+                        mol2_int)
+
+            com.create_top(boxtype = 'set', addcmd = cmd1 + cmd2,
+                           addcmd2 = leap_cmd)
+
+            com = self.ff.Complex(pdb_file, mol2_int)
+            com.ligand_fmt = 'mol2'
+            com.frcmod = self.frcmod1
+            com._parm_overwrite = 'pmemd_sc_2step_2'
+
+            leap_cmd = ('s2 = loadmol2 "%s"\n'
+                        's = combine {l s2 p}\n' %
+                        mol2_1)
+            com.create_top(boxtype = 'set', addcmd = cmd1 + cmd2,
+                           addcmd2 = leap_cmd)
         # FIXME: residue name will be both the same
-        if self.FE_sub_type == 'softcore3':
+        elif self.FE_sub_type == 'softcore3':
             com = self.ff.Complex(pdb_file, mol2_0)
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0

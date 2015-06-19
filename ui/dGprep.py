@@ -22,7 +22,7 @@ Simple user interface for free energy simulation preparation.
 """
 
 from __future__ import print_function
-import sys
+import os, sys
 
 if ('%x' % sys.hexversion)[:3] != '207':
     print ('Python version 2.7 required, you have %i.%i' %
@@ -163,8 +163,8 @@ def make_ligand(name, ff, opts, short = False):
                    overwrite = opts[SECT_DEF]['overwrite']) as ligand:
 
         if not os.access(lig['file.name'], os.F_OK):
-            raise errors.SetupError('start file %s does not exist' %
-                                    lig['file.name'])
+            raise errors.SetupError('start file %s does not exist in %s' %
+                                    (lig['file.name'], os.getcwd() ) )
 
         load_cmds = ''
 
