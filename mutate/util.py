@@ -1671,7 +1671,7 @@ def transfer_charges(lig_morph, lig_ref, atom_map):
                 base = lig_ref.atoms().select(finfo.index)
                 charge = base.property('charge')
 
-                new.setProperty('charge', charge)
+            new.setProperty('charge', charge)
         else:
              base = lig_ref.atoms().select(finfo.index)  # Atom
              ambertype = '%s' % base.property('ambertype')
