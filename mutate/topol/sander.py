@@ -148,7 +148,8 @@ class PertTopology(object):
                              start_fmt = 'mol2', frcmod = frcmod1)
             lig.set_atomtype('gaff')
             lig._parm_overwrite = 'state_int_sc'
-            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
+            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2 +
+                           'mods1 = loadAmberParams "%s"\n' % frcmod0)
         elif self.FE_sub_type == 'dummy':
             top0 = lig0._parm_overwrite + lig0.TOP_EXT
             top1 = lig1._parm_overwrite + lig1.TOP_EXT
@@ -233,7 +234,8 @@ class PertTopology(object):
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'state_int_sc'
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2)
+                           addcmd = cmd1 + cmd2 +
+                           'mods1 = loadAmberParams "%s"\n' % self.frcmod0)
         elif self.FE_sub_type == 'dummy':
             top0 = com0._parm_overwrite + com0.TOP_EXT
             top1 = com1._parm_overwrite + com1.TOP_EXT

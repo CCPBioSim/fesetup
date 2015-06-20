@@ -135,9 +135,10 @@ class PertTopology(object):
             lig.set_atomtype('gaff')
             lig._parm_overwrite = 'pmemd_sc_2step_1'
 
-            leap_cmd = ('int = loadmol2 "%s"\n'
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        'int = loadmol2 "%s"\n'
                         's = combine {s int}\n' %
-                        mol2_int)
+                        (frcmod1, mol2_int) )
 
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
@@ -147,9 +148,10 @@ class PertTopology(object):
             lig.set_atomtype('gaff')
             lig._parm_overwrite = 'pmemd_sc_2step_2'
 
-            leap_cmd = ('s2 = loadmol2 "%s"\n'
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        's2 = loadmol2 "%s"\n'
                         's = combine {s s2}\n' %
-                        mol2_1)
+                        (frcmod0, mol2_1) )
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
         # FIXME: residue name will be both the same
@@ -250,9 +252,10 @@ class PertTopology(object):
             com.frcmod = self.frcmod0
             com._parm_overwrite = 'pmemd_sc_2step_1'
 
-            leap_cmd = ('int = loadmol2 "%s"\n'
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        'int = loadmol2 "%s"\n'
                         's = combine {l int p}\n' %
-                        mol2_int)
+                        (self.frcmod1, mol2_int) )
 
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
@@ -262,9 +265,10 @@ class PertTopology(object):
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'pmemd_sc_2step_2'
 
-            leap_cmd = ('s2 = loadmol2 "%s"\n'
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        's2 = loadmol2 "%s"\n'
                         's = combine {l s2 p}\n' %
-                        mol2_1)
+                        (self.frcmod0, mol2_1) )
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
         # FIXME: residue name will be both the same
