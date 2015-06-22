@@ -59,14 +59,13 @@ class PertTopology(object):
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
 
-
         if self.FE_sub_type[:8] == 'softcore':
             util.amber_input(self.atoms_initial, self.atoms_final,
                              self.atom_map, self.sc_type, self.FE_sub_type,
                              True)
 
             state0, state1 = util.amber_softcore(lig_morph, self.lig_final,
-                                                  self.atom_map)
+                                                 self.atom_map)
 
             leap_extra0 = ''
             leap_extra1 = ''
@@ -122,9 +121,8 @@ class PertTopology(object):
 
         if self.FE_sub_type == 'softcore2':
             ow_add = '_int'
-            
-            int_state = util.transfer_charges(lig_morph, self.lig_final,
-                                              self.atom_map)
+
+            int_state = util.transfer_charges(state0, state1, self.atom_map)
 
             mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                     const.MOL2_EXT)
@@ -152,6 +150,7 @@ class PertTopology(object):
                         's2 = loadmol2 "%s"\n'
                         's = combine {s s2}\n' %
                         (frcmod0, mol2_1) )
+
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
         # FIXME: residue name will be both the same
@@ -240,8 +239,7 @@ class PertTopology(object):
         if self.FE_sub_type == 'softcore2':
             ow_add = '_int'
             
-            int_state = util.transfer_charges(lig_morph, self.lig_final,
-                                              self.atom_map)
+            int_state = util.transfer_charges(state0, state1, self.atom_map)
 
             mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                     const.MOL2_EXT)
@@ -269,6 +267,7 @@ class PertTopology(object):
                         's2 = loadmol2 "%s"\n'
                         's = combine {l s2 p}\n' %
                         (self.frcmod0, mol2_1) )
+
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
         # FIXME: residue name will be both the same

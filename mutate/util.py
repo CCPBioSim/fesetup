@@ -1632,53 +1632,54 @@ def amber_softcore(lig_morph, lig_final, atom_map):
     return state0.commit(), state1.commit()
 
 
-def transfer_charges(lig_morph, lig_ref, atom_map):
+def transfer_charges(mol0, mol1, atom_map):
     """
     Transfer charges from the final state to the initial state.
 
-    :param lig_morph: the morph molecule
-    :type lig_morph: Sire.Mol.CutGroup
-    :param lig_ref: the final state molecule
-    :type lig_ref: Sire.Mol.Molecule
+    :param mol0: molecule 0
+    :type mol0: Sire.Mol.CutGroup
+    :param mol1: molecule 1
+    :type mol1: Sire.Mol.Molecule
     :param atom_map: the forward atom map
     :type atom_map: dict of _AtomInfo to _AtomInfo
     :returns: initial state molecule, final state molecule
     :rtype: Sire.Mol.Molecule, Sire.Mol.Molecule
     """
 
-    mol_m = Sire.Mol.Molecule(lig_morph)
-    mol = mol_m.edit()                  # MolEditor
-
-
     fdummies = False
 
-    for iinfo, finfo in atom_map.items():
-        istr = iinfo.name.value()
-        fstr = finfo.name.value()
-        iidx = iinfo.index
-
+    for finfo in atom_map.values():
         if not finfo.atom:
             fdummies = True
+            break
 
+    if fdummies:
+        mol_m = Sire.Mol.Molecule(mol0)
+    else:
+        mol_m = Sire.Mol.Molecule(mol1)
+
+    mol = mol_m.edit()              # MolEditor
+        
 
     for iinfo, finfo in atom_map.items():
-        new = mol.atom(iinfo.index)     # AtomEditor
+        new = mol.atom(iinfo.index) # AtomEditor
 
-        if fdummies:
-            if not finfo.atom:
-                charge = 0.0 * Sire.Units.mod_electron
-            else:
-                base = lig_ref.atoms().select(finfo.index)
-                charge = base.property('charge')
-
-            new.setProperty('charge', charge)
+        if not finfo.atom:
+            charge = 0.0 * Sire.Units.mod_electron
         else:
-             base = lig_ref.atoms().select(finfo.index)  # Atom
-             ambertype = '%s' % base.property('ambertype')
-             new.rename(base.name() )
-             new.setProperty('ambertype', ambertype)
+            if fdummies:
+                base = mol1.atoms().select(finfo.index)
+                charge = base.property('charge')
+            else:
+                if iinfo.atom:
+                    base = mol0.atoms().select(iinfo.index)
+                    charge = base.property('charge')
+                else:
+                    charge = 0.0 * Sire.Units.mod_electron
 
-        mol = new.molecule()            # MolEditor
+        new.setProperty('charge', charge)
+
+        mol = new.molecule()        # MolEditor
 
 
     return mol.commit()
