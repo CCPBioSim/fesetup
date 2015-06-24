@@ -134,6 +134,8 @@ class PertTopology(object):
         self.frcmod0 = frcmod0
         self.frcmod1 = frcmod1
 
+        # NOTE: intermediate state assumed to not have dummies, so no
+        #       missing parameters fixed through patching!
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
             
@@ -149,7 +151,8 @@ class PertTopology(object):
             lig._parm_overwrite = 'state_int'
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2 +
                            'mods1 = loadAmberParams "%s"\n' % frcmod0)
-        elif self.FE_sub_type == 'dummy':
+
+        if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             top0 = lig0._parm_overwrite + lig0.TOP_EXT
             top1 = lig1._parm_overwrite + lig1.TOP_EXT
 
@@ -234,7 +237,8 @@ class PertTopology(object):
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2 +
                            'mods1 = loadAmberParams "%s"\n' % self.frcmod0)
-        elif self.FE_sub_type == 'dummy':
+
+        if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             top0 = com0._parm_overwrite + com0.TOP_EXT
             top1 = com1._parm_overwrite + com1.TOP_EXT
 
