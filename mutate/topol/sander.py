@@ -72,7 +72,7 @@ class PertTopology(object):
 
             leap_extra = ''
             ow_add = '_sc'
-        elif self.FE_sub_type == 'dummy':
+        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             state0 = lig_morph
             state1 = amber_dummy(lig_morph, self.con_morph,
                                  self.lig_final, self.atom_map)
@@ -134,7 +134,7 @@ class PertTopology(object):
         self.frcmod0 = frcmod0
         self.frcmod1 = frcmod1
 
-        if self.FE_sub_type == 'softcore2':
+        if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
             
             int_state = util.transfer_charges(state0, state1, self.atom_map)
@@ -146,7 +146,7 @@ class PertTopology(object):
             lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_int,
                              start_fmt = 'mol2', frcmod = frcmod1)
             lig.set_atomtype('gaff')
-            lig._parm_overwrite = 'state_int_sc'
+            lig._parm_overwrite = 'state_int'
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2 +
                            'mods1 = loadAmberParams "%s"\n' % frcmod0)
         elif self.FE_sub_type == 'dummy':
@@ -169,7 +169,7 @@ class PertTopology(object):
 
             leap_extra = ''
             ow_add = '_sc'
-        elif self.FE_sub_type == 'dummy':
+        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             state0 = lig_morph
             state1 = amber_dummy(lig_morph, self.con_morph,
                                  self.lig_final, self.atom_map)
@@ -218,7 +218,7 @@ class PertTopology(object):
             com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                             addcmd = cmd1 + cmd2)
 
-        if self.FE_sub_type == 'softcore2':
+        if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
             
             int_state = util.transfer_charges(state0, state1, self.atom_map)
@@ -230,7 +230,7 @@ class PertTopology(object):
             com = self.ff.Complex(pdb_file, mol2_int)
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
-            com._parm_overwrite = 'state_int_sc'
+            com._parm_overwrite = 'state_int'
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2 +
                            'mods1 = loadAmberParams "%s"\n' % self.frcmod0)
