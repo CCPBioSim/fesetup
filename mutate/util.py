@@ -1670,6 +1670,7 @@ def transfer_charges(mol0, mol1, atom_map):
             if fdummies:
                 base = mol1.atoms().select(finfo.index)
                 charge = base.property('charge')
+                new = mol.atom(finfo.index) # AtomEditor
             else:
                 if iinfo.atom:
                     base = mol0.atoms().select(iinfo.index)
