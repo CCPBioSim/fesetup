@@ -1659,7 +1659,12 @@ def transfer_charges(mol0, mol1, atom_map):
         mol_m = Sire.Mol.Molecule(mol1)
 
     mol = mol_m.edit()              # MolEditor
-        
+
+
+    for iinfo in atom_map:
+        new = mol.atom(iinfo.index)
+        new.setProperty('charge', 0.0 * Sire.Units.mod_electron)
+        mol = new.molecule()
 
     for iinfo, finfo in atom_map.items():
         new = mol.atom(iinfo.index) # AtomEditor
@@ -1679,7 +1684,7 @@ def transfer_charges(mol0, mol1, atom_map):
                     charge = 0.0 * Sire.Units.mod_electron
 
         new.setProperty('charge', charge)
-
+ 
         mol = new.molecule()        # MolEditor
 
 
