@@ -178,6 +178,15 @@ class PertTopology(object):
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
         elif self.FE_sub_type == 'dummy':
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        's1 = loadmol2 "%s"\n'
+                        '%s'
+                        's = combine {s s1}\n' %
+                        (frcmod1, mol2_1, leap_extra1) )
+
+            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
+                           addcmd2 = leap_cmd)
+
             top = lig._parm_overwrite + lig.TOP_EXT
             util.patch_parmtop(top, '')
 
@@ -296,6 +305,16 @@ class PertTopology(object):
                            make_gaff = False, addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
         elif self.FE_sub_type == 'dummy':
+            leap_cmd = ('mods1 = loadAmberParams "%s"\n'
+                        's1 = loadmol2 "%s"\n'
+                        '%s'
+                        's = combine {l s1 p}\n' %
+                        (self.frcmod1, mol2_1, leap_extra1) )
+
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+                           make_gaff = False, addcmd = cmd1 + cmd2,
+                           addcmd2 = leap_cmd)
+
             top = com._parm_overwrite + com.TOP_EXT
             util.patch_parmtop(top, '')
 
