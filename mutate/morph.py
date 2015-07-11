@@ -284,10 +284,12 @@ class Morph(object):
         :param system: must be either Ligand (solvated) or Complex (solvated).
            The ligand coordinates are computed while the coordinates of the rest
            of the system are taken from the unperturbed solvated system.
+        :param cmd1: additional leap commands
+        :param cmd2: additional leap commands
         :type system: either Ligand or Complex
-        :param sys_rev: optional 2nd system to determine box size from
-        :tyoe sys_rev: only Ligand at the moment passed in from dGrep.py
-
+        :type cmd1: string
+        :type cmd2: string
+        :type sys_rev: only Ligand at the moment passed in from dGrep.py
         """
 
         os.chdir(self.dst)        # FIXME: kludge to allow non-context use
@@ -313,8 +315,6 @@ class Morph(object):
         if not crd:
             raise errors.SetupError('no suitable rst7 file found')
 
-        logger.write('Using %s for coordinate file creation' % crd)
-
         system.sander_rst = crd
         system.get_box_dims()
 
@@ -323,6 +323,8 @@ class Morph(object):
         except UserWarning as error:
             raise errors.SetupError('error opening %s/%s: %s' %
                                     (crd, top, error) )
+
+        lig, rest = util.split_system(mols)
 
         # FIXME: another kludge, working only for ligand but not complex
         if sys_rev:
@@ -356,7 +358,6 @@ class Morph(object):
                 rest = util.split_system(mols2)[1]
                 crd = crd2
 
-        lig, rest = util.split_system(mols)
 
         if lig.nAtoms() != (len(self.atom_map) - len(self.dummy_idx) ):
             raise errors.SetupError('reference state has wrong number of '
