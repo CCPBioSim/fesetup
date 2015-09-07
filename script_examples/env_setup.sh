@@ -25,7 +25,7 @@
 #               pygccxml0.95
 #
 
-RDBASE=/usr/local/RDKit_2014_09_2
+RDBASE=/usr/local/RDKit_2015_03_1
 DYLD_LIBRARY_PATH=$RDBASE/lib
 LD_LIBRARY_PATH=$RDBASE/lib
 

@@ -203,7 +203,9 @@ def _isSameDihedralPotential(ipot, fpot):
             # molecules have a different dihedral potential, but only because
             # the initial state has a null cos2phi potential which isn't
             # present in the morph.
-            if ki < sys.float_info.min or \
+            # NOTE: this first test will falsely mark dihedrals as same
+#           if ki < sys.float_info.min or \
+            if \
                    (abs(ki - kf) < sys.float_info.min and
                     abs(periodi - periodf) < sys.float_info.min and
                     abs(phasei - phasef) < sys.float_info.min):
@@ -620,7 +622,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
                 break
 
-        if ipot is None:
+        if not ipot:
             if (at0.name().value().startsWith("DU") or
                 at1.name().value().startsWith("DU") or
                 at2.name().value().startsWith("DU") or
@@ -659,7 +661,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 unmapped_fdihedrals.remove(fdihedral)
                 break
 
-        if fpot is None:
+        if not fpot:
             if not map_at0 or not map_at1 or not map_at2 or not map_at3:
                 fpot = "todefine"
                 fdummy = True
@@ -706,6 +708,11 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             fpot = [0.0, 0.0, 0.0]
             if allfdummy:
                 fpot = ipot
+
+        # leap creates for some unkown reason zero torsions
+        if len(ipot) == 3 and len(fpot) == 3 and \
+               ipot[0] == 0.0 and fpot[0] == 0.0:
+            continue
 
         if (idummy or fdummy) or (not samepotential):
             outstr = "\tdihedral\n"
@@ -795,7 +802,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 unmapped_iimpropers.remove(iimproper)
                 break
 
-        if ipot is None:
+        if not ipot:
             if (at0.name().value().startsWith("DU") or
                 at1.name().value().startsWith("DU") or
                 at2.name().value().startsWith("DU") or
@@ -861,7 +868,8 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 unmapped_fimpropers.remove(fimproper)
 
                 break
-        if fpot is None:
+
+        if not fpot:
             if not map_at0 or not map_at1 or not map_at2 or not map_at3:
                 fpot = "todefine"
                 fdummy = True
@@ -878,8 +886,12 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             allfdummy = (not map_at0 and not map_at1 and
                          not map_at2 and not map_at3)
 
+#       print '=== impropers ==='
+#       print (at0.name().value(), at1.name().value(),
+#              at2.name().value(), at3.name().value(), ipot, fpot )
         samepotential = _isSameDihedralPotential(ipot, fpot)
 
+        # FIXME: there is a logical problem here!
         if (not samepotential and
             ipot != "todefine" and
             (not _isSameDihedralPotential(ipot, mpot) ) ):

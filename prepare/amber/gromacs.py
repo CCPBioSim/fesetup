@@ -814,6 +814,10 @@ def mixer(top0, top1, filename = const.GROMACS_PERT_ITP,
 
             for proper0, proper1 in zip(mt0.propers, mt1.propers):
                 for dih0, dih1 in zip(proper0[4], proper1[4]):
+                    # for some reason, leap creates null entries
+                    if dih0[0] == 0.0 and dih1[0] == 0.0:
+                        continue
+
                     itp.write('%7i %7i %7i %7i 9 %11.2f %11.5f %i   '
                               '%11.2f %11.5f %i\n' %
                               (proper0[:4] + (dih0[2] * const.RAD2DEG,
