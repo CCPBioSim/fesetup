@@ -416,7 +416,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         samepotential = _isSameBondAnglePotential(ipot, fpot)
 
-
         if (not samepotential and
             ipot != "todefine" and
             not _isSameBondAnglePotential(ipot, mpot) ):
@@ -886,9 +885,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             allfdummy = (not map_at0 and not map_at1 and
                          not map_at2 and not map_at3)
 
-#       print '=== impropers ==='
-#       print (at0.name().value(), at1.name().value(),
-#              at2.name().value(), at3.name().value(), ipot, fpot )
         samepotential = _isSameDihedralPotential(ipot, fpot)
 
         # FIXME: there is a logical problem here!
@@ -916,6 +912,11 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             fpot = [0.0, 0.0, 0.0]
             if allfdummy:
                 fpot = ipot
+
+        # leap creates for some unkown reason zero torsions
+        if len(ipot) == 3 and len(fpot) == 3 and \
+               ipot[0] == 0.0 and fpot[0] == 0.0:
+            continue
 
         ipotstr = ""
         for val in ipot:
