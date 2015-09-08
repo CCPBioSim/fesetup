@@ -913,11 +913,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             if allfdummy:
                 fpot = ipot
 
-        # leap creates for some unkown reason zero torsions
-        if len(ipot) == 3 and len(fpot) == 3 and \
-               ipot[0] == 0.0 and fpot[0] == 0.0:
-            continue
-
         ipotstr = ""
         for val in ipot:
             ipotstr += "%s " % val
