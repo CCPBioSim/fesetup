@@ -239,7 +239,8 @@ def _isSameBondAnglePotential(ipot, fpot):
 
 def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                    atoms_final, atom_map, reverse_atom_map, zz_atoms,
-                   turnoffdummyangles, shrinkdummybonds):
+                   turnoffdummyangles, shrinkdummybonds,
+                   zero_all_dummies = False):
 
     """
     Create a perturbation file for Sire.
@@ -264,6 +265,9 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     :type turnoffdummyangles: bool
     :param shrinkdummybonds: shrink dummy bonds
     :type shrinkdummybonds: bool
+    :param zero_all_dummies: use zero dihedrals and impropers when all atoms are
+    dummies
+    :type zero_all_dummies: bool
     :raises: SetupError
     """
 
@@ -368,6 +372,8 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         at0i = at0.index()
         at1i = at1.index()
+
+#         ipot = params_initial.getParams(bond)
 
         for ibond in bonds_initial:
             iat0 = lig_initial.select(ibond.atom0() ).index()
@@ -622,10 +628,10 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 break
 
         if not ipot:
-            if (at0.name().value().startsWith("DU") or
-                at1.name().value().startsWith("DU") or
-                at2.name().value().startsWith("DU") or
-                at3.name().value().startsWith("DU") ):
+            is_dummy = [at.name().value().startsWith("DU")
+                        for at in (at0, at1, at2, at3) ]
+            
+            if any(is_dummy):
                 ipot = "todefine"
                 idummy = True
             else:
@@ -634,10 +640,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                                         'because the atom mapping would open '
                                         'up a ring in the intiial state.')
 
-            allidummy = (at0.name().value().startsWith("DU") and
-                         at1.name().value().startsWith("DU") and
-                         at2.name().value().startsWith("DU") and
-                         at3.name().value().startsWith("DU") )
+            allidummy = all(is_dummy)
 
         fpot = None
 
@@ -698,15 +701,15 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             ipot = [0.0, 0.0, 0.0]
             fpot = [0.0, 0.0, 0.0]
         elif idummy:
-            ipot = [0.0, 0.0, 0.0]
-            # Use parameters of final perturbation if all initial atoms are
-            # dummies
-            if allidummy:
+            if allidummy and not zero_all_dummies:
                 ipot = fpot
+            else:
+                ipot = [0.0, 0.0, 0.0]
         elif fdummy:
-            fpot = [0.0, 0.0, 0.0]
-            if allfdummy:
+            if allfdummy and not zero_all_dummies:
                 fpot = ipot
+            else:
+                fpot = [0.0, 0.0, 0.0]
 
         # leap creates for some unkown reason zero torsions
         if len(ipot) == 3 and len(fpot) == 3 and \
@@ -775,10 +778,10 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         allfdummy = False
         ipot = None
 
-        at0 = new_morph.select( improper.atom0() )
-        at1 = new_morph.select( improper.atom1() )
-        at2 = new_morph.select( improper.atom2() )
-        at3 = new_morph.select( improper.atom3() )
+        at0 = new_morph.select(improper.atom0() )
+        at1 = new_morph.select(improper.atom1() )
+        at2 = new_morph.select(improper.atom2() )
+        at3 = new_morph.select(improper.atom3() )
 
         at0i = at0.index()
         at1i = at1.index()
@@ -792,20 +795,23 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             iat3 = lig_initial.select(iimproper.atom3() ).index()
 
             # Need different matching rules
-            if ( ( at0i == iat0 or at0i == iat1 or at0i == iat2 or at0i == iat3) and
-                 ( at1i == iat0 or at1i == iat1 or at1i == iat2 or at1i == iat3) and
-                 ( at2i == iat0 or at2i == iat1 or at2i == iat2 or at2i == iat3) and
-                 ( at3i == iat0 or at3i == iat1 or at3i == iat2 or at3i == iat3)
+            if ( (at0i == iat0 or at0i == iat1 or at0i == iat2 or at0i == iat3)
+                 and
+                 (at1i == iat0 or at1i == iat1 or at1i == iat2 or at1i == iat3)
+                 and
+                 (at2i == iat0 or at2i == iat1 or at2i == iat2 or at2i == iat3)
+                 and
+                 (at3i == iat0 or at3i == iat1 or at3i == iat2 or at3i == iat3)
                  ):
                 ipot = params_initial.getParams(iimproper)
                 unmapped_iimpropers.remove(iimproper)
                 break
 
         if not ipot:
-            if (at0.name().value().startsWith("DU") or
-                at1.name().value().startsWith("DU") or
-                at2.name().value().startsWith("DU") or
-                at3.name().value().startsWith("DU") ):
+            is_dummy = [at.name().value().startsWith("DU")
+                        for at in (at0, at1, at2, at3) ]
+
+            if any(is_dummy):
                 ipot = "todefine"
                 idummy = True
             else:
@@ -813,11 +819,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                                         'the final state. This is most likely '
                                         'because the atom mapping would open '
                                         'up a ring in the intiial state.')
-
-            allidummy = (at0.name().value().startsWith("DU") and
-                         at1.name().value().startsWith("DU") and
-                         at2.name().value().startsWith("DU") and
-                         at3.name().value().startsWith("DU") )
+            allidummy = all(is_dummy)
 
         fpot = None
 
@@ -905,13 +907,15 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             ipot = [ 0.0, 0.0, 0.0 ]
             fpot = [ 0.0, 0.0, 0.0 ]
         elif idummy:
-            ipot = [0.0, 0.0, 0.0]
-            if allidummy:
+            if allidummy and not zero_all_dummies:
                 ipot = fpot
+            else:
+                ipot = [0.0, 0.0, 0.0]
         elif fdummy:
-            fpot = [0.0, 0.0, 0.0]
-            if allfdummy:
+            if allfdummy and not zero_all_dummies:
                 fpot = ipot
+            else:
+                fpot = [0.0, 0.0, 0.0]
 
         ipotstr = ""
         for val in ipot:

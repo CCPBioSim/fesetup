@@ -31,7 +31,7 @@ if ('%x' % sys.hexversion)[:3] != '207':
 
 
 __revision__ = "$Id$"
-__version__ = '0.6.2'
+__version__ = '0.6.3'
 
 
 vstring = 'FESetup SUI version: %s' % __version__

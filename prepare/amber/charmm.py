@@ -38,15 +38,20 @@ from FESetup import const, errors, logger
 _prefix = 'G'
 _num_prefix = 'X'
 
-def _check_type(s):
+def _check_type(s, atomtypes = None, idx = 0):
     """Check atom types and uppercase and prefix if necessary."""
 
+    if s == 'du' and atomtypes:
+        s = atomtypes[idx] + s
+
     if any(c.islower() for c in s):
-      s = _prefix + s.upper()
+        # FIXME: may create conflicts between GAFF and GLYCAM!
+        s = _prefix + s.upper()
     elif not s[0].isalpha():
-      s = _num_prefix + s.upper()
+        s = _num_prefix + s.upper()
 
     return s
+
 
 def _psf_format(fileh, data):
     """Format PSF lines."""
@@ -82,7 +87,7 @@ def _psf_format(fileh, data):
 class CharmmTop(object):
     """Basic CHARMM prm and psf writer."""
 
-    def __init__(self):
+    def __init__(self, atomtypes = None):
         self.atoms = []
         self.bonds = []
         self.angles = []
@@ -95,6 +100,8 @@ class CharmmTop(object):
         self.angle_params = {}
         self.dihedral_params = {}
         self.improper_params = {}
+
+        self.atomtypes = atomtypes
 
 
     def readParm(self, parmtop, inpcrd):
@@ -163,7 +170,7 @@ class CharmmTop(object):
                 else:
                     segid = chr(segcnt)  # FIXME: check for overflow
 
-                amber_type = _check_type(amber_type)
+                amber_type = _check_type(amber_type, self.atomtypes, atomno-1)
 
                 self.atoms.append( (atomno, resno, segid, resid, res, atom_type,
                                     amber_type, charge, mass, coords) )
@@ -175,10 +182,16 @@ class CharmmTop(object):
             for bond in params.getAllBonds():  # Sire.Mol.BondID
                 at0 = bond.atom0()  # Sire.Mol.AtomIdx!
                 at1 = bond.atom1()
-
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
                 k, r = params.getParams(bond)
+
+                idx0 = at0.value()
+                idx1 = at1.value()
+
+                t0 = str(mol.select(at0).property('ambertype'))
+                t1 = str(mol.select(at1).property('ambertype'))
+ 
+                name0 = _check_type(t0, self.atomtypes, idx0)
+                name1 = _check_type(t1, self.atomtypes, idx1)
 
                 self.bonds.append( (at0.value() + 1 + offset,
                                at1.value() + 1 + offset) )
@@ -192,9 +205,17 @@ class CharmmTop(object):
                 at2 = angle.atom2()
                 k, theta = params.getParams(angle)
 
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
-                name2 = _check_type(str(mol.select(at2).property('ambertype')))
+                idx0 = at0.value()
+                idx1 = at1.value()
+                idx2 = at2.value()
+
+                t0 = str(mol.select(at0).property('ambertype'))
+                t1 = str(mol.select(at1).property('ambertype'))
+                t2 = str(mol.select(at2).property('ambertype'))
+
+                name0 = _check_type(t0, self.atomtypes, idx0)
+                name1 = _check_type(t1, self.atomtypes, idx1)
+                name2 = _check_type(t2, self.atomtypes, idx2)
 
                 self.angles.append( (at0.value() + 1 + offset,
                                      at1.value() + 1 + offset,
@@ -209,10 +230,20 @@ class CharmmTop(object):
                 at2 = dihedral.atom2()
                 at3 = dihedral.atom3()
 
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
-                name2 = _check_type(str(mol.select(at2).property('ambertype')))
-                name3 = _check_type(str(mol.select(at3).property('ambertype')))
+                idx0 = at0.value()
+                idx1 = at1.value()
+                idx2 = at2.value()
+                idx3 = at3.value()
+
+                t0 = str(mol.select(at0).property('ambertype'))
+                t1 = str(mol.select(at1).property('ambertype'))
+                t2 = str(mol.select(at2).property('ambertype'))
+                t3 = str(mol.select(at3).property('ambertype'))
+
+                name0 = _check_type(t0, self.atomtypes, idx0)
+                name1 = _check_type(t1, self.atomtypes, idx1)
+                name2 = _check_type(t2, self.atomtypes, idx2)
+                name3 = _check_type(t3, self.atomtypes, idx3)
 
                 p = params.getParams(dihedral)
                 terms = []
@@ -236,10 +267,20 @@ class CharmmTop(object):
                 at2 = improper.atom2()
                 at3 = improper.atom3()
 
-                name0 = _check_type(str(mol.select(at0).property('ambertype')))
-                name1 = _check_type(str(mol.select(at1).property('ambertype')))
-                name2 = _check_type(str(mol.select(at2).property('ambertype')))
-                name3 = _check_type(str(mol.select(at3).property('ambertype')))
+                idx0 = at0.value()
+                idx1 = at1.value()
+                idx2 = at2.value()
+                idx3 = at3.value()
+
+                t0 = str(mol.select(at0).property('ambertype'))
+                t1 = str(mol.select(at1).property('ambertype'))
+                t2 = str(mol.select(at2).property('ambertype'))
+                t3 = str(mol.select(at3).property('ambertype'))
+
+                name0 = _check_type(t0, self.atomtypes, idx0)
+                name1 = _check_type(t1, self.atomtypes, idx1)
+                name2 = _check_type(t2, self.atomtypes, idx2)
+                name3 = _check_type(t3, self.atomtypes, idx3)
 
                 term = params.getParams(improper)
 

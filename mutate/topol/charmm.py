@@ -28,6 +28,9 @@ __revision__ = "$Id$"
 import os, sys
 from collections import defaultdict
 
+import Sire.MM
+import Sire.Units
+
 import sander
 from FESetup import const, errors, logger
 from FESetup.prepare.amber import charmm
@@ -64,10 +67,25 @@ class PertTopology(object):
         self.stype = FE_sub_type
 
         self.topol = None
+        self.itypes = []
+        self.ftypes = []
         
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
 
+        for atom in lig_morph.atoms():
+            self.itypes.append(str(atom.property('initial_ambertype') ) )
+
+        for iinfo, finfo in self.atom_map.items():
+            if not finfo.atom:
+                final_type = "du"
+            else:
+                base = self.atoms_final.select(finfo.index)
+                final_type = "%s" % str(base.property("ambertype") )
+
+            self.ftypes.append(final_type)
+
+  
         topol = sander.PertTopology(TR_TABLE[self.stype], self.sc_type, self.ff,
                                     self.con_morph, self.atoms_initial,
                                     self.atoms_final, self.lig_initial,
@@ -82,7 +100,7 @@ class PertTopology(object):
         rst = topol.lig0.RST_EXT
 
         # top0 and top1 written mainly for debugging purposes
-        top0 = charmm.CharmmTop()
+        top0 = charmm.CharmmTop(self.ftypes)
         top0.readParm(lig0 + top, lig0 + rst)
         top0.writePsf('state0.psf')
         top0.writeCrd('state0.cor')
@@ -93,7 +111,7 @@ class PertTopology(object):
             top_int.writePsf(STATE_INT + '.psf')
             top_int.writeCrd(STATE_INT + '.cor')
 
-        top1 = charmm.CharmmTop()
+        top1 = charmm.CharmmTop(self.itypes)
         top1.readParm(lig1 + top, lig1 + rst)
         top1.writePsf('state1.psf')
         top1.writeCrd('state1.cor')
@@ -123,7 +141,7 @@ class PertTopology(object):
         rst = self.topol.lig0.RST_EXT
 
         # top0 and top1 written mainly for debugging purposes
-        top0 = charmm.CharmmTop()
+        top0 = charmm.CharmmTop(self.ftypes)
         top0.readParm(lig0 + top, lig0 + rst)
         top0.writePsf('state0.psf')
         top0.writeCrd('state0.cor')
@@ -134,7 +152,7 @@ class PertTopology(object):
             top_int.writePsf(STATE_INT + '.psf')
             top_int.writeCrd(STATE_INT + '.cor')
 
-        top1 = charmm.CharmmTop()
+        top1 = charmm.CharmmTop(self.itypes)
         top1.readParm(lig1 + top, lig1 + rst)
         top1.writePsf('state1.psf')
         top1.writeCrd('state1.cor')
