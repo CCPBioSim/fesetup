@@ -31,7 +31,7 @@ if ('%x' % sys.hexversion)[:3] != '207':
 
 
 __revision__ = "$Id$"
-__version__ = '0.6.3'
+__version__ = '0.6.4'
 
 
 vstring = 'FESetup SUI version: %s' % __version__
@@ -694,6 +694,11 @@ if __name__ == '__main__':
 
 
     ### ligand morphs
+
+    if morph_pairs:
+        print('Morphs will be generated for %s' % options[SECT_DEF]['FE_type'])
+        logger.write('Morphs will be generated for %s\n' %
+                     options[SECT_DEF]['FE_type'])
 
     morphs = []
     morph_failed = []
