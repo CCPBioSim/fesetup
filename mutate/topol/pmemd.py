@@ -70,7 +70,7 @@ class PertTopology(object):
             leap_extra0 = ''
             leap_extra1 = ''
             ow_add = '_sc'
-        elif self.FE_sub_type == 'dummy':
+        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             state0 = lig_morph
             state1 = amber_dummy(lig_morph, self.con_morph,
                                  self.lig_final, self.atom_map)
@@ -119,7 +119,7 @@ class PertTopology(object):
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_extra0 + leap_cmd)
 
-        if self.FE_sub_type == 'softcore2':
+        if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
 
             int_state = util.transfer_charges(state0, state1, self.atom_map)
@@ -135,8 +135,9 @@ class PertTopology(object):
 
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         'int = loadmol2 "%s"\n'
+                        '%s\n'
                         's = combine {s int}\n' %
-                        (frcmod1, mol2_int) )
+                        (frcmod1, mol2_int, leap_extra0) )
 
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
@@ -147,9 +148,10 @@ class PertTopology(object):
             lig._parm_overwrite = 'pmemd_sc_2step_2'
 
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
-                        's2 = loadmol2 "%s"\n'
-                        's = combine {s s2}\n' %
-                        (frcmod0, mol2_1) )
+                        's1 = loadmol2 "%s"\n'
+                        '%s\n'
+                        's = combine {s s1}\n' %
+                        (frcmod0, mol2_1, leap_extra1) )
 
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_cmd)
@@ -180,18 +182,20 @@ class PertTopology(object):
         elif self.FE_sub_type == 'dummy':
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         's1 = loadmol2 "%s"\n'
-                        '%s'
+                        '%s\n'
                         's = combine {s s1}\n' %
                         (frcmod1, mol2_1, leap_extra1) )
 
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2,
                            addcmd2 = leap_extra0 + leap_cmd)
 
-            top = lig._parm_overwrite + lig.TOP_EXT
-            util.patch_parmtop(top, '')
-
         self.frcmod0 = frcmod0
         self.frcmod1 = frcmod1
+
+        if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
+            top = lig._parm_overwrite + lig.TOP_EXT
+
+            util.patch_parmtop(top, "")
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
@@ -209,7 +213,7 @@ class PertTopology(object):
             leap_extra0 = ''
             leap_extra1 = ''
             ow_add = '_sc'
-        else:
+        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             state0 = lig_morph
             state1 = amber_dummy(lig_morph, self.con_morph,
                                  self.lig_final, self.atom_map)
@@ -219,6 +223,8 @@ class PertTopology(object):
             leap_extra1 = ('source "%s"\n' %
                            os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
             ow_add = '_dummy'
+        else:
+            raise NotImplementedError
 
         mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
                               const.MOL2_EXT)
@@ -245,7 +251,7 @@ class PertTopology(object):
                            make_gaff = False, addcmd = cmd1 + cmd2,
                            addcmd2 = 's = l\n' + leap_extra0 + leap_cmd)
 
-        if self.FE_sub_type == 'softcore2':
+        if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
             
             int_state = util.transfer_charges(state0, state1, self.atom_map)
@@ -261,8 +267,9 @@ class PertTopology(object):
 
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         'int = loadmol2 "%s"\n'
+                        '%s\n'
                         's = combine {l int p}\n' %
-                        (self.frcmod1, mol2_int) )
+                        (self.frcmod1, mol2_int, leap_extra0) )
 
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
@@ -273,9 +280,10 @@ class PertTopology(object):
             com._parm_overwrite = 'pmemd_sc_2step_2'
 
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
-                        's2 = loadmol2 "%s"\n'
-                        's = combine {l s2 p}\n' %
-                        (self.frcmod0, mol2_1) )
+                        's1 = loadmol2 "%s"\n'
+                        '%s\n'
+                        's = combine {l s1 p}\n' %
+                        (self.frcmod0, mol2_1, leap_extra1) )
 
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
@@ -319,7 +327,7 @@ class PertTopology(object):
             
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         's1 = loadmol2 "%s"\n'
-                        '%s'
+                        '%s\n'
                         's = combine {l s1 p}\n' %
                         (self.frcmod1, mol2_1, leap_extra1) )
 
@@ -327,8 +335,14 @@ class PertTopology(object):
                            make_gaff = False, addcmd = cmd1 + cmd2 + leap_extra0,
                            addcmd2 = leap_extra0 +leap_cmd)
 
+
+        if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             top = com._parm_overwrite + com.TOP_EXT
-            util.patch_parmtop(top, '')
+
+            util.patch_parmtop(top, "")
+            
+            self.parmtop = top
+            self.inpcrd = com._parm_overwrite + com.RST_EXT
 
 
 def amber_dummy(lig_morph, con_morph, lig_final, atom_map):

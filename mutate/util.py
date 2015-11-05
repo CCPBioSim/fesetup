@@ -1336,7 +1336,7 @@ def patch_parmtop(parm0_fn, parm1_fn, copy_dih = True):
 
         logger.write('Patching parmtop %s\n' % parm0_fn)
 
-        mask_str0 = ':%s' % const.LIGAND0_NAME
+        mask_str0 = ':%s|:INT' % const.LIGAND0_NAME
         mask_str1 = ':%s' % const.LIGAND1_NAME
         idx_list =  [i for i in AmberMask(parm0, mask_str0).Selected()]
         idx_list2 = [i for i in AmberMask(parm0, mask_str1).Selected()]
@@ -1642,8 +1642,8 @@ def transfer_charges(mol0, mol1, atom_map):
     :type mol1: Sire.Mol.Molecule
     :param atom_map: the forward atom map
     :type atom_map: dict of _AtomInfo to _AtomInfo
-    :returns: initial state molecule, final state molecule
-    :rtype: Sire.Mol.Molecule, Sire.Mol.Molecule
+    :returns: molecule with new charges
+    :rtype: Sire.Mol.Molecule
     """
 
     fdummies = False
@@ -1673,12 +1673,12 @@ def transfer_charges(mol0, mol1, atom_map):
             charge = 0.0 * Sire.Units.mod_electron
         else:
             if fdummies:
-                base = mol1.atoms().select(finfo.index)
+                base = mol1.select(finfo.index)
                 charge = base.property('charge')
                 new = mol.atom(finfo.index) # AtomEditor
             else:
                 if iinfo.atom:
-                    base = mol0.atoms().select(iinfo.index)
+                    base = mol0.select(iinfo.index)
                     charge = base.property('charge')
                 else:
                     charge = 0.0 * Sire.Units.mod_electron
