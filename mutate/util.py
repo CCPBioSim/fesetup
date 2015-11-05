@@ -1632,7 +1632,7 @@ def amber_softcore(lig_morph, lig_final, atom_map):
     return state0.commit(), state1.commit()
 
 
-def transfer_charges(mol0, mol1, atom_map):
+def transfer_charges(mol0, mol1, atom_map, dum=False):
     """
     Transfer charges from the final state to the initial state.
 
@@ -1660,7 +1660,6 @@ def transfer_charges(mol0, mol1, atom_map):
 
     mol = mol_m.edit()              # MolEditor
 
-
     for iinfo in atom_map:
         new = mol.atom(iinfo.index)
         new.setProperty('charge', 0.0 * Sire.Units.mod_electron)
@@ -1673,9 +1672,15 @@ def transfer_charges(mol0, mol1, atom_map):
             charge = 0.0 * Sire.Units.mod_electron
         else:
             if fdummies:
-                base = mol1.select(finfo.index)
+                # FIXME: is this really correct?
+                if dum:
+                    idx = iinfo.index
+                else:
+                    idx = finfo.index
+
+                base = mol1.select(idx)
                 charge = base.property('charge')
-                new = mol.atom(finfo.index) # AtomEditor
+                new = mol.atom(idx) # AtomEditor
             else:
                 if iinfo.atom:
                     base = mol0.select(iinfo.index)

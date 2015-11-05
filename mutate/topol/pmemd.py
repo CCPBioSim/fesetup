@@ -122,7 +122,12 @@ class PertTopology(object):
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
 
-            int_state = util.transfer_charges(state0, state1, self.atom_map)
+            if self.FE_sub_type == 'dummy2':
+                f = True
+            else:
+                f = False
+
+            int_state = util.transfer_charges(state0, state1, self.atom_map, f)
 
             mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                     const.MOL2_EXT)
@@ -254,7 +259,12 @@ class PertTopology(object):
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
             
-            int_state = util.transfer_charges(state0, state1, self.atom_map)
+            if self.FE_sub_type == 'dummy2':
+                f = True
+            else:
+                f = False
+
+            int_state = util.transfer_charges(state0, state1, self.atom_map, f)
 
             mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                     const.MOL2_EXT)
