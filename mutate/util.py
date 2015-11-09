@@ -1291,7 +1291,7 @@ def _add_improper(impropers0, impropers1, parm):
             act.execute()
 
 
-def patch_parmtop(parm0_fn, parm1_fn, copy_dih = True):
+def patch_parmtop(parm0_fn, parm1_fn, mask0, mask1, copy_dih=True):
     """
     Patch two AMBER parmtop files to include bond, angle and dihedral functions
     from the respective other state.  These parameters would otherwise be all
@@ -1307,6 +1307,10 @@ def patch_parmtop(parm0_fn, parm1_fn, copy_dih = True):
     :type parm0_fn: string
     :param parm1_fn: filename of the parmtop file for state1
     :type parm1_fn: string
+    :param mask0: first mask used when one or two parmtops
+    :type mask0: string
+    :param mask1: second mask only used when one parmtop
+    :type mask1: string
     :param copy_dih: copy dihedral from other state if periodicity is zero
     :type copy_dih: bool
     :raises: SetupError
@@ -1323,9 +1327,10 @@ def patch_parmtop(parm0_fn, parm1_fn, copy_dih = True):
         if parm0.ptr('natom') != parm1.ptr('natom'):
             raise errors.SetupError('BUG: parms of different lengths')
 
-        logger.write('Patching parmtops %s, %s\n' % (parm0_fn, parm1_fn) )
+        logger.write('Patching parmtops %s, %s with mask %s\n' %
+                     (parm0_fn, parm1_fn, mask0) )
 
-        mask_str = ':%s' % const.LIGAND_NAME
+        mask_str = mask0
         idx_list = [i for i in AmberMask(parm0, mask_str).Selected()]
         idx_list2 = idx_list
 
@@ -1334,10 +1339,11 @@ def patch_parmtop(parm0_fn, parm1_fn, copy_dih = True):
         parm0 = AmberParm(parm0_fn)
         parm1 = parm0
 
-        logger.write('Patching parmtop %s\n' % parm0_fn)
+        logger.write('Patching parmtop %s with masks %s, %s\n' %
+                     (parm0_fn, mask0, mask1) )
 
-        mask_str0 = ':%s|:INT' % const.LIGAND0_NAME
-        mask_str1 = ':%s' % const.LIGAND1_NAME
+        mask_str0 = mask0
+        mask_str1 = mask1
         idx_list =  [i for i in AmberMask(parm0, mask_str0).Selected()]
         idx_list2 = [i for i in AmberMask(parm0, mask_str1).Selected()]
 

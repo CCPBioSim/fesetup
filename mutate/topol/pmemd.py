@@ -56,8 +56,13 @@ class PertTopology(object):
         self.frcmod0 = None
         self.frcmod1 = None
 
+        self.initial_dummies = not all([a.atom for a in atom_map.keys()])
+        self.final_dummies = not all([a.atom for a in atom_map.values()])
+
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
+
+        patch_parms = []
 
         if self.FE_sub_type[:8] == 'softcore':
             util.amber_input(self.atoms_initial, self.atoms_final,
@@ -138,6 +143,11 @@ class PertTopology(object):
             lig.set_atomtype('gaff')
             lig._parm_overwrite = 'pmemd_sc_2step_1'
 
+            if self.initial_dummies:
+                patch_parms.append( (lig._parm_overwrite,
+                                     ':%s' % const.LIGAND0_NAME,
+                                     ':%s' % const.INT_NAME) )
+
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         'int = loadmol2 "%s"\n'
                         '%s\n'
@@ -151,6 +161,11 @@ class PertTopology(object):
                              start_fmt = 'mol2', frcmod = frcmod1)
             lig.set_atomtype('gaff')
             lig._parm_overwrite = 'pmemd_sc_2step_2'
+
+            if self.final_dummies:
+                patch_parms.append( (lig._parm_overwrite,
+                                     ':%s' % const.INT_NAME, 
+                                     ':%s' % const.LIGAND1_NAME) )
 
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         's1 = loadmol2 "%s"\n'
@@ -198,13 +213,14 @@ class PertTopology(object):
         self.frcmod1 = frcmod1
 
         if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
-            top = lig._parm_overwrite + lig.TOP_EXT
-
-            util.patch_parmtop(top, "")
+            for prm in patch_parms:
+                util.patch_parmtop(prm[0] + lig.TOP_EXT, "", prm[1], prm[2])
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
                       cmd1, cmd2):
+
+        patch_parms = []
 
         if self.FE_sub_type[:8] == 'softcore':
             util.amber_input(self.atoms_initial, self.atoms_final,
@@ -275,11 +291,18 @@ class PertTopology(object):
             com.frcmod = self.frcmod0
             com._parm_overwrite = 'pmemd_sc_2step_1'
 
+            if self.initial_dummies:
+                patch_parms.append( (com._parm_overwrite,
+                                     ':%s' % const.LIGAND0_NAME, 
+                                     ':%s' % const.INT_NAME) )
+
+            # FIXME: this really needs some clean-up
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         'int = loadmol2 "%s"\n'
                         '%s\n'
-                        's = combine {l int p}\n' %
-                        (self.frcmod1, mol2_int, leap_extra0) )
+                        's = combine {l int p}\n'
+                        '%s\n' %
+                        (self.frcmod1, mol2_int, leap_extra0, leap_extra0) )
 
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
@@ -289,11 +312,18 @@ class PertTopology(object):
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'pmemd_sc_2step_2'
 
+            if self.final_dummies:
+                patch_parms.append( (com._parm_overwrite,
+                                     ':%s' % const.INT_NAME,
+                                     ':%s' % const.LIGAND1_NAME) )
+
+            # FIXME: this really needs some clean-up
             leap_cmd = ('mods1 = loadAmberParams "%s"\n'
                         's1 = loadmol2 "%s"\n'
                         '%s\n'
-                        's = combine {l s1 p}\n' %
-                        (self.frcmod0, mol2_1, leap_extra1) )
+                        's = combine {l s1 p}\n'
+                        '%s\n' %
+                        (self.frcmod0, mol2_1, leap_extra1, leap_extra1) )
 
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2, addcmd2 = leap_cmd)
@@ -347,12 +377,11 @@ class PertTopology(object):
 
 
         if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
-            top = com._parm_overwrite + com.TOP_EXT
-
-            util.patch_parmtop(top, "")
+            for prm in patch_parms:
+                util.patch_parmtop(prm[0] + com.TOP_EXT, "", prm[1], prm[2])
             
-            self.parmtop = top
-            self.inpcrd = com._parm_overwrite + com.RST_EXT
+            #self.parmtop = top
+            #self.inpcrd = com._parm_overwrite + com.RST_EXT
 
 
 def amber_dummy(lig_morph, con_morph, lig_final, atom_map):
