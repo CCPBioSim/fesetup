@@ -393,20 +393,12 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
             mapping = dict(zip(m1[min_idx], m2[0]) )
 
         m1 = m1[min_idx]
+        m2 = m2[0]
     else:
         m1 = mol1.GetSubstructMatch(p)
         m2 = mol2.GetSubstructMatch(p)
 
         mapping = dict(zip(m1, m2) )
-
-    em = rdkit.Chem.EditableMol(mol1)
-    for idx in range(len(m1)-1, -1, -1):
-        if idx not in m1:
-            em.RemoveAtom(idx)
-
-    # RDKit cannot write mol2 files
-    # kekulize is True by default and leads to exceptions
-    rdkit.Chem.MolToMolFile(em.GetMol(), 'mcs.mol', kekulize = False)
 
     delete_atoms = []
 
