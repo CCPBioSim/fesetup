@@ -354,7 +354,7 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
                      (len(m1), len(m2) ) )
 
         # FIXME: is it possible that the smaller one has more then one matches
-        #        when uniquify=True?
+        #        when uniquify=False?
         if len(m1) < len(m2):
             m1, m2 = m2, m1
             conf1 = mol2.GetConformer()
@@ -391,6 +391,8 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
             mapping = dict(zip(m2[0], m1[min_idx]) )
         else:
             mapping = dict(zip(m1[min_idx], m2[0]) )
+
+        m1 = m1[min_idx]
     else:
         m1 = mol1.GetSubstructMatch(p)
         m2 = mol2.GetSubstructMatch(p)
