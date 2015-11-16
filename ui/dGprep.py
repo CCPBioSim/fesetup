@@ -31,7 +31,7 @@ if ('%x' % sys.hexversion)[:3] != '207':
 
 
 __revision__ = "$Id$"
-__version__ = '0.6.4'
+__version__ = '0.7.0'
 
 
 vstring = 'FESetup SUI version: %s' % __version__
@@ -498,7 +498,7 @@ defaults[SECT_DEF] = {
     'softcore_type': ('', None),
     'remake': (False, ('bool', ) ),
     'mcs.timeout': (600.0, (float, ) ),
-    'mcs.selection': ('', None),
+    'mcs.match_by': ('', None),
     'overwrite': (False, ('bool', ) ),
     'user_params': (False, ('bool', ) ),
     'MC_prep': (False, ('bool', ) ),
@@ -722,7 +722,7 @@ if __name__ == '__main__':
                           options[SECT_DEF]['FE_type'],
                           options[SECT_DEF]['softcore_type'],
                           options[SECT_DEF]['mcs.timeout'],
-                          options[SECT_DEF]['mcs.selection']) as morph:
+                          options[SECT_DEF]['mcs.match_by']) as morph:
 
             print ('Morphing %s to %s...' % pair)
 

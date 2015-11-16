@@ -32,7 +32,6 @@ from collections import OrderedDict, defaultdict
 import openbabel as ob
 
 import rdkit.Chem
-import rdkit.Chem.MCS
 from rdkit.Chem import ChiralType
 from rdkit import rdBase
 
@@ -200,17 +199,35 @@ def create_isotope_map(filename):
     return isotope_map
 
 
-# defaults are minNumAtoms = 2, maximize = 'bonds', atomCompare = 'elements',
-# bondCompare = 'bondtypes', matchValences = False, ringMatchesRingOnly =
-# False, completeRingsOnly = False, timeout = None, threshold = None
-#
-# when completeRingsOnly = True also ringMatchesRingOnly = True
-#
-# if number of atoms in match < minNumAtoms then smarts will be None
-# completeRingsOnly = True disallows partial rings
-# MCS algorithm is exhaustive so use timeout to limit time
-_params = dict(maximize = 'atoms', bondCompare = 'any',
-               completeRingsOnly = True)
+_fmcs_imp = 'c++'                       # 'python' or 'c++'
+
+if _fmcs_imp == 'c++':
+    from rdkit.Chem.rdFMCS import FindMCS, AtomCompare, BondCompare
+
+    # RDKit 2015.03.1 FMCS C++ implentation, seems super-fast, not
+    # exactly the same implementation e.g. smart string more specific
+    # NOTE: some different parameters and order!
+    _params = dict(maximizeBonds = False, threshold = 1.0,
+                   verbose = False, matchValences = False,
+                   ringMatchesRingOnly = True, completeRingsOnly = True,
+                   matchChiralTag = False, bondCompare = BondCompare.CompareAny)
+else:
+    from rdkit.Chem.MCS import FindMCS
+
+    # defaults are minNumAtoms = 2, maximize = 'bonds',
+    # atomCompare = 'elements', bondCompare = 'bondtypes',
+    # matchValences = False, ringMatchesRingOnly = False,
+    # completeRingsOnly = False, timeout = None, threshold = None
+    #
+    # when completeRingsOnly = True also ringMatchesRingOnly = True
+    #
+    # if number of atoms in match < minNumAtoms then smarts will be None
+    # completeRingsOnly = True disallows partial rings
+    # MCS algorithm is exhaustive so use timeout to limit time
+    _params = dict(minNumAtoms = 2, maximize = 'atoms', atomCompare = 'elements',
+                   bondCompare = 'any', matchValences = False,
+                   ringMatchesRingOnly = True, completeRingsOnly = True,
+                   threshold = None)
 
 def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
     """
@@ -239,8 +256,14 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
                                        removeHs = False)
     rdBase.EnableLog('rdApp.warning')
 
+    _params.update(timeout = maxtime)
+
+    # FIXME: test c++ implementation
     if isotope_map:
-        _params.update(atomCompare = 'isotopes')
+        if _fmcs_imp == 'c++':
+            _params.update(atomCompare = AtomCompare.CompareIsotopes)
+        else:
+            _params.update(atomCompare = 'isotopes')
 
         max_idx1 = mol1.GetNumAtoms()
         max_idx2 = mol2.GetNumAtoms()
@@ -267,7 +290,10 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
             atom2 = mol2.GetAtomWithIdx(idx2-1)
             atom2.SetIsotope(icnt)
     else:
-        _params.update(atomCompare = 'any')
+        if _fmcs_imp == 'c++':
+            _params.update(atomCompare = AtomCompare.CompareAny)
+        else:
+            _params.update(atomCompare = 'any')
 
         n_chiral1 = len(rdkit.Chem.FindMolChiralCenters(mol1) )
         n_chiral2 = len(rdkit.Chem.FindMolChiralCenters(mol2) )
@@ -282,20 +308,26 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
                          % (n_chiral2, 's' if n_chiral2 > 1 else '') )
 
 
-    _params.update(timeout = maxtime)
+    mcs = FindMCS( (mol1, mol2), **_params)
 
-    mcs = rdkit.Chem.MCS.FindMCS( (mol1, mol2), **_params)
+    if _fmcs_imp == 'c++':
+        smarts = mcs.smartsString
+        completed = not mcs.canceled
+    else:
+        smarts = mcs.smarts
+        completed = mcs.completed
 
-    logger.write('Running RDKit/fmcs with arguments:\n%s' %
-                 ', '.join(['%s=%s' % (k,v) for k,v in _params.iteritems()] ) )
+    logger.write('Running RDKit/fmcs (%s implementation) with arguments:\n%s' %
+                 (_fmcs_imp,
+                  ', '.join(['%s=%s' % (k,v) for k,v in _params.iteritems()] ) ) )
 
-    if not mcs.smarts:
+    if not smarts:
         raise errors.SetupError('No MCSS match could be found')
 
-    if not mcs.completed:
+    if not completed:
         logger.write('Warning: MCSS timed out after %.2fs' % maxtime)
 
-    p = rdkit.Chem.MolFromSmarts(mcs.smarts)
+    p = rdkit.Chem.MolFromSmarts(smarts)
 
     conv = ob.OBConversion()
     conv.SetInAndOutFormats('mol2', 'mol2')
@@ -304,93 +336,54 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
     conv.AddOption('r', ob.OBConversion.OUTOPTIONS)  # do not append resnum
 
     obmol1 = ob.OBMol()
-    #obmol2 = ob.OBMol()
 
     errlev = ob.obErrorLog.GetOutputLevel()
     ob.obErrorLog.SetOutputLevel(0)
 
     conv.ReadString(obmol1, mol2str_1)
-    #conv.ReadString(obmol2, mol2str_2)
 
     ob.obErrorLog.SetOutputLevel(errlev)
 
 
     # NOTE: experimental!
-    #       current problem: do not get all matches when hydrogens!
-    #       won't work if MCS does not contain binding mode conformation
-    if selec == 'distance':
-        # OpenBabel version:
-#         pat1 = ob.OBSmartsPattern()
-#         pat2 = ob.OBSmartsPattern()
+    if selec == 'spatially-closest':
+        m1 = mol1.GetSubstructMatches(p, uniquify=True, useChirality=False)
+        m2 = mol2.GetSubstructMatches(p, uniquify=True, useChirality=False)
 
-#         pat1.Init(mcs.smarts)
-#         pat2.Init(mcs.smarts)
+        # FIXME: is it possible that the smaller one has more then one matches?
+        if len(m1) < len(m2):
+            m1, m2 = m2, m1
+            conf1 = mol2.GetConformer()
+            conf2 = mol1.GetConformer()
+            swapped = True
+        else:
+            conf1 = mol1.GetConformer()
+            conf2 = mol2.GetConformer()
 
-#         pat1.Match(obmol1)
-#         pat2.Match(obmol2)
+        dist_sum = []
 
-#         for m1 in pat1.GetMapList():
-#             print m1
+        for match1 in m1:
+            dists = []
 
-        min_dist = []
-        RMSD = sys.float_info.max
+            for i, idx1 in enumerate(match1):
+                pos1 = conf1.GetAtomPosition(idx1)
 
-        mol_noH1 = rdkit.Chem.RemoveHs(mol1)
-        mol_noH2 = rdkit.Chem.RemoveHs(mol2)
+                for match2 in m2:       # FIXME: is there ever a 2nd match when
+                    idx2 = match2[i]    #        uniquify=True?
+                    pos2 = conf2.GetAtomPosition(idx2)
 
-        # FIXME: order of atoms in mol without hydrogens can be different!
-        mcs = rdkit.Chem.MCS.FindMCS( (mol_noH1, mol_noH2), **_params)
-        p_noH = rdkit.Chem.MolFromSmarts(mcs.smarts)
+                    d = math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2 +
+                                  (pos1.z - pos2.z)**2)
 
-        cnf1 = mol_noH1.GetConformer()
-        cnf2 = mol_noH2.GetConformer()
+                    dists.append(d)
 
-        for m_noH1 in mol_noH1.GetSubstructMatches(p_noH, uniquify = False,
-                                           useChirality = False,
-                                           useQueryQueryMatches = True):
-            for m_noH2 in mol_noH2.GetSubstructMatches(p_noH, uniquify = False,
-                                               useChirality = False,
-                                               useQueryQueryMatches = True):
-                dist = 0.0
-                #print m_noH1, m_noH2
+        dist_sum.append(sum(dists))
+        min_idx = dist_sum.index(min(dist_sum) )
 
-                for idx1, idx2 in zip(m_noH1, m_noH2):
-                    coord1 = cnf1.GetAtomPosition(idx1)
-                    coord2 = cnf2.GetAtomPosition(idx2)
-
-                    x1 = coord1.x
-                    y1 = coord1.y
-                    z1 = coord1.z
-
-                    x2 = coord2.x
-                    y2 = coord2.y
-                    z2 = coord2.z
-
-                    dist += (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2
-
-                tmp = math.sqrt(dist / len(m_noH1) )
-                #print tmp
-
-                if tmp < RMSD:
-                    RMSD = tmp
-                    mx1 = m_noH1
-                    mx2 = m_noH2
-
-        m1 = mol1.GetSubstructMatch(p)
-        m2 = mol2.GetSubstructMatch(p)
-
-        mapping = dict()
-
-        #print mx1, mx2
-
-        # FIXME: order of atoms in mol without hydrogens can be different!
-        for a, b in zip(m1, m2):
-            if a in mx1:
-                mapping[a] = mx2[mx1.index(a)]
-            else:
-                mapping[a] = b
-
-        print mapping
+        if swapped:
+            mapping = m2[0], m1[min_idx]
+        else:
+            mapping = m1[min_idx], m2[0]
     else:
         m1 = mol1.GetSubstructMatch(p)
         m2 = mol2.GetSubstructMatch(p)
