@@ -497,7 +497,7 @@ defaults[SECT_DEF] = {
     'FE_type': ('Sire', None),
     'softcore_type': ('', None),
     'remake': (False, ('bool', ) ),
-    'mcs.timeout': (600.0, (float, ) ),
+    'mcs.timeout': (60, (int, ) ),      # int because of FMCS/C++
     'mcs.match_by': ('', None),
     'overwrite': (False, ('bool', ) ),
     'user_params': (False, ('bool', ) ),

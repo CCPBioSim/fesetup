@@ -229,7 +229,7 @@ else:
                    ringMatchesRingOnly = True, completeRingsOnly = True,
                    threshold = None)
 
-def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
+def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
     """
     Maximum common substructure search via RDKit/fmcs.
 
@@ -256,7 +256,7 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
                                        removeHs = False)
     rdBase.EnableLog('rdApp.warning')
 
-    _params.update(timeout = maxtime)
+    _params.update(timeout = int(maxtime) )
 
     # FIXME: test c++ implementation
     if isotope_map:
@@ -350,7 +350,11 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
         m1 = mol1.GetSubstructMatches(p, uniquify=True, useChirality=False)
         m2 = mol2.GetSubstructMatches(p, uniquify=True, useChirality=False)
 
-        # FIXME: is it possible that the smaller one has more then one matches?
+        logger.write('Applying spatially-closest algorithm (%s, %s matches)\n' %
+                     (len(m1), len(m2) ) )
+
+        # FIXME: is it possible that the smaller one has more then one matches
+        #        when uniquify=True?
         if len(m1) < len(m2):
             m1, m2 = m2, m1
             conf1 = mol2.GetConformer()
@@ -359,6 +363,7 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
         else:
             conf1 = mol1.GetConformer()
             conf2 = mol2.GetConformer()
+            swapped = False
 
         dist_sum = []
 
@@ -368,8 +373,8 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
             for i, idx1 in enumerate(match1):
                 pos1 = conf1.GetAtomPosition(idx1)
 
-                for match2 in m2:       # FIXME: is there ever a 2nd match when
-                    idx2 = match2[i]    #        uniquify=True?
+                for match2 in m2:
+                    idx2 = match2[i]
                     pos2 = conf2.GetAtomPosition(idx2)
 
                     d = math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2 +
@@ -377,13 +382,15 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60.0, isotope_map = None, selec = ''):
 
                     dists.append(d)
 
-        dist_sum.append(sum(dists))
+            dist_sum.append(sum(dists))
+
         min_idx = dist_sum.index(min(dist_sum) )
 
+        # FIXME: assume there is only one match for 2nd molecule
         if swapped:
-            mapping = m2[0], m1[min_idx]
+            mapping = dict(zip(m2[0], m1[min_idx]) )
         else:
-            mapping = m1[min_idx], m2[0]
+            mapping = dict(zip(m1[min_idx], m2[0]) )
     else:
         m1 = mol1.GetSubstructMatch(p)
         m2 = mol2.GetSubstructMatch(p)
