@@ -204,13 +204,14 @@ _fmcs_imp = 'c++'                       # 'python' or 'c++'
 if _fmcs_imp == 'c++':
     from rdkit.Chem.rdFMCS import FindMCS, AtomCompare, BondCompare
 
-    # RDKit 2015.03.1 FMCS C++ implentation, seems super-fast, not
-    # exactly the same implementation e.g. smart string more specific
+    # RDKit 2015.03.1 FMCS C++ implentation, seems not to be exactly the
+    # same implementation e.g. SMARTS string more specific
     # NOTE: some different parameters and order!
+    #       matchChiralTag = False not implemented before 2015.03.1
     _params = dict(maximizeBonds = False, threshold = 1.0,
                    verbose = False, matchValences = False,
                    ringMatchesRingOnly = True, completeRingsOnly = True,
-                   matchChiralTag = False, bondCompare = BondCompare.CompareAny)
+                   bondCompare = BondCompare.CompareAny)
 else:
     from rdkit.Chem.MCS import FindMCS
 
@@ -275,7 +276,7 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
         for idx1, idx2 in isotope_map.iteritems():
             icnt += 1
 
-            logger.write('Mapping atom indices %i to %i' % (idx1, idx2) )
+            logger.write('Mapping atom index %i to %i' % (idx1, idx2) )
 
             if idx1 > max_idx1 or idx2 > max_idx2 or idx1 < 0 or idx2 < 0:
                 logger.write('Error: indices out of bounds (%i, %i)' %
@@ -354,7 +355,7 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
                      (len(m1), len(m2) ) )
 
         # FIXME: is it possible that the smaller one has more then one matches
-        #        when uniquify=False?
+        #        when uniquify=True?
         if len(m1) < len(m2):
             m1, m2 = m2, m1
             conf1 = mol2.GetConformer()
