@@ -16,6 +16,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 import rdkit.Chem as rd
 import rdkit.Chem.AllChem as ac
@@ -49,8 +50,14 @@ def calc_MST(filenames, sim_method):
     print('Reading input files...')
 
     for filename in filenames:
-       mols.append(rd.MolFromMol2File(filename, **_mol_params) )
-       mol_names.append(os.path.splitext(os.path.basename(filename))[0])
+        mol = rd.MolFromMol2File(filename, **_mol_params)
+        mols.append(mol)
+        basename = os.path.splitext(os.path.basename(filename))[0]
+        mol_names.append(basename)
+        outname = basename + os.extsep + 'png'
+        tmp = ac.Compute2DCoords(mol)
+        draw.MolToFile(mol, outname, wedgeBonds=False,
+                       fitImage=True, kekulize=False)
 
     print('Computing similarity matrix using %s...' % sim_method)
 
@@ -92,7 +99,7 @@ def calc_MST(filenames, sim_method):
                 # simple linear
                 score = NA + NB - NMCS + 1
 
-                # Brint&Willet
+                # Brint&Willethttp://effbot.org/imagingbook/imagetk.htm
                 #NbA = mol2.GetNumBonds()
                 #NbA = mol1.GetNumBonds()
                 #mol3 = rd.EditableMol(mol1)
@@ -144,25 +151,50 @@ def calc_MST(filenames, sim_method):
 
     #for mol in mols:
     #   tmp = ac.Compute2DCoords(mol)
-    #   imgs.append(draw.MolToMPL(mol) )
+    #   imgs.append(draw.MolToMPL(mol,kekulize=False) )  # matplotlib.figure.Figure
 
     #img = draw.MolsToGridImage(mols, molsPerRow=20, subImgSize=(150,150),
     #                           legends=mol_names, kekulize=False)
     #img.save('test.png')
 
     G = nx.from_scipy_sparse_matrix(mst)
-    pos = nx.spring_layout(G, iterations=2000)
+
+    for n in G:
+        img = mpimg.imread(mol_names[n] + os.extsep + 'png')
+        G.node[n]['image'] = img
+
+    pos = nx.spring_layout(G, scale = 1.0, iterations=2000)
+    #print(pos)
     node_labels = {}
 
     for i, name in enumerate(mol_names):
         node_labels[i] = name
 
-    plt.figure(0, figsize=(N/4,N/4), dpi=80)
+    plt.figure(0, figsize=(N,N), dpi=80)
 
-    nx.draw_networkx_nodes(G, pos, node_size=20, node_color='r', node_shape='o')
+    #nx.draw_networkx_nodes(G, pos, node_size=20, node_color='r', node_shape='o')
     nx.draw_networkx_edges(G, pos)
     nx.draw_networkx_edge_labels(G, pos, edge_labels)
-    nx.draw_networkx_labels(G, pos, node_labels)
+    #nx.draw_networkx_labels(G, pos, node_labels)
+    nx.draw_networkx_labels(G, pos)
+
+    ax = plt.gca()
+    fig = plt.gcf()
+    trans = ax.transData.transform
+    trans2 = fig.transFigure.inverted().transform
+    imsize = 0.05
+
+    for n in G.nodes():
+        (x, y) = pos[n]
+        xx, yy = trans((x, y)) # figure coordinates
+        xa, ya = trans2((xx, yy)) # axes coordinates
+
+        img =  G.node[n]['image']
+
+        a = plt.axes([xa - imsize / 2.0, ya - imsize / 2.0, imsize, imsize])
+        a.imshow(img)
+        a.set_aspect('equal')
+        a.axis('off')
 
     plt.axis('off')
     plt.savefig('mst.svg')
