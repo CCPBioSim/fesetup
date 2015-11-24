@@ -10,13 +10,14 @@ import os
 import sys
 import glob
 import math
+import multiprocessing as mp
+from functools import partial
 
 import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 import networkx as nx
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 
 import rdkit.Chem as rd
 import rdkit.Chem.AllChem as ac
@@ -26,189 +27,183 @@ from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem.rdFMCS import FindMCS, AtomCompare, BondCompare
 
 
-beta = 1.0
 
-_fmcs_params = dict(maximizeBonds = False, threshold = 1.0, timeout=1,
-                    verbose = False, matchValences = False,
-                    ringMatchesRingOnly = True, completeRingsOnly = True,
-                    atomCompare = AtomCompare.CompareAny,
-                    bondCompare = BondCompare.CompareAny)
+# NOTE: the more similar, the smaller the weight must be!
+#       0 (or Inf or NaN) mean no egde for dense(!) graphs
 
-_mol_params = dict(sanitize = False, removeHs = False)
+def tanimoto_score(mol1, mol2):
+    fp1 = FingerprintMols.FingerprintMol(mol1)
+    fp2 = FingerprintMols.FingerprintMol(mol2)
 
-# FIXME: guard afainst low scores
-def calc_MST(filenames, sim_method):
+    return 1.0 / (DataStructs.FingerprintSimilarity(fp1, fp2) + 1e-15)
 
-    N = len(filenames)
-    M = N * (N - 1) / 2
-    npout = (M + (100 - M % 100) ) / 100
-    cgraph = np.zeros(shape=(N,N), dtype=np.float32)
+def maccs_score(mol1, mol2):
+    fp1 = rd.MACCSkeys.GenMACCSKeys(mol1)
+    fp2 = rd.MACCSkeys.GenMACCSKeys(mol2)
 
-    mols = []
-    mol_names = []
-
-    print('Reading input files...')
-
-    for filename in filenames:
-        mol = rd.MolFromMol2File(filename, **_mol_params)
-        mols.append(mol)
-        basename = os.path.splitext(os.path.basename(filename))[0]
-        mol_names.append(basename)
-        outname = basename + os.extsep + 'png'
-        tmp = ac.Compute2DCoords(mol)
-        draw.MolToFile(mol, outname, wedgeBonds=False,
-                       fitImage=True, kekulize=False)
-
-    print('Computing similarity matrix using %s...' % sim_method)
-
-    cnt = 0 
-
-    for i in range(N-1):
-        mol1 = mols[i]
-
-        for j in range(i+1, N):
-            mol2 = mols[j]
-
-            # FIXME: disallow change in total charge
-
-            if sim_method == 'tanimoto':
-                fp1 = FingerprintMols.FingerprintMol(mol1)
-                fp2 = FingerprintMols.FingerprintMol(mol2)
-                score = DataStructs.FingerprintSimilarity(fp1, fp2)
-            elif sim_method == 'maccs':
-                fp1 = rd.MACCSkeys.GenMACCSKeys(mol1)
-                fp2 = rd.MACCSkeys.GenMACCSKeys(mol2)
-                score = DataStructs.FingerprintSimilarity(fp1, fp2)
-            elif sim_method == 'mcs':
-                mcs = FindMCS( (mol1, mol2), **_fmcs_params)
-                pattern = rd.MolFromSmarts(mcs.smartsString)
-
-                # FIXME: deal with multiple matches?
-                match1 = mol1.GetSubstructMatch(pattern)
-
-                NA = mol1.GetNumAtoms()
-                NB = mol2.GetNumAtoms()
-                NMCS = 2 * len(match1)
-
-                # NOTE: the more similar, the smaller the weight must be!
-                #       0 (or Inf or NaN) mean no egde for dense(!) graphs
-                #
-                #       LOMAP, for heavy atoms only
-                #score = math.exp(beta * (NA + NB - NMCS) )
-
-                # simple linear
-                score = NA + NB - NMCS + 1
-
-                # Brint&Willethttp://effbot.org/imagingbook/imagetk.htm
-                #NbA = mol2.GetNumBonds()
-                #NbA = mol1.GetNumBonds()
-                #mol3 = rd.EditableMol(mol1)
- 
-                #for k in range(NA-1, -1, -1):
-                #    if k not in match1:
-                #        mol3.RemoveAtom(k)
-
-                #NbMCS = mol3.GetMol().GetNumAtoms()
-
-                #score = (float(NMCS + NbMCS) /
-                #         float( (NA + NB) * (NbA + NbA) ) )
+    return 1.0 / (DataStructs.FingerprintSimilarity(fp1, fp2) + 1e-15)
 
 
-                # NOTE: triangle or symmetric matrix? Possible multiplicity:
-                #       either accept this or change scoring function
-            else:
-                raise ValueError('Unknown similarity method: %s'
-                                 % sim_method)
+_fmcs_params = dict(maximizeBonds=False, threshold=1.0, timeout=10,
+                    verbose=False, matchValences=False,
+                    ringMatchesRingOnly=True, completeRingsOnly=True,
+                    atomCompare=AtomCompare.CompareAny,
+                    bondCompare=BondCompare.CompareAny)
 
-            cgraph[i][j] = score
-            cnt += 1
+def mcs_score(mol1, mol2):
+    mcs = FindMCS( (mol1, mol2), **_fmcs_params)
+    pattern = rd.MolFromSmarts(mcs.smartsString)
 
-            if not cnt % npout:
-                print('%i...' % cnt)
+    # FIXME: deal with multiple matches?
+    match1 = mol1.GetSubstructMatch(pattern)
 
-    print('similarity score matrix:\n', cgraph)
+    NA = mol1.GetNumAtoms()
+    NB = mol2.GetNumAtoms()
+    NMCS = 2 * len(match1)
 
-    # NOTE: this removes edges with the larger weight
-    mst = minimum_spanning_tree(csr_matrix(cgraph) )
+    # LOMAP, for heavy atoms only
+    #beta = 1.0
+    #score = math.exp(beta * (NA + NB - NMCS) )
+
+    # simple linear
+    score = NA + NB - NMCS + 1
+
+    # Brint&Willet
+    #NbA = mol2.GetNumBonds()
+    #NbA = mol1.GetNumBonds()
+    #mol3 = rd.EditableMol(mol1)
+
+    #for k in range(NA-1, -1, -1):
+    #    if k not in match1:
+    #        mol3.RemoveAtom(k)
+
+    #NbMCS = mol3.GetMol().GetNumAtoms()
+
+    #score = (float(NMCS + NbMCS) /
+    #         float( (NA + NB) * (NbA + NbA) ) )
+
+    return score
+
+
+valid_methods = {'tanimoto' : tanimoto_score,
+                 'maccs' : maccs_score,
+                 'mcs' : mcs_score}
+
+def draw_graph(mst, mol_names, dir_names):
 
     mst_a = mst.toarray()
+    N = mst.size
     print('\nminimal spanning tree (MST):\n', mst_a)
 
     cnt = 0
-    edge_labels = {}
     print('\nsuggested mappings from MST:')
+
+    G = nx.from_scipy_sparse_matrix(mst)
 
     for i, j in zip(mst.nonzero()[0], mst.nonzero()[1]):
         cnt += 1
         n1 = mol_names[i]
         n2 = mol_names[j]
         score = mst_a[i][j]
+
         print('%6i) %s <> %s (%f)\n' % (cnt, n1, n2, score), end='')
-        edge_labels[i,j] = '%.4f' % score
 
-    # draw picture for each molecule
-    #imgs = []
-
-    #for mol in mols:
-    #   tmp = ac.Compute2DCoords(mol)
-    #   imgs.append(draw.MolToMPL(mol,kekulize=False) )  # matplotlib.figure.Figure
-
-    #img = draw.MolsToGridImage(mols, molsPerRow=20, subImgSize=(150,150),
-    #                           legends=mol_names, kekulize=False)
-    #img.save('test.png')
-
-    G = nx.from_scipy_sparse_matrix(mst)
-
-    for n in G:
-        img = mpimg.imread(mol_names[n] + os.extsep + 'png')
-        G.node[n]['image'] = img
-
-    pos = nx.spring_layout(G, scale = 1.0, iterations=2000)
-    #print(pos)
-    node_labels = {}
-
-    for i, name in enumerate(mol_names):
-        node_labels[i] = name
-
-    plt.figure(0, figsize=(N,N), dpi=80)
-
-    #nx.draw_networkx_nodes(G, pos, node_size=20, node_color='r', node_shape='o')
-    nx.draw_networkx_edges(G, pos)
-    nx.draw_networkx_edge_labels(G, pos, edge_labels)
-    #nx.draw_networkx_labels(G, pos, node_labels)
-    nx.draw_networkx_labels(G, pos)
-
-    ax = plt.gca()
-    fig = plt.gcf()
-    trans = ax.transData.transform
-    trans2 = fig.transFigure.inverted().transform
-    imsize = 0.05
+        G.edge[i][j]['label'] = '%.1f' % (score - 1)
+        G.edge[i][j]['len'] = '3.0'
 
     for n in G.nodes():
-        (x, y) = pos[n]
-        xx, yy = trans((x, y)) # figure coordinates
-        xa, ya = trans2((xx, yy)) # axes coordinates
+        G.node[n]['image'] = os.path.join(dir_names[n],
+                                          mol_names[n] + os.extsep + 'svg')
+        G.node[n]['shape'] = 'box'
+        G.node[n]['label'] = ''
 
-        img =  G.node[n]['image']
+    nx.write_dot(G, 'test.dot')
 
-        a = plt.axes([xa - imsize / 2.0, ya - imsize / 2.0, imsize, imsize])
-        a.imshow(img)
-        a.set_aspect('equal')
-        a.axis('off')
 
-    plt.axis('off')
-    plt.savefig('mst.svg')
+_mol_params = dict(sanitize=False, removeHs=False)
+
+# FIXME: guard against low scores
+#        disallow change in total charge
+def calc_MST(filenames, sim_method, parallel=False):
+
+    score = valid_methods[sim_method]
+
+    N = len(filenames)
+    M = N * (N - 1) / 2
+    npout = (M + (100 - M % 100) ) / 100
+    simmat = np.zeros(shape=(N,N), dtype=np.float32)
+
+    mols = []
+    mol_names = []
+    dir_names = []
+
+    print('Reading input files...')
+
+    for filename in filenames:
+        mol = rd.MolFromMol2File(filename, **_mol_params)
+
+        dirname = os.path.dirname(filename)
+        basename = os.path.splitext(os.path.basename(filename))[0]
+        outname = os.path.join(dirname, basename + os.extsep + 'svg')
+
+        mols.append(mol)
+        mol_names.append(basename)
+        dir_names.append(dirname)
+
+        tmp = ac.Compute2DCoords(mol)
+
+        draw.MolToFile(mol, outname, wedgeBonds=False, size=(150,150),
+                       fitImage=True, kekulize=False)
+
+    print('Computing similarity matrix using %s...' % sim_method)
+
+    if parallel:
+        pool = mp.Pool()
+
+        for i in range(N-1):
+            print('%s...' % mol_names[i])
+
+            partial_func = partial(score, mols[i])
+            simmat[i][i+1:N] = pool.map(partial_func, mols[i+1:N])
+
+        pool.close()
+        pool.join()
+    else:
+        for i in range(N-1):
+            print('%s...' % mol_names[i])
+            mol1 = mols[i]
+
+            for j in range(i+1, N):
+                mol2 = mols[j]
+                simmat[i][j] = score(mol1, mol2)
+
+    print('similarity score matrix:\n', simmat)
+
+    # NOTE: this removes edges with the larger weight
+    mst = minimum_spanning_tree(csr_matrix(simmat) )
+
+    draw_graph(mst, mol_names, dir_names)
 
 
 
 if __name__ == '__main__':
 
     if len(sys.argv) < 3:
-        print('Usage: %s similarity[tanimoto|maccs|mcs] dir_with_mol2' %
+        print('Usage: %s similarity[tanimoto|maccs|mcs] '
+              'dir_with_mol2 [parallel]' %
               sys.argv[0], file=sys.stderr)
         exit(1)
 
     # FIXME: other file types
     mol2_files = glob.glob('%s/*.mol2' % sys.argv[2])
 
-    calc_MST(mol2_files, sys.argv[1])
+    method = sys.argv[1]
+
+    if method not in valid_methods:
+        raise ValueError('Unknown similarity method: %s' % method)
+
+    parallel = 0
+    if len(sys.argv) == 4:
+        parallel = sys.argv[3]
+
+    calc_MST(mol2_files, method, parallel)
