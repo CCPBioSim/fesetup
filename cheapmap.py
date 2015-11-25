@@ -17,7 +17,6 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 import networkx as nx
-import matplotlib.pyplot as plt
 
 import rdkit.Chem as rd
 import rdkit.Chem.AllChem as ac
@@ -28,8 +27,12 @@ from rdkit.Chem.rdFMCS import FindMCS, AtomCompare, BondCompare
 
 
 
+DOT_FILE = 'mst.dot'
+GPICKLE_FILE = 'nx_mst.pickle'
+
+
 # NOTE: the more similar, the smaller the weight must be!
-#       0 (or Inf or NaN) mean no egde for dense(!) graphs
+#       0 (or Inf or NaN) means no egde for dense(!) graphs
 
 def tanimoto_score(mol1, mol2):
     fp1 = FingerprintMols.FingerprintMol(mol1)
@@ -44,7 +47,7 @@ def maccs_score(mol1, mol2):
     return 1.0 / (DataStructs.FingerprintSimilarity(fp1, fp2) + 1e-15)
 
 
-_fmcs_params = dict(maximizeBonds=False, threshold=1.0, timeout=10,
+_fmcs_params = dict(maximizeBonds=False, threshold=1.0, timeout=60,
                     verbose=False, matchValences=False,
                     ringMatchesRingOnly=True, completeRingsOnly=True,
                     atomCompare=AtomCompare.CompareAny,
@@ -89,7 +92,7 @@ valid_methods = {'tanimoto' : tanimoto_score,
                  'maccs' : maccs_score,
                  'mcs' : mcs_score}
 
-def draw_graph(mst, mol_names, dir_names):
+def draw_graph(mst, mol_names, dir_names, sim_method):
 
     mst_a = mst.toarray()
     N = mst.size
@@ -100,6 +103,11 @@ def draw_graph(mst, mol_names, dir_names):
 
     G = nx.from_scipy_sparse_matrix(mst)
 
+    if sim_method == 'mcs':
+        corr = 1
+    else:
+        corr = 0
+
     for i, j in zip(mst.nonzero()[0], mst.nonzero()[1]):
         cnt += 1
         n1 = mol_names[i]
@@ -108,7 +116,7 @@ def draw_graph(mst, mol_names, dir_names):
 
         print('%6i) %s <> %s (%f)\n' % (cnt, n1, n2, score), end='')
 
-        G.edge[i][j]['label'] = '%.1f' % (score - 1)
+        G.edge[i][j]['label'] = '%.1f' % (score - corr)  # when MCS!
         G.edge[i][j]['len'] = '3.0'
 
     for n in G.nodes():
@@ -117,7 +125,8 @@ def draw_graph(mst, mol_names, dir_names):
         G.node[n]['shape'] = 'box'
         G.node[n]['label'] = ''
 
-    nx.write_dot(G, 'test.dot')
+    nx.write_dot(G, DOT_FILE)
+    nx.write_gpickle(G, GPICKLE_FILE)
 
 
 _mol_params = dict(sanitize=False, removeHs=False)
@@ -158,6 +167,7 @@ def calc_MST(filenames, sim_method, parallel=False):
     print('Computing similarity matrix using %s...' % sim_method)
 
     if parallel:
+        #nproc = mp.cpu_count()
         pool = mp.Pool()
 
         for i in range(N-1):
@@ -182,7 +192,7 @@ def calc_MST(filenames, sim_method, parallel=False):
     # NOTE: this removes edges with the larger weight
     mst = minimum_spanning_tree(csr_matrix(simmat) )
 
-    draw_graph(mst, mol_names, dir_names)
+    draw_graph(mst, mol_names, dir_names, sim_method)
 
 
 
