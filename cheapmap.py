@@ -27,6 +27,7 @@ from rdkit.Chem.rdFMCS import FindMCS, AtomCompare, BondCompare
 
 
 
+MST_NP_FILE = 'scipy_mst'
 DOT_FILE = 'mst.dot'
 GPICKLE_FILE = 'nx_mst.pickle'
 
@@ -133,7 +134,7 @@ _mol_params = dict(sanitize=False, removeHs=False)
 
 # FIXME: guard against low scores
 #        disallow change in total charge
-def calc_MST(filenames, sim_method, parallel=False):
+def calc_MST(filenames, sim_method, do_draw=True, parallel=False):
 
     score = valid_methods[sim_method]
 
@@ -161,13 +162,13 @@ def calc_MST(filenames, sim_method, parallel=False):
 
         tmp = ac.Compute2DCoords(mol)
 
-        draw.MolToFile(mol, outname, wedgeBonds=False, size=(150,150),
-                       fitImage=True, kekulize=False)
+        if do_draw:
+            draw.MolToFile(mol, outname, wedgeBonds=False, size=(150,150),
+                           fitImage=True, kekulize=False)
 
     print('Computing similarity matrix using %s...' % sim_method)
 
     if parallel:
-        #nproc = mp.cpu_count()
         pool = mp.Pool()
 
         for i in range(N-1):
@@ -190,9 +191,13 @@ def calc_MST(filenames, sim_method, parallel=False):
     print('similarity score matrix:\n', simmat)
 
     # NOTE: this removes edges with the larger weight
-    mst = minimum_spanning_tree(csr_matrix(simmat) )
+    mst = minimum_spanning_tree(csr_matrix(simmat))
 
-    draw_graph(mst, mol_names, dir_names, sim_method)
+    # pickle.dump doesn't work
+    np.savez(MST_NP_FILE, data=mst.data, indices=mst.indices,
+             indptr=mst.indptr, shape=mst.shape )
+
+    return mst, mol_names, dir_names
 
 
 
@@ -200,7 +205,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) < 3:
         print('Usage: %s similarity[tanimoto|maccs|mcs] '
-              'dir_with_mol2 [parallel]' %
+              'dir_with_mol2 [draw] [parallel]' %
               sys.argv[0], file=sys.stderr)
         exit(1)
 
@@ -212,8 +217,15 @@ if __name__ == '__main__':
     if method not in valid_methods:
         raise ValueError('Unknown similarity method: %s' % method)
 
-    parallel = 0
+    do_draw = True
     if len(sys.argv) == 4:
-        parallel = sys.argv[3]
+        do_draw = sys.argv[3]
 
-    calc_MST(mol2_files, method, parallel)
+    parallel = False
+    if len(sys.argv) == 5:
+        parallel = sys.argv[4]
+
+    mst, mol_names, dir_names = calc_MST(mol2_files, method, do_draw, parallel)
+
+    if do_draw:
+        draw_graph(mst, mol_names, dir_names, method)
