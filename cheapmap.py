@@ -206,18 +206,29 @@ def calc_MST(filenames, sim_method, do_draw=True, parallel=False):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Compute the minimal spanning tree (MST) from a set of '
+        'mol2 files. The similarity matrix is computed for all the molecules '
+        'with a chosen similarity method.  This matrix is then reduced to a '
+        'MST path such that all N(N-1)/2 pairs are reduced to a path of N-1 '
+        'pairs by minimising the sum of similarity scores.')
     parser.add_argument('mol2_dir', nargs=1,
-                        help='directory containing mol2 files')
+                        help='directory containing mol2 files '
+                        '(only first molecule read)')
     parser.add_argument('-m', '--method', type=str, default=['mcs'], nargs=1,
-                        help='similarity method [mcs|tanimoto|maccs]')
-    parser.add_argument('-d', '--draw', default=False, action='store_true',
+                        choices=['mcs', 'tanimoto', 'maccs'],
+                        help='similarity method used for each molecule pair')
+    parser.add_argument('-d', '--draw', action='store_true',
                         help='draw the resulting MST graph (requires PIL, '
                         'pygraphviz)')
-    parser.add_argument('-p', '--parallel', default=False, action='store_true',
+    parser.add_argument('-p', '--parallel', action='store_true',
                         help='enable the multiprocessing feature')
+    parser.add_argument('--version', action='version', version='%(prog)s 0.1.0')
     parser.add_argument('--tracebacklimit', type=int, default=0, nargs=1,
-                        help='set the Python traceback limit (for debugging)')
+                        metavar='N',
+                        help='set the Python traceback limit to N '
+                        '(for debugging)')
+
     args = parser.parse_args()
 
     sys.tracebacklimit = args.tracebacklimit
@@ -225,10 +236,11 @@ if __name__ == '__main__':
 
     # FIXME: other file types
     mol2_files = glob.glob('%s/*.mol2' % args.mol2_dir[0])
-    method = args.method[0]
 
-    if method not in valid_methods:
-        raise ValueError('Unknown similarity method: %s' % method)
+    if not mol2_files:
+        raise IOError('directory %s non-existent or empty' % args.mol2_dir[0])
+    
+    method = args.method[0]
 
     if args.parallel:
         print('Running on %i processors...' % mp.cpu_count() )
