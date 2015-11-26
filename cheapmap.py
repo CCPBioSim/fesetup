@@ -209,7 +209,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('mol2_dir', nargs=1,
                         help='directory containing mol2 files')
-    parser.add_argument('-m', '--method', type=str, default='mcs', nargs=1,
+    parser.add_argument('-m', '--method', type=str, default=['mcs'], nargs=1,
                         help='similarity method [mcs|tanimoto|maccs]')
     parser.add_argument('-d', '--draw', default=False, action='store_true',
                         help='draw the resulting MST graph (requires PIL, '
@@ -222,17 +222,19 @@ if __name__ == '__main__':
 
     sys.tracebacklimit = args.tracebacklimit
 
+
     # FIXME: other file types
     mol2_files = glob.glob('%s/*.mol2' % args.mol2_dir[0])
+    method = args.method[0]
 
-    if args.method[0] not in valid_methods:
-        raise ValueError('Unknown similarity method: %s' % args.method[0])
+    if method not in valid_methods:
+        raise ValueError('Unknown similarity method: %s' % method)
 
     if args.parallel:
         print('Running on %i processors...' % mp.cpu_count() )
 
-    mst, mol_names, dir_names = calc_MST(mol2_files, args.method[0], args.draw,
+    mst, mol_names, dir_names = calc_MST(mol2_files, method, args.draw,
                                          args.parallel)
 
     if args.draw:
-        draw_graph(mst, mol_names, dir_names, args.method)
+        draw_graph(mst, mol_names, dir_names, method)
