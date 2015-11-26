@@ -12,9 +12,10 @@ import rdkit.Chem as rd
 
 
 
-MST_NP_FILE = 'scipy_mst.npz'
+#MST_NP_FILE = 'scipy_mst.npz'
 DOT_FILE = 'mst.dot'
 GPICKLE_FILE = 'nx_mst.pickle'
+MST_PICKLE_FILE = 'mst.pickle'
 
 
 # NOTE: the more similar, the smaller the weight must be!
@@ -110,10 +111,14 @@ def draw_graph(mst, mst_a, mol_names, dir_names, method):
         G.edge[i][j]['len'] = '3.0'
 
     for n in G.nodes():
-        G.node[n]['image'] = os.path.join(dir_names[n],
-                                          mol_names[n] + os.extsep + 'svg')
         G.node[n]['shape'] = 'box'
-        G.node[n]['label'] = ''
+        G.node[n]['label'] = ('<'
+        '<table border="0" cellspacing="-20" cellborder="0">'
+        '<tr><td><img src="%s"/></td></tr>'
+        '<tr><td bgcolor="#F0F0F0">%s</td></tr>'
+        '</table>>' % (os.path.join(dir_names[n],
+                                    mol_names[n] + os.extsep + 'svg'),
+                       mol_names[n]) )
 
     print('Writing networkx graph pickle file %s...' % GPICKLE_FILE)
     nx.write_gpickle(G, GPICKLE_FILE)
@@ -209,10 +214,10 @@ def calc_MST(filenames, method, do_draw=True, parallel=False):
 
         print('%6i) %s <> %s (%f)\n' % (cnt, n1, n2, score), end='')
 
-    # pickle.dump doesn't work
-    print('\nWriting MST data file %s (numpy savez format)...' % MST_NP_FILE)
-    np.savez(MST_NP_FILE, data=mst.data, indices=mst.indices,
-             indptr=mst.indptr, shape=mst.shape )
+    with open(MST_PICKLE_FILE, 'wb') as pfile:
+        pickle.dump(mst, pfile, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(mol_names, pfile, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(dir_names, pfile, pickle.HIGHEST_PROTOCOL)
 
     return mst, mst_a, mol_names, dir_names
 
@@ -223,6 +228,7 @@ if __name__ == '__main__':
     import argparse
     import sys
     import glob
+    import cPickle as pickle
 
     parser = argparse.ArgumentParser(
         description='Compute the minimal spanning tree (MST) from a set of '
