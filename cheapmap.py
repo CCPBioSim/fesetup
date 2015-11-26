@@ -6,29 +6,13 @@
 
 from __future__ import print_function
 
-import argparse
 import os
-import sys
-import glob
-import math
-import multiprocessing as mp
-from functools import partial
-
-import numpy as np
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import minimum_spanning_tree
-import networkx as nx
 
 import rdkit.Chem as rd
-import rdkit.Chem.AllChem as ac
-import rdkit.Chem.Draw as draw
-from rdkit import DataStructs
-from rdkit.Chem.Fingerprints import FingerprintMols
-from rdkit.Chem.rdFMCS import FindMCS, AtomCompare, BondCompare
 
 
 
-MST_NP_FILE = 'scipy_mst'
+MST_NP_FILE = 'scipy_mst.npz'
 DOT_FILE = 'mst.dot'
 GPICKLE_FILE = 'nx_mst.pickle'
 
@@ -37,25 +21,41 @@ GPICKLE_FILE = 'nx_mst.pickle'
 #       0 (or Inf or NaN) means no egde for dense(!) graphs
 
 def tanimoto_score(mol1, mol2):
+    """Compute the similarity via Tanimoto fingerprints for mol1 and mol2."""
+
+    from rdkit.Chem.Fingerprints import FingerprintMols
+    from rdkit import DataStructs
+
     fp1 = FingerprintMols.FingerprintMol(mol1)
     fp2 = FingerprintMols.FingerprintMol(mol2)
 
     return 1.0 / (DataStructs.FingerprintSimilarity(fp1, fp2) + 1e-15)
 
 def maccs_score(mol1, mol2):
+    """Compute the similarity via MACCS fingerprints for mol1 and mol2."""
+
+    from rdkit.Chem.Fingerprints import FingerprintMols
+    from rdkit import DataStructs
+
     fp1 = rd.MACCSkeys.GenMACCSKeys(mol1)
     fp2 = rd.MACCSkeys.GenMACCSKeys(mol2)
 
     return 1.0 / (DataStructs.FingerprintSimilarity(fp1, fp2) + 1e-15)
 
 
-_fmcs_params = dict(maximizeBonds=False, threshold=1.0, timeout=60,
-                    verbose=False, matchValences=False,
-                    ringMatchesRingOnly=True, completeRingsOnly=True,
-                    atomCompare=AtomCompare.CompareAny,
-                    bondCompare=BondCompare.CompareAny)
-
 def mcs_score(mol1, mol2):
+    """Compute the similarity via the MCS for mol1 and mol2."""
+
+    import math
+
+    from rdkit.Chem.rdFMCS import FindMCS, AtomCompare, BondCompare
+
+    _fmcs_params = dict(maximizeBonds=False, threshold=1.0, timeout=60,
+                        verbose=False, matchValences=False,
+                        ringMatchesRingOnly=True, completeRingsOnly=True,
+                        atomCompare=AtomCompare.CompareAny,
+                        bondCompare=BondCompare.CompareAny)
+
     mcs = FindMCS( (mol1, mol2), **_fmcs_params)
     pattern = rd.MolFromSmarts(mcs.smartsString)
 
@@ -94,31 +94,19 @@ valid_methods = {'tanimoto' : tanimoto_score,
                  'maccs' : maccs_score,
                  'mcs' : mcs_score}
 
-def draw_graph(mst, mol_names, dir_names, sim_method):
+def draw_graph(mst, mst_a, mol_names, dir_names, method):
 
-    mst_a = mst.toarray()
-    N = mst.size
-    print('\nminimal spanning tree (MST):\n', mst_a)
-
-    cnt = 0
-    print('\nsuggested mappings from MST:')
+    import networkx as nx
 
     G = nx.from_scipy_sparse_matrix(mst)
 
-    if sim_method == 'mcs':
+    if method == 'mcs':
         corr = 1
     else:
         corr = 0
 
     for i, j in zip(mst.nonzero()[0], mst.nonzero()[1]):
-        cnt += 1
-        n1 = mol_names[i]
-        n2 = mol_names[j]
-        score = mst_a[i][j]
-
-        print('%6i) %s <> %s (%f)\n' % (cnt, n1, n2, score), end='')
-
-        G.edge[i][j]['label'] = '%.1f' % (score - corr)  # when MCS!
+        G.edge[i][j]['label'] = '%.1f' % (mst_a[i][j] - corr)
         G.edge[i][j]['len'] = '3.0'
 
     for n in G.nodes():
@@ -127,9 +115,10 @@ def draw_graph(mst, mol_names, dir_names, sim_method):
         G.node[n]['shape'] = 'box'
         G.node[n]['label'] = ''
 
+    print('Writing networkx graph pickle file %s...' % GPICKLE_FILE)
     nx.write_gpickle(G, GPICKLE_FILE)
 
-    print('\nWriting DOT file...')
+    print('Writing DOT file %s...' % DOT_FILE)
     nx.write_dot(G, DOT_FILE)
 
 
@@ -137,9 +126,17 @@ _mol_params = dict(sanitize=False, removeHs=False)
 
 # FIXME: guard against low scores
 #        disallow change in total charge
-def calc_MST(filenames, sim_method, do_draw=True, parallel=False):
+def calc_MST(filenames, method, do_draw=True, parallel=False):
 
-    score = valid_methods[sim_method]
+    from functools import partial
+
+    import numpy as np
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import minimum_spanning_tree
+
+    import rdkit.Chem.AllChem as ac
+
+    score = valid_methods[method]
 
     N = len(filenames)
     M = N * (N - 1) / 2
@@ -166,10 +163,11 @@ def calc_MST(filenames, sim_method, do_draw=True, parallel=False):
         tmp = ac.Compute2DCoords(mol)
 
         if do_draw:
+            import rdkit.Chem.Draw as draw
             draw.MolToFile(mol, outname, wedgeBonds=False, size=(150,150),
                            fitImage=True, kekulize=False)
 
-    print('Computing similarity matrix using %s...' % sim_method)
+    print('Computing similarity matrix using %s...' % method)
 
     if parallel:
         pool = mp.Pool(mp.cpu_count() )
@@ -196,15 +194,35 @@ def calc_MST(filenames, sim_method, do_draw=True, parallel=False):
     # NOTE: this removes edges with the larger weight
     mst = minimum_spanning_tree(csr_matrix(simmat))
 
+    cnt = 0
+    mst_a = mst.toarray()
+
+    print('\nminimal spanning tree (MST):\n', mst_a)
+
+    print('\nsuggested mappings from MST:')
+
+    for i, j in zip(mst.nonzero()[0], mst.nonzero()[1]):
+        cnt += 1
+        n1 = mol_names[i]
+        n2 = mol_names[j]
+        score = mst_a[i][j]
+
+        print('%6i) %s <> %s (%f)\n' % (cnt, n1, n2, score), end='')
+
     # pickle.dump doesn't work
+    print('\nWriting MST data file %s (numpy savez format)...' % MST_NP_FILE)
     np.savez(MST_NP_FILE, data=mst.data, indices=mst.indices,
              indptr=mst.indptr, shape=mst.shape )
 
-    return mst, mol_names, dir_names
+    return mst, mst_a, mol_names, dir_names
 
 
 
 if __name__ == '__main__':
+
+    import argparse
+    import sys
+    import glob
 
     parser = argparse.ArgumentParser(
         description='Compute the minimal spanning tree (MST) from a set of '
@@ -223,7 +241,7 @@ if __name__ == '__main__':
                         'pygraphviz)')
     parser.add_argument('-p', '--parallel', action='store_true',
                         help='enable the multiprocessing feature')
-    parser.add_argument('--version', action='version', version='%(prog)s 0.1.0')
+    parser.add_argument('--version', action='version', version='%(prog)s 0.2.0')
     parser.add_argument('--tracebacklimit', type=int, default=0, nargs=1,
                         metavar='N',
                         help='set the Python traceback limit to N '
@@ -243,10 +261,11 @@ if __name__ == '__main__':
     method = args.method[0]
 
     if args.parallel:
+        import multiprocessing as mp
         print('Running on %i processors...' % mp.cpu_count() )
 
-    mst, mol_names, dir_names = calc_MST(mol2_files, method, args.draw,
-                                         args.parallel)
+    mst, mst_a, mol_names, dir_names = calc_MST(mol2_files, method, args.draw,
+                                                args.parallel)
 
     if args.draw:
-        draw_graph(mst, mol_names, dir_names, method)
+        draw_graph(mst, mst_a, mol_names, dir_names, method)
