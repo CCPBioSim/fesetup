@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 
+import argparse
 import os
 import sys
 import glob
@@ -126,8 +127,10 @@ def draw_graph(mst, mol_names, dir_names, sim_method):
         G.node[n]['shape'] = 'box'
         G.node[n]['label'] = ''
 
-    nx.write_dot(G, DOT_FILE)
     nx.write_gpickle(G, GPICKLE_FILE)
+
+    print('\nWriting DOT file...')
+    nx.write_dot(G, DOT_FILE)
 
 
 _mol_params = dict(sanitize=False, removeHs=False)
@@ -169,7 +172,7 @@ def calc_MST(filenames, sim_method, do_draw=True, parallel=False):
     print('Computing similarity matrix using %s...' % sim_method)
 
     if parallel:
-        pool = mp.Pool()
+        pool = mp.Pool(mp.cpu_count() )
 
         for i in range(N-1):
             print('%s...' % mol_names[i])
@@ -203,29 +206,33 @@ def calc_MST(filenames, sim_method, do_draw=True, parallel=False):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) < 3:
-        print('Usage: %s similarity[tanimoto|maccs|mcs] '
-              'dir_with_mol2 [draw] [parallel]' %
-              sys.argv[0], file=sys.stderr)
-        exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('mol2_dir', nargs=1,
+                        help='directory containing mol2 files')
+    parser.add_argument('-m', '--method', type=str, default='mcs', nargs=1,
+                        help='similarity method [mcs|tanimoto|maccs]')
+    parser.add_argument('-d', '--draw', default=False, action='store_true',
+                        help='draw the resulting MST graph (requires PIL, '
+                        'pygraphviz)')
+    parser.add_argument('-p', '--parallel', default=False, action='store_true',
+                        help='enable the multiprocessing feature')
+    parser.add_argument('--tracebacklimit', type=int, default=0, nargs=1,
+                        help='set the Python traceback limit (for debugging)')
+    args = parser.parse_args()
+
+    sys.tracebacklimit = args.tracebacklimit
 
     # FIXME: other file types
-    mol2_files = glob.glob('%s/*.mol2' % sys.argv[2])
+    mol2_files = glob.glob('%s/*.mol2' % args.mol2_dir[0])
 
-    method = sys.argv[1]
+    if args.method[0] not in valid_methods:
+        raise ValueError('Unknown similarity method: %s' % args.method[0])
 
-    if method not in valid_methods:
-        raise ValueError('Unknown similarity method: %s' % method)
+    if args.parallel:
+        print('Running on %i processors...' % mp.cpu_count() )
 
-    do_draw = True
-    if len(sys.argv) == 4:
-        do_draw = sys.argv[3]
+    mst, mol_names, dir_names = calc_MST(mol2_files, args.method[0], args.draw,
+                                         args.parallel)
 
-    parallel = False
-    if len(sys.argv) == 5:
-        parallel = sys.argv[4]
-
-    mst, mol_names, dir_names = calc_MST(mol2_files, method, do_draw, parallel)
-
-    if do_draw:
-        draw_graph(mst, mol_names, dir_names, method)
+    if args.draw:
+        draw_graph(mst, mol_names, dir_names, args.method)

@@ -591,7 +591,7 @@ if __name__ == '__main__':
                         help = 'input file in INI format, if not given then '
                         'just output defaults')
     parser.add_argument('--tracebacklimit', type = int, default = 0,
-               help = 'set the Python traceback limit')
+               help = 'set the Python traceback limit (for debugging)')
     args = parser.parse_args()
 
     options = IniParser(copy.deepcopy(defaults))
