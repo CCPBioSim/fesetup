@@ -264,13 +264,18 @@ if __name__ == '__main__':
 
     if args.graph:
         import rdkit.Chem.Draw as draw
+        import rdkit.Chem.AllChem as ac
 
         # FIXME: ugly hack
         for filename in glob.glob('%s/*.mol2' % args.mol2_dir[0]):
             mol = rd.MolFromMol2File(filename, **_mol_params)
+
             dirname = os.path.dirname(filename)
             basename = os.path.splitext(os.path.basename(filename))[0]
             outname = os.path.join(dirname, basename + os.extsep + 'svg')
+
+            tmp = ac.Compute2DCoords(mol)
+
             draw.MolToFile(mol, outname, wedgeBonds=False, size=(150,150),
                            fitImage=True, kekulize=False)
 
