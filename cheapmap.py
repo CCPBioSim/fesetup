@@ -176,23 +176,24 @@ def calc_MST(filenames, method, do_draw=True, parallel=False):
 
     if parallel:
         pool = mp.Pool(mp.cpu_count() )
+        map_func = pool.imap
+    else:
+        map_func = map
 
-        for i in range(N-1):
-            print('%s...' % mol_names[i])
+    results = []
 
-            partial_func = partial(score, mols[i])
-            simmat[i][i+1:N] = pool.map(partial_func, mols[i+1:N])
+    for i in range(N-1):
+        print('%s...' % mol_names[i])
 
+        partial_func = partial(score, mols[i])
+        results.append(map_func(partial_func, mols[i+1:N]) )
+
+    for i, row in enumerate(results):
+        simmat[i][i+1:N] = [s for s in row]
+
+    if parallel:
         pool.close()
         pool.join()
-    else:
-        for i in range(N-1):
-            print('%s...' % mol_names[i])
-            mol1 = mols[i]
-
-            for j in range(i+1, N):
-                mol2 = mols[j]
-                simmat[i][j] = score(mol1, mol2)
 
     print('similarity score matrix:\n', simmat)
 
