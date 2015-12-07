@@ -246,6 +246,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--draw', action='store_true',
                         help='draw the resulting MST graph (requires PIL, '
                         'pygraphviz)')
+    parser.add_argument('-g', '--graph', default=None, nargs=1,
+                        help='read graph from previous run and draw it'
+                        'pygraphviz)')
     parser.add_argument('-p', '--parallel', action='store_true',
                         help='enable the multiprocessing feature')
     parser.add_argument('--version', action='version', version='%(prog)s 0.2.0')
@@ -259,20 +262,40 @@ if __name__ == '__main__':
     sys.tracebacklimit = args.tracebacklimit
 
 
-    # FIXME: other file types
-    mol2_files = glob.glob('%s/*.mol2' % args.mol2_dir[0])
+    if args.graph:
+        import rdkit.Chem.Draw as draw
 
-    if not mol2_files:
-        raise IOError('directory %s non-existent or empty' % args.mol2_dir[0])
+        # FIXME: ugly hack
+        for filename in glob.glob('%s/*.mol2' % args.mol2_dir[0]):
+            mol = rd.MolFromMol2File(filename, **_mol_params)
+            dirname = os.path.dirname(filename)
+            basename = os.path.splitext(os.path.basename(filename))[0]
+            outname = os.path.join(dirname, basename + os.extsep + 'svg')
+            draw.MolToFile(mol, outname, wedgeBonds=False, size=(150,150),
+                           fitImage=True, kekulize=False)
+
+        with open(args.graph[0], 'rb') as pfile:
+            mst = pickle.load(pfile)
+            mol_names = pickle.load(pfile)
+            dir_names = pickle.load(pfile)
+
+        mst_a = mst.toarray()
+        draw_graph(mst, mst_a, mol_names, dir_names, args.method[0])
+    else:
+        # FIXME: other file types
+        mol2_files = glob.glob('%s/*.mol2' % args.mol2_dir[0])
+
+        if not mol2_files:
+            raise IOError('directory %s non-existent or empty' % args.mol2_dir[0])
     
-    method = args.method[0]
+        method = args.method[0]
 
-    if args.parallel:
-        import multiprocessing as mp
-        print('Running on %i processors...' % mp.cpu_count() )
+        if args.parallel:
+            import multiprocessing as mp
+            print('Running on %i processors...' % mp.cpu_count() )
 
-    mst, mst_a, mol_names, dir_names = calc_MST(mol2_files, method, args.draw,
+        mst, mst_a, mol_names, dir_names = calc_MST(mol2_files, method, args.draw,
                                                 args.parallel)
 
-    if args.draw:
-        draw_graph(mst, mst_a, mol_names, dir_names, method)
+        if args.draw:
+            draw_graph(mst, mst_a, mol_names, dir_names, method)
