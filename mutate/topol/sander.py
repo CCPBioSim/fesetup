@@ -156,7 +156,7 @@ class PertTopology(object):
             top0 = lig0._parm_overwrite + lig0.TOP_EXT
             top1 = lig1._parm_overwrite + lig1.TOP_EXT
 
-            util.patch_parmtop(top0, top1, '%s' % const.LIGAND_NAME, '')
+            util.patch_parmtop(top0, top1, ':%s' % const.LIGAND_NAME, '')
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
@@ -242,7 +242,7 @@ class PertTopology(object):
             top0 = com0._parm_overwrite + com0.TOP_EXT
             top1 = com1._parm_overwrite + com1.TOP_EXT
 
-            util.patch_parmtop(top0, top1, '%s' % const.LIGAND_NAME, '')
+            util.patch_parmtop(top0, top1, ':%s' % const.LIGAND_NAME, '')
             
             self.parmtop = top0
             self.inpcrd = com0._parm_overwrite + com0.RST_EXT
