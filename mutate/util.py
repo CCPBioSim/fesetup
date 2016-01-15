@@ -441,8 +441,8 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
     conv.WriteFile(obmol1, const.MCS_MOL_FILE)
 
     with open(const.MCS_MAP_FILE, 'wb') as pkl:
-        pickle.dump(m1, pkl, 0)
-        pickle.dump(m2, pkl, 0)
+        pickle.dump(mapping.keys(), pkl, 0)
+        pickle.dump(mapping.values(), pkl, 0)
 
     return mapping
 
