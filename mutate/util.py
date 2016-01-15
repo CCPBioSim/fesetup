@@ -401,12 +401,34 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
 
         mapping = dict(zip(m1, m2) )
 
+    # delete atoms from mapping that are also part of an map-external ring
+    rings1 = mol1.GetRingInfo().AtomRings()
+    rings2 = mol2.GetRingInfo().AtomRings()
+    map1 = set(mapping.keys())
+    map2 = set(mapping.values())
+
+    for ring in rings1:
+        if not set(ring).issubset(map1):
+            for idx in map1:
+                if idx in ring:
+                    del(mapping[idx])
+
+    delete_values = []
+    for ring in rings2:
+        if not set(ring).issubset(map2):
+            for idx in map2:
+                if idx in ring:
+                    delete_values.append(idx)
+
+    mapping = {k: v for k, v in mapping.items() if v not in delete_values}
+
+
     delete_atoms = []
 
     for atom in ob.OBMolAtomIter(obmol1):
         idx = atom.GetIdx() - 1
 
-        if idx not in m1:
+        if idx not in mapping:
             delete_atoms.append(atom)
 
     obmol1.BeginModify()

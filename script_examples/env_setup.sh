@@ -25,16 +25,20 @@
 #               pygccxml0.95
 #
 
-RDBASE=/usr/local/RDKit_2015_03_1
-DYLD_LIBRARY_PATH=$RDBASE/lib
-LD_LIBRARY_PATH=$RDBASE/lib
+FES_HOME=/usr/local/Sire_dev
+#RDBASE=/usr/local/RDKit_2015_03_1
+#DYLD_LIBRARY_PATH=$RDBASE/lib
+#LD_LIBRARY_PATH=$RDBASE/lib
+LD_LIBRARY_PATH=/usr/local/Sire_dev/lib
 
-NAMDHOME=/usr/local/NAMD_CVS-2014-06-04_Linux-x86-multicore
+NAMDHOME=/usr/local/NAMD_2.10_Linux-x86-multicore
 GMXHOME=/usr/local/gromacs-4.6.7
 DLPOLYHOME=/usr/local/dl_poly_4.06
 #AMBERHOME=
 
 # first dir includes FESetup
-PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$RDBASE/lib/python2.7/site-packages:$AMBERHOME/bin
+#PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$RDBASE/lib/python2.7/site-packages:$AMBERHOME/bin
+PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$AMBERHOME/bin:/usr/local/Sire_dev/lib/python2.7/site-packages
 
 export DYLD_LIBRARY_PATH LD_LIBRARY_PATH PYTHONPATH NAMDHOME GMXHOME DLPOLYHOME
+export FES_HOME
