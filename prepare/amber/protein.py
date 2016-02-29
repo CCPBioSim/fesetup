@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler
+#  Copyright (C) 2012-2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -64,6 +64,8 @@ class Protein(Common):
         if not os.access(sfile, os.R_OK):
             raise errors.SetupError('the protein start file %s does not exist '
                                     % sfile)
+
+        self.leap_added = False
 
         self.mol_file = start_file
         self.mol_fmt = 'pdb'
@@ -152,14 +154,12 @@ class Protein(Common):
 
             return
 
-        leapin = '''
-%s
-%s
-%s
-s = loadpdb "%s"\n
-%s''' % (self.ff_cmd, self.solvent_load, addcmd, self.mol_file, addcmd2)
+        if not self.leap_added:
+            self.leap.add_mol(self.mol_file, self.mol_fmt, align=align)
 
-        leapin += self._amber_top_common(boxtype, boxlength, boxfile, align,
-                                         neutralize,  remove_first = False)
+            self.leap_added = True
+
+        leapin = self._amber_top_common(boxtype, boxlength, boxfile,
+                                        neutralize, remove_first = False)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)

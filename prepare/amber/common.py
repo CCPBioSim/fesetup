@@ -42,7 +42,91 @@ import pybel
 
 import utils                            # relative import
 from FESetup import const, errors, logger, report
+from leap import Leap
 
+
+
+def ssbonds(ss_file):
+    """
+    Read file with SS-bond information.
+
+    :param ss_file: filename with disulfide bond information
+    :type ss_file: string
+
+    :returns: pair of SS-bond indices
+    """
+
+    lcnt = 0
+    pairs = []
+
+    with open(ss_file, 'r') as ssb:
+        for line in ssb:
+            lcnt += 1
+            l = line.lstrip()
+
+            if l.startswith('#') or l == '':
+                continue
+
+            try:
+                a, b = line.split()
+                a, b = int(a), int(b)
+
+                if a == b:
+                    raise errors.SetupError('malformed file %s in '
+                            'line %i: residue numbers cannot be the '
+                            'same' % (lcnt, ss_file) )
+
+                pairs.append( (a, b) )
+            except (ValueError, TypeError) as why:
+                raise errors.SetupError('malformed file %s in '
+                            'line %i: %s' % (ss_file, lcnt, why) )
+
+    return pairs
+
+
+def read_box_file(box_file):
+    """
+    Read box dimensions from file.
+
+    :param box_file: filename with box dimensions
+    :type box_file: string
+
+    :returns: box dimensions
+    """
+
+    boxdata = None
+
+    with open(box_file, 'r') as box:
+        for line in box:
+            l = line.lstrip()
+
+            if l.startswith('#') or l == '':
+                continue
+
+            bb_len = line.split()
+
+            if len(bb_len) == 1:
+                try:
+                    boxdata = '%s' % float(bb_len[0])
+                except ValueError:
+                    raise errors.SetupError('boxfile %s contains '
+                                            'non-float data' % box_file)
+            elif len(bb_len) >= 3:
+                # tleap generates rst7 with origin in corner (but PDB
+                # has it in the centre???), setbox takes _buffer_
+                try:
+                    boxdata = '{ %s %s %s }' % (float(bb_len[0]) / 2.0,
+                                                float(bb_len[1]) / 2.0,
+                                                float(bb_len[2]) / 2.0)
+                except ValueError:
+                    raise errors.SetupError('boxfile %s contains '
+                                            'non-float data' % box_file)
+            else:
+                raise errors.SetupError('boxfile %s must contain either '
+                                        '1 or more than 3 floats' %
+                                        box_file)
+
+    return boxdata
 
 
 # FIXME: check very carefully the flow of method calls.  The current assumption
@@ -117,6 +201,8 @@ class Common(object):
         #self.solvent_box 
         #self.MDEngine
 
+        self.leap = Leap(self.force_fields, self.solvent_load)
+
         self.mdengine = None
 
         self.mol_name = mol_name
@@ -181,76 +267,25 @@ class Common(object):
 
 
     def _amber_top_common(self, boxtype = '', boxlength = '10.0',
-                          boxfile = None, align = False, neutralize = False,
+                          boxfile = None, neutralize = False,
                           remove_first = False):
         """Common scripting commands for leap.  Internal function only."""
 
-        leapin = ''
-
-        if align:
-            leapin = 'alignAxes s\n'
+        leapin = self.leap.generate_init()
 
         if os.access(const.SSBOND_FILE, os.R_OK):
+            pairs = ssbonds(const.SSBOND_FILE)
             cmd = []
 
-            with open(const.SSBOND_FILE, 'r') as ssb:
-                lcnt = 0
-
-                for line in ssb:
-                    lcnt += 1
-                    l = line.lstrip()
-
-                    if l.startswith('#') or l == '':
-                        continue
-
-                    try:
-                        a, b = line.split()
-                        a, b = int(a), int(b)
-
-                        if a == b:
-                            raise errors.SetupError('malformed file %s in '
-                                    'line %i: residue numbers cannot be the '
-                                    'same' % (lcnt, SSBOND_FILE) )
-
-                        cmd.append('bond s.%i.SG s.%i.SG\n' % (a, b) )
-                    except (ValueError, TypeError) as why:
-                        raise errors.SetupError('malformed file %s in '
-                                    'line %i: %s' % (SSBOND_FILE, lcnt, why) )
+            for a, b in pairs:
+                cmd.append('bond s.%i.SG s.%i.SG\n' % (a, b) )
 
             leapin += ''.join(cmd)
-
 
         boxdata = None
 
         if boxfile:
-            with open(boxfile, 'r') as box:
-                for line in box:
-                    l = line.lstrip()
-
-                    if l.startswith('#') or l == '':
-                        continue
-
-                    bb_len = line.split()
-
-                    if len(bb_len) == 1:
-                        boxdata = '%s' % bb_len[0]
-                    elif len(bb_len) >= 3:
-                        # tleap generates rst7 with origin in corner (but PDB
-                        # has it in the centre???), setbox takes _buffer_
-                        boxdata = '{ %s %s %s }' % (float(bb_len[0]) / 2.0,
-                                                    float(bb_len[1]) / 2.0,
-                                                    float(bb_len[2]) / 2.0)
-                    else:
-                        raise errors.SetupError('boxfile %s must contain either'
-                                                ' 1 or more than 3 floats' %
-                                                boxfile)
-
-                    for n in bb_len:
-                        try:
-                            float(n)
-                        except ValueError:
-                            raise errors.SetupError('boxfile %s contains '
-                                                    'non-float' % boxfile)
+            boxdata = read_box_file(boxfile)
 
         # bug #976: input may contain ions and water
         #leapin += self.solvent_load

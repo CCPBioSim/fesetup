@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler
+#  Copyright (C) 2012-2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -298,6 +298,8 @@ class Ligand(Common):
 
         self.workdir = workdir
 
+        self.leap_added = False
+
         self.model = ModelConfig(ligand_name)
 
 
@@ -566,7 +568,7 @@ class Ligand(Common):
     @report
     def create_top(self, boxtype = '', boxlength = '10.0', boxfile = None,
                    align = False, neutralize = False, addcmd = '',
-                   addcmd2 = '', remove_first = False):
+                   addcmd2 = '', remove_first = False, gaff = 'gaff'):
         """
         Generate an AMBER topology file via leap. Leap requires atom names in
         GAFF format to match against GAFF force field database.  Finally
@@ -600,9 +602,7 @@ class Ligand(Common):
 
             return
 
-        if self.mol_fmt == 'pdb':
-            load_cmd = 'loadpdb "%s"' % self.mol_file
-        elif self.mol_fmt == 'mol2':
+        if self.mol_fmt == 'mol2':
             if self.mol_atomtype != 'gaff':
                 mol_file = const.GAFF_MOL2_FILE
                 antechamber = utils.check_amber('antechamber')
@@ -614,25 +614,19 @@ class Ligand(Common):
                                 (const.LIGAND_AC_FILE, mol_file) )
             else:
                 mol_file = self.mol_file
-
-            load_cmd = 'loadmol2 "%s"' % mol_file
         else:
             raise errors.SetupError('Leap unsupported input format: %s (only '
                                     'mol2 and pdb)' % self.mol_fmt)
 
-        leapin = '''%s
-source leaprc.gaff
-%s
-%s
-mods = loadAmberParams "%s"
-s = %s
-savemol2 s leap.mol2 1
-%s\n''' % (self.ff_cmd, self.solvent_load, addcmd, self.frcmod, load_cmd,
-           addcmd2)
+        if not self.leap_added:
+            self.leap.add_force_field(gaff)
+            self.leap.add_mol(mol_file, self.mol_fmt, self.frcmod)
 
-        leapin += self._amber_top_common(boxtype, boxlength, boxfile, align,
-                                         neutralize,
-                                         remove_first = remove_first)
+            self.leap_added = True
+
+        leapin = self._amber_top_common(boxtype, boxlength, boxfile,
+                                        neutralize,
+                                        remove_first = remove_first)
 
 
         # Strangely, sleap does not create sander compatible top files with

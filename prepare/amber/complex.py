@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler, Julien Michel
+#  Copyright (C) 2012-2016  Hannes H Loeffler, Julien Michel
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -55,6 +55,7 @@ class Complex(Common):
         """
 
         self.workdir = const.COMPLEX_WORKDIR
+        self.leap_added = False
 
         # FIXME: ugly type checking!
         if type(protein) == str and type(ligand) == str:
@@ -148,8 +149,8 @@ class Complex(Common):
 
     @report
     def create_top(self, boxtype = '', boxlength = 10.0, boxfile = None,
-                   align = False, neutralize = False, make_gaff = True,
-                   addcmd = '', addcmd2 = '', remove_first = False):
+                   align = False, neutralize = False, addcmd = '', addcmd2 = '',
+                   remove_first = False, gaff = 'gaff'):
         """Generate an AMBER topology file via leap.
 
         :param boxtype: rectangular, octahedron or set (set dimensions explicitly)
@@ -157,7 +158,6 @@ class Complex(Common):
         :param boxfile: name of file containing box dimensions
         :param align: align solute along the principal axes
         :param neutralize: neutralise the system
-        :param make_gaff: force GAFF fromat of the ligand
         :param addcmd: inject additional leap commands
         :param remove_first: remove first unit/residue
         :type boxtype: string
@@ -165,7 +165,6 @@ class Complex(Common):
         :type boxfile: string
         :type align: bool
         :type neutralize: bool
-        :type make_gaff: bool
         :type addcmd: string
         :type remove_first: bool
         """
@@ -177,42 +176,29 @@ class Complex(Common):
             utils.run_amber(antechamber,
                             '-i %s -fi ac -o %s -fo mol2 -j 1 -at gaff -pf y' %
                             (const.LIGAND_AC_FILE, mol_file) )
-            load_cmd = 'loadmol2 "%s"' % mol_file
+            self.ligand_fmt = 'mol2'
         else:
-            # antechamber has troubles with dummy atoms
+            # antechamber has trouble with dummy atoms
             mol_file = self.ligand_file
 
-            if self.ligand_fmt == 'pdb':
-                load_cmd = 'loadpdb "%s"' % mol_file
-            elif self.ligand_fmt == 'mol2':
-                load_cmd = 'loadmol2 "%s"' % mol_file
-            else:
-                raise ValueError
-                raise errors.SetupError('Leap unsupported input format: %s (only '
-                                        'mol2 and pdb)' % self.mol_fmt)
+            if self.ligand_fmt != 'pdb' or self.ligand_fmt != 'mol2':
+                raise errors.SetupError('Leap unsupported input format: %s ('
+                                        'only mol2 and pdb)' % self.mol_fmt)
 
 
-        # FIXME: the "s = combine { l p }" needs to be overwritten in
-        #        pmemd/dummy because assumptions is that ligand0 is named s
-        leapin = '''%s
-source leaprc.gaff
-%s
-%s
-mods = loadAmberParams "%s"
-l = %s
-p = loadpdb "%s"
-s = combine { l p }
-%s
-''' % (self.ff_cmd, self.solvent_load, addcmd, self.frcmod, load_cmd,
-       self.protein_file, addcmd2)
+        if not self.leap_added:
+            self.leap.add_force_field(gaff)
+            self.leap.add_mol(mol_file, self.ligand_fmt, self.frcmod)
+            self.leap.add_mol(self.protein_file, 'pdb', align=align)
 
+            self.leap_added = True
 
         # FIXME: there can be problems with the ordering of commands, e.g.
         #        when tip4pew is used the frcmod files are only loaded after
         #        reading PDB and MOL2
-        leapin += self._amber_top_common(boxtype, boxlength, boxfile, align,
-                                         neutralize,
-                                         remove_first = remove_first)
+        leapin = self._amber_top_common(boxtype, boxlength, boxfile,
+                                        neutralize,
+                                        remove_first = remove_first)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)
 

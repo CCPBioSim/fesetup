@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler
+#  Copyright (C) 2012-2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -83,9 +83,11 @@ def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version = 2):
 
     if ff_type in AMBER_FF_TYPES:
         ff_cmd = 'source leaprc.%s\n' % ff_type
+        force_fields = [ff_type]
 
         for ff in add_ons:
             ff_cmd += 'source leaprc.%s\n' % ff
+            force_fields.append(ff)
     else:
         print >> sys.stderr, 'Unsupported force field: %s' % ff_type
         print >> sys.stderr, 'Known types are: %s' % \
@@ -115,3 +117,5 @@ def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version = 2):
     Common.solvent_box = solvent_box
     Common.MDEngine = mdengine
     Common.parmchk_version = parmchk_version
+
+    Common.force_fields = force_fields
