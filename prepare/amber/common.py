@@ -268,7 +268,7 @@ class Common(object):
 
     def _amber_top_common(self, boxtype = '', boxlength = '10.0',
                           boxfile = None, neutralize = False,
-                          remove_first = False):
+                          align=None, remove_first = False):
         """Common scripting commands for leap.  Internal function only."""
 
         leapin = self.leap.generate_init()
@@ -283,6 +283,9 @@ class Common(object):
             leapin += ''.join(cmd)
 
         boxdata = None
+
+        if align:
+            leapin += 'alignAxes s\n'
 
         if boxfile:
             boxdata = read_box_file(boxfile)

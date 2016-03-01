@@ -194,6 +194,7 @@ def make_ligand(name, ff, opts, short = False):
             ligand.mol_file = const.GAFF_MOL2_FILE
             ligand.mol_fmt = 'mol2'
 
+        ligand.prepare_top()
         ligand.create_top(boxtype = '', addcmd = load_cmds)
 
         if opts[SECT_DEF]['MC_prep']:
@@ -304,6 +305,7 @@ def make_protein(name, ff, opts, short = False):
             protein.protonate_propka(pH = prot['propka.pH'])
 
         protein.get_charge()    # must be done explicitly
+        protein.prepare_top()
         protein.create_top(boxtype = '')
 
         # FIXME: also check for boxlength and neutralize
@@ -388,6 +390,7 @@ def make_complex(prot, lig, ff, opts, load_cmds, short = False):
             return complex, load_cmds
 
         complex.ligand_fmt = lig.mol_fmt
+        complex.prepare_top()
         complex.create_top(boxtype = '', addcmd = load_cmds)
 
         # FIXME: also check for boxlength and neutralize

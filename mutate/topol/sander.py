@@ -73,6 +73,7 @@ class PertTopology(object):
             leap_extra = ''
             ow_add = '_sc'
         elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
+            # also for Gromacs and CHARMM
             state0 = lig_morph
             state1 = amber_dummy(lig_morph, self.con_morph,
                                  self.lig_final, self.atom_map)

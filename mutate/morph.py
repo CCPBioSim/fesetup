@@ -31,7 +31,7 @@ __revision__ = "$Id$"
 import sys, os, re, shutil
 
 from FESetup import const, errors, logger, report
-from FESetup.prepare.amber import gromacs
+#from FESetup.prepare.amber import gromacs
 from . import util
 
 import Sire.IO

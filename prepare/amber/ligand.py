@@ -564,11 +564,42 @@ class Ligand(Common):
 
         utils.run_amber(parmchk, params)
 
+    @report
+    def prepare_top(self, gaff='gaff', pert=None):
+        """
+        Prepare for parmtop creation i.e. add molecules to Leap structure.
+        This needs to be run before create_top() to ensure that the molecule
+        has been added but also to not trigger parmtop generation to early.
+        Pmemd needs to have a second molecule added in alchemical free
+        energy setups.
+        """
+        if self.mol_fmt == 'mol2':
+            if self.mol_atomtype != 'gaff':
+                mol_file = const.GAFF_MOL2_FILE
+                antechamber = utils.check_amber('antechamber')
+
+                utils.run_amber(antechamber,
+                                '-i %s -fi ac '
+                                '-o %s -fo mol2 '
+                                '-at gaff -s 2 -pf y' %
+                                (const.LIGAND_AC_FILE, mol_file) )
+            else:
+                mol_file = self.mol_file
+        else:
+            raise errors.SetupError('Leap unsupported input format: %s (only '
+                                    'mol2 and pdb)' % self.mol_fmt)
+
+        if not self.leap_added:
+            self.leap.add_force_field(gaff)
+            self.leap.add_mol(mol_file, self.mol_fmt, self.frcmod)
+
+            self.leap_added = True
+
 
     @report
-    def create_top(self, boxtype = '', boxlength = '10.0', boxfile = None,
-                   align = False, neutralize = False, addcmd = '',
-                   addcmd2 = '', remove_first = False, gaff = 'gaff'):
+    def create_top(self, boxtype='', boxlength='10.0', boxfile=None,
+                   align=False, neutralize=False, addcmd='',
+                   addcmd2='', remove_first=False):
         """
         Generate an AMBER topology file via leap. Leap requires atom names in
         GAFF format to match against GAFF force field database.  Finally
@@ -602,31 +633,9 @@ class Ligand(Common):
 
             return
 
-        if self.mol_fmt == 'mol2':
-            if self.mol_atomtype != 'gaff':
-                mol_file = const.GAFF_MOL2_FILE
-                antechamber = utils.check_amber('antechamber')
-
-                utils.run_amber(antechamber,
-                                '-i %s -fi ac '
-                                '-o %s -fo mol2 '
-                                '-at gaff -s 2 -pf y' %
-                                (const.LIGAND_AC_FILE, mol_file) )
-            else:
-                mol_file = self.mol_file
-        else:
-            raise errors.SetupError('Leap unsupported input format: %s (only '
-                                    'mol2 and pdb)' % self.mol_fmt)
-
-        if not self.leap_added:
-            self.leap.add_force_field(gaff)
-            self.leap.add_mol(mol_file, self.mol_fmt, self.frcmod)
-
-            self.leap_added = True
-
         leapin = self._amber_top_common(boxtype, boxlength, boxfile,
-                                        neutralize,
-                                        remove_first = remove_first)
+                                        neutralize, align=align,
+                                        remove_first=remove_first)
 
 
         # Strangely, sleap does not create sander compatible top files with

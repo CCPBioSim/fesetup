@@ -122,9 +122,25 @@ class Protein(Common):
 
 
     @report
-    def create_top(self, boxtype = '', boxlength = 10.0, boxfile = None,
-                   align = False, neutralize = False, addcmd = '',
-                   addcmd2 = '', remove_first = False):
+    def prepare_top(self, pert=None):
+        """
+        Prepare for parmtop creation i.e. add molecules to Leap structure.
+        This needs to be run before create_top() to ensure that the molecule
+        has been added but also to not trigger parmtop generation to early.
+        Pmemd needs to have a second molecule added in alchemical free
+        energy setups.
+        """
+
+        if not self.leap_added:
+            self.leap.add_mol(self.mol_file, self.mol_fmt, pert=pert)
+
+            self.leap_added = True
+
+
+    @report
+    def create_top(self, boxtype='', boxlength=10.0, boxfile=None, align=False,
+                   neutralize=False, addcmd='', addcmd2='',
+                   remove_first=False):
         """
         Generate an AMBER topology file via leap.
 
@@ -154,12 +170,8 @@ class Protein(Common):
 
             return
 
-        if not self.leap_added:
-            self.leap.add_mol(self.mol_file, self.mol_fmt, align=align)
-
-            self.leap_added = True
-
         leapin = self._amber_top_common(boxtype, boxlength, boxfile,
-                                        neutralize, remove_first = False)
+                                        neutralize, align=align,
+                                        remove_first = False)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)
