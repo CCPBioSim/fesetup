@@ -169,18 +169,15 @@ class Complex(Common):
             # antechamber has trouble with dummy atoms
             mol_file = self.ligand_file
 
-            if self.ligand_fmt != 'pdb' or self.ligand_fmt != 'mol2':
-                raise errors.SetupError('Leap unsupported input format: %s ('
-                                        'only mol2 and pdb)' % self.mol_fmt)
+            if self.ligand_fmt != 'mol2' and self.ligand_fmt != 'pdb':
+                raise errors.SetupError('unsupported leap input format: %s ('
+                                        'only mol2 and pdb)' % self.ligand_fmt)
 
 
         if not self.leap_added:
             self.leap.add_force_field(gaff)
             self.leap.add_mol(mol_file, self.ligand_fmt, self.frcmod,
                               pert=pert)
-            self.leap.add_mol(self.protein_file, 'pdb', pert=pert)
-
-            self.leap_added = True
 
 
     @report
@@ -204,6 +201,10 @@ class Complex(Common):
         :type addcmd: string
         :type remove_first: bool
         """
+
+        if not self.leap_added:
+            self.leap.add_mol(self.protein_file, 'pdb')
+            self.leap_added = True
 
         # FIXME: there can be problems with the ordering of commands, e.g.
         #        when tip4pew is used the frcmod files are only loaded after

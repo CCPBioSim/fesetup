@@ -587,7 +587,7 @@ class Ligand(Common):
             else:
                 mol_file = self.mol_file
         else:
-            raise errors.SetupError('Leap unsupported input format: %s (only '
+            raise errors.SetupError('unsupported leap input format: %s (only '
                                     'mol2 and pdb)' % self.mol_fmt)
 
         if not self.leap_added:
