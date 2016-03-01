@@ -573,6 +573,7 @@ class Ligand(Common):
         Pmemd needs to have a second molecule added in alchemical free
         energy setups.
         """
+
         if self.mol_fmt == 'mol2':
             if self.mol_atomtype != 'gaff':
                 mol_file = const.GAFF_MOL2_FILE
@@ -591,7 +592,7 @@ class Ligand(Common):
 
         if not self.leap_added:
             self.leap.add_force_field(gaff)
-            self.leap.add_mol(mol_file, self.mol_fmt, self.frcmod)
+            self.leap.add_mol(mol_file, self.mol_fmt, self.frcmod, pert=pert)
 
             self.leap_added = True
 

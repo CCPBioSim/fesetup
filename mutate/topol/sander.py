@@ -70,15 +70,15 @@ class PertTopology(object):
                     util.amber_softcore(lig_morph, self.lig_final,
                                         self.atom_map)
 
-            leap_extra = ''
+            pert0_info, pert1_info = None, None
             ow_add = '_sc'
         elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             # also for Gromacs and CHARMM
             state0 = lig_morph
-            state1 = amber_dummy(lig_morph, self.con_morph,
-                                 self.lig_final, self.atom_map)
+            state1, pert0_info, pert1_info = \
+                    amber_dummy(lig_morph, self.con_morph,
+                                self.lig_final, self.atom_map)
 
-            leap_extra = 'source "%s"\n'
             ow_add = '_dummy'
         else:
             raise NotImplementedError
@@ -94,17 +94,15 @@ class PertTopology(object):
                               start_fmt = 'mol2', frcmod = frcmod0)
 
         lig0.set_atomtype('gaff')
-
         lig0._parmchk(mol2_0, 'mol2', frcmod0)
-
         lig0._parm_overwrite = 'state0' + ow_add
 
-        if leap_extra:
-            lig0.create_top(boxtype = '', addcmd = cmd1 + cmd2,
-                            addcmd2 = leap_extra %
-                            os.path.join(curr_dir, const.LEAP_PERT0_FILE) )
+        if pert0_info:
+            lig0.prepare_top(pert=pert0_info)
         else:
-            lig0.create_top(boxtype = '', addcmd = cmd1 + cmd2)
+            lig0.prepare_top()
+
+        lig0.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
                               const.MOL2_EXT)
@@ -117,17 +115,15 @@ class PertTopology(object):
                               start_fmt = 'mol2', frcmod = frcmod1)
 
         lig1.set_atomtype('gaff')
-
         lig1._parmchk(mol2_1, 'mol2', frcmod1)
-
         lig1._parm_overwrite = 'state1' + ow_add
 
-        if leap_extra:
-            lig1.create_top(boxtype = '', addcmd = cmd1 + cmd2,
-                            addcmd2 = leap_extra %
-                            os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
+        if pert1_info:
+            lig1.prepare_top(pert=pert1_info)
         else:
-            lig1.create_top(boxtype = '', addcmd = cmd1 + cmd2)
+            lig1.prepare_top()
+
+        lig1.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         self.lig0 = lig0
         self.lig1 = lig1
@@ -139,7 +135,7 @@ class PertTopology(object):
         #       missing parameters fixed through patching!
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
-            
+
             int_state = util.transfer_charges(state0, state1, self.atom_map)
 
             mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
@@ -150,6 +146,8 @@ class PertTopology(object):
                              start_fmt = 'mol2', frcmod = frcmod1)
             lig.set_atomtype('gaff')
             lig._parm_overwrite = 'state_int'
+
+            lig.prepare_top()
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2 +
                            'mods1 = loadAmberParams "%s"\n' % frcmod0)
 
@@ -171,12 +169,13 @@ class PertTopology(object):
                     util.amber_softcore(lig_morph, self.lig_final,
                                         self.atom_map)
 
-            leap_extra = ''
+            pert0_info, pert1_info = None, None
             ow_add = '_sc'
         elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             state0 = lig_morph
-            state1 = amber_dummy(lig_morph, self.con_morph,
-                                 self.lig_final, self.atom_map)
+            state1, pert0_info, pert1_info = \
+                    amber_dummy(lig_morph, self.con_morph,
+                                self.lig_final, self.atom_map)
 
             leap_extra = 'source "%s"\n'
             ow_add = '_dummy'
@@ -194,14 +193,13 @@ class PertTopology(object):
         com0._parm_overwrite = 'state0' + ow_add
         com0.ligand_fmt = 'mol2'
 
-        if leap_extra:
-            com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2,
-                            addcmd2 = leap_extra %
-                            os.path.join(curr_dir, const.LEAP_PERT0_FILE) )
+        if pert0_info:
+            com0.prepare_top(pert=pert0_info)
         else:
-            com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2)
+            com0.prepare_top()
+
+        com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+                        addcmd = cmd1 + cmd2)
 
         mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
                               const.MOL2_EXT)
@@ -213,14 +211,13 @@ class PertTopology(object):
 
         com1._parm_overwrite = 'state1' + ow_add
 
-        if leap_extra:
-            com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2,
-                            addcmd2 = leap_extra %
-                            os.path.join(curr_dir, const.LEAP_PERT1_FILE) )
+        if pert1_info:
+            com1.prepare_top(pert=pert1_info)
         else:
-            com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                            addcmd = cmd1 + cmd2)
+            com1.prepare_top()
+
+        com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
+                        addcmd = cmd1 + cmd2)
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
@@ -269,8 +266,8 @@ def amber_dummy(lig_morph, con_morph, lig_final, atom_map):
     state1_m = Sire.Mol.Molecule(lig_morph)
     state1 = state1_m.edit()    # MolEditor
 
-    leap_pert0 = []
-    leap_pert1 = []
+    pert0_info = []
+    pert1_info = []
 
 
     for iinfo, finfo in atom_map.items():
@@ -282,38 +279,23 @@ def amber_dummy(lig_morph, con_morph, lig_final, atom_map):
         # Dummy may be bonded to H which exceeds leap's valency limit.  Leap
         # will only keep the first bond encountered.  Solution:
         # "pert=true" and explicit bonding to DU, recreate all bonds to not
-        # rely on which one leap keeps
+        # rely on which one leap had kept
         if not iinfo.atom:
             for idx in con_morph.connectionsTo(iinfo.index):
                 atom = lig_morph.select(idx)
-                #resnum = atom.residue().number().value()
                 name = '%s' % atom.name().value()
                 ambertype = '%s' % atom.property('ambertype')
 
-                # FIXME: hard-coded unit name
                 if ambertype.upper().startswith('H') and \
                        name.startswith('H'):
-                    ur = 's.1' #% resnum
-                    leap_pert0.append('set %s.%s pert true' % (ur, name) )
-                    leap_pert0.append('deletebond %s.%s %s.%s' %
-                                      (ur, istr, ur, name) ) # not necessary
-                    leap_pert0.append('bond %s.%s %s.%s' % (ur, istr, ur, name) )
+                    pert0_info.append( (str(istr), str(name)) )
 
         if fstr.startsWith('H') and con_morph.nConnections(iinfo.index) > 1:
-            ur = 's.1' #% new.residue().number().value()
-            leap_pert1.append('set %s.%s pert true' % (ur, fstr) )
-
             for bond_index in con_morph.connectionsTo(iinfo.index):
                 atom1 = lig_morph.select(bond_index)
-                #resnum = atom1.residue().number().value()
-
                 rname = util.search_atominfo(atom1.index(), atom_map)
                 name = '%s' % rname.name.value()
-                ur = 's.1' #% resnum
-                
-                # FIXME: hard-coded unit name
-                leap_pert1.append('deletebond %s.%s %s.%s' % (ur, fstr, ur, name) )
-                leap_pert1.append('bond %s.%s %s.%s' % (ur, fstr, ur, name) )
+                pert1_info.append( (str(fstr), str(name)) )
 
 
         if not finfo.atom:
@@ -346,14 +328,6 @@ def amber_dummy(lig_morph, con_morph, lig_final, atom_map):
         new.rename(Sire.Mol.AtomName(name) )
         state1 = new.molecule()
 
-    with open(const.LEAP_PERT0_FILE, 'w') as lp:
-        lp.write('\n'.join(leap_pert0) )
-        lp.write('\n')
-
-    with open(const.LEAP_PERT1_FILE, 'w') as lp:
-        lp.write('\n'.join(leap_pert1) )
-        lp.write('\n')
-
     state1 = state1.commit()
 
-    return state1
+    return state1, pert0_info, pert1_info
