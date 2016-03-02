@@ -309,7 +309,11 @@ class Morph(object):
 
         # FIXME: silly kludge to find top/crd because internal state not
         # available anymore
-        top = os.path.join(system.dst, 'solvated.parm7')
+        top = os.path.join(system.dst, 'ionized.parm7')
+
+        if not os.path.exists(top):
+            top = os.path.join(system.dst, 'solvated.parm7')
+
         crd = util.search_crd(system)
 
         if not crd:
@@ -328,7 +332,11 @@ class Morph(object):
 
         # FIXME: another kludge, working only for ligand but not complex
         if sys_rev:
-            top2 = os.path.join(sys_rev.dst, 'solvated.parm7')
+            top2 = os.path.join(sys_rev.dst, 'ionized.parm7')
+
+            if not os.path.exists(top):
+                top2 = os.path.join(sys_rev.dst, 'solvated.parm7')
+
             crd2 = util.search_crd(sys_rev)
 
             natoms = []

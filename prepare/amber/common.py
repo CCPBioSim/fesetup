@@ -366,9 +366,9 @@ class Common(object):
             # FIXME: check if this is correct
             volume = self.volume * self.density / dens
 
-            # 1 mol/l = 6.022*10^23 particles/litre
+            # 1 mol/l = 6.022140857*10^23 particles/litre (NIST)
             # 1 A^3   = 10^-27 l
-            npart = round(conc * 6.022 * volume * 0.0001)
+            npart = round(0.0006022141 * conc * volume)
 
             if self.charge < 0.0:
                 npos = npart + nions
