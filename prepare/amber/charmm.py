@@ -154,6 +154,7 @@ class CharmmTop(object):
             try:
                 params = mol.property('amberparameters')
             except UserWarning:
+                # FIXME: adjust segcnt?
                 is_atom = True
 
             for atom in mol.atoms():
@@ -183,7 +184,7 @@ class CharmmTop(object):
                 self.atom_params[amber_type] = (mass, lj)
 
             # IMPORTANT: do not forget to increase offset because all
-            #            indices below are relative with each molecule!
+            #            indices below are relative within each molecule!
             if is_atom:
                 offset += 1
                 continue

@@ -326,6 +326,7 @@ def make_protein(name, ff, opts, short = False):
                 protein.create_top(boxtype = prot['box.type'],
                                    boxlength = prot['box.length'],
                                    neutralize = 2,
+                                   align = prot['align_axes'],
                                    addcmd = load_cmds, remove_first = False,
                                    conc = prot['ions.conc'],
                                    dens = prot['ions.dens'])
@@ -419,6 +420,7 @@ def make_complex(prot, lig, ff, opts, load_cmds, short = False):
                 complex.create_top(boxtype = com['box.type'],
                                    boxlength = com['box.length'],
                                    neutralize = 2,
+                                   align = com['align_axes'],
                                    addcmd = load_cmds, remove_first = False,
                                    conc = com['ions.conc'],
                                    dens = com['ions.dens'])
