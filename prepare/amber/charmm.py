@@ -149,6 +149,12 @@ class CharmmTop(object):
             mol = mols.at(num).molecule()
             natoms = mol.nAtoms()
             segcnt += 1
+            is_atom = False
+
+            try:
+                params = mol.property('amberparameters')
+            except UserWarning:
+                is_atom = True
 
             for atom in mol.atoms():
                 atomno += 1
@@ -176,8 +182,8 @@ class CharmmTop(object):
                                     amber_type, charge, mass, coords) )
                 self.atom_params[amber_type] = (mass, lj)
 
-
-            params = mol.property('amberparameters') # Sire.Mol.AmberParameters
+            if is_atom:
+                continue
 
             for bond in params.getAllBonds():  # Sire.Mol.BondID
                 at0 = bond.atom0()  # Sire.Mol.AtomIdx!
@@ -194,7 +200,7 @@ class CharmmTop(object):
                 name1 = _check_type(t1, self.atomtypes, idx1)
 
                 self.bonds.append( (at0.value() + 1 + offset,
-                               at1.value() + 1 + offset) )
+                                    at1.value() + 1 + offset) )
                 self.bond_params[name0, name1] = (k, r)
 
             self.bonds.sort()

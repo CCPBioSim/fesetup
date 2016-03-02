@@ -334,7 +334,7 @@ class Morph(object):
         if sys_rev:
             top2 = os.path.join(sys_rev.dst, 'ionized.parm7')
 
-            if not os.path.exists(top):
+            if not os.path.exists(top2):
                 top2 = os.path.join(sys_rev.dst, 'solvated.parm7')
 
             crd2 = util.search_crd(sys_rev)
