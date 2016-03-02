@@ -182,7 +182,10 @@ class CharmmTop(object):
                                     amber_type, charge, mass, coords) )
                 self.atom_params[amber_type] = (mass, lj)
 
+            # IMPORTANT: do not forget to increase offset because all
+            #            indices below are relative with each molecule!
             if is_atom:
+                offset += 1
                 continue
 
             for bond in params.getAllBonds():  # Sire.Mol.BondID
