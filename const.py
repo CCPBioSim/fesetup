@@ -165,6 +165,7 @@ A2NM = 0.1
 CAL2J = 4.184
 CALA2JNM2 = CAL2J * 100.0               # kcal/mol/A2 to kJ/mol/nm2
 ATM2BAR = 1.01325
+AMU2GRAMS = 1.6605402                   # * 10^-24 grams
 
 # ':' is a noop but only as a command so should be safe in filenames
 PROT_LIG_SEP = ':'

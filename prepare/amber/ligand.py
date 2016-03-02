@@ -538,16 +538,34 @@ class Ligand(Common):
         #self.model['supports_mc'] = False
 
 
-    def _parmchk(self, infile, informat, outfile):
+    def _parmchk(self, infile, informat, outfile, gaff='gaff'):
+        """
+        Run parmcheck to generate missing parameters.
+
+        
+        :param infile: input file name
+        :type infile: string
+        :param informat: input file format
+        :type informat: string
+        :param outfile: output frcmod file
+        :type outifle: string
+        :param gaff: GAFF version (needs parmchk2)
+        :type gaff: string
+        """
+
+        params = ''
+        
         if self.parmchk_version > 1:
             parmchk = utils.check_amber('parmchk%s' %
                                         str(self.parmchk_version) )
+            if gaff == 'gaff2':
+                params += '-s gaff2 '
         else:
             parmchk = utils.check_amber('parmchk')
 
         logger.write('Creating frcmod file')
 
-        params = '-i %s -f %s -o %s -a N ' % (infile, informat, outfile)
+        params += '-i %s -f %s -o %s -a N ' % (infile, informat, outfile)
 
         # FIXME: parmchk only reads on parmfile, possible solution: write
         #        temporary frcmod files and paste together?
@@ -743,6 +761,7 @@ class Ligand(Common):
         """
         :returns: file names of current topology and rst files
         """
+
         return self.amber_top, self.amber_crd
 
 

@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler, Julien Michel
+#  Copyright (C) 2012-2016  Hannes H Loeffler, Julien Michel
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -43,6 +43,8 @@ import pybel
 import utils                            # relative import
 from FESetup import const, errors, logger, report
 from leap import Leap
+
+import Sire.IO
 
 
 
@@ -545,3 +547,41 @@ class Common(object):
             box.write(self.box_dims)
 
         self.box_dims = self.box_dims.split()
+
+
+    def get_box_info(self):
+        """
+        Use Sire to get information about the system.
+
+        :returns: volume
+        :returns: density
+        :returns: box dimensions
+        :rtype: float
+        """
+
+        # Sire.Mol.Molecules, Sire.Vol.PeriodicBox or Sire.Vol.Cartesian
+        molecules, space = \
+                   Sire.IO.Amber().readCrdTop(self.amber_crd, self.amber_top)
+
+        volume, density = 0.0, 0.0
+        x, y, z = 0.0, 0.0, 0.0
+        
+        if space.isPeriodic():
+            volume = space.volume().value()
+
+            # NOTE: currently rectangular box only
+            x = space.dimensions().x()
+            y = space.dimensions().y()
+            z = space.dimensions().z()
+ 
+            total_mass = 0.0
+            
+            for num in molecules.molNums():
+                mol = molecules.at(num).molecule()
+
+                for atom in mol.atoms():
+                    total_mass += atom.property('mass').value()
+
+            density = total_mass * const.AMU2GRAMS / volume
+
+        return volume, (x, y, z), density
