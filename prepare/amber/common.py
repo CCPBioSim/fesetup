@@ -190,6 +190,8 @@ class Common(object):
 
         self.charge = 0.0
         self.box_dims = []
+        self.volume = 0.0
+        self.density = 0.0
 
         self.amber_top = ''             # only set in _amber_top_common
         self.amber_crd = ''             # only set in _amber_top_common
@@ -269,9 +271,29 @@ class Common(object):
 
 
     def _amber_top_common(self, boxtype = '', boxlength = '10.0',
-                          boxfile = None, neutralize = False,
-                          align=None, remove_first = False):
-        """Common scripting commands for leap.  Internal function only."""
+                          boxfile = None, neutralize = 0,
+                          align=None, remove_first = False,
+                          conc = 0.0, dens = 1.0):
+        """Common scripting commands for leap.  Internal function only.
+
+        :param boxtype: rectangular, octahedron or set
+        :type boxtype: string
+        :param boxlength: box length in Angstrom
+        :type boxlength: float
+        :param boxfile: file name with box information
+        :type boxfile: string
+        :param neutralize: overwrite files in the working directory from basedir
+        :type neutralize: string
+        :param align: align axes?
+        :type align: bool
+        :param remove_first: remove first molecule?
+        :type remove_first: bool
+        :param conc: ion concentration in mol/litres
+        :type conc: float
+        :param dens: expected target density
+        :type dens: float
+        :raises: SetupError
+        """
 
         leapin = self.leap.generate_init()
 
@@ -324,14 +346,46 @@ class Common(object):
             self.amber_crd = self._parm_overwrite + self.RST_EXT
             self.amber_pdb = self._parm_overwrite + const.PDB_EXT
 
-        if neutralize:
+        if neutralize == 1:             # minimum number of ions
             nions = abs(round(self.charge) )
 
             # add explicit number of ions because leap just truncates the int!
             if self.charge < 0.0:
-                leapin += 'addions s Na+ %i\n' % nions
+                leapin += 'addIons s Na+ %i\n' % nions
             elif self.charge > 0.0:
-                leapin += 'addions s Cl- %i\n' % nions
+                leapin += 'addIons s Cl- %i\n' % nions
+        elif neutralize == 2:           # neutralise to set concentration
+            self.get_box_info()
+
+            self.amber_top = const.LEAP_IONIZED + self.TOP_EXT
+            self.amber_crd = const.LEAP_IONIZED + self.RST_EXT
+            self.amber_pdb = const.LEAP_IONIZED + const.PDB_EXT
+
+            nions = abs(round(self.charge) )
+
+            # FIXME: check if this is correct
+            volume = self.volume * self.density / dens
+
+            # 1 mol/l = 6.022*10^23 particles/litre
+            # 1 A^3   = 10^-27 l
+            npart = round(conc * 6.022 * volume * 0.0001)
+
+            if self.charge < 0.0:
+                npos = npart + nions
+                nneg = npart
+            elif self.charge > 0.0:
+                npos = npart
+                nneg = npart + nions
+            else:
+                npos = nneg = npart
+
+            logger.write('box info: V = %f A^3, rho = %f g/cc\n'
+                         'charge = %f; computed #pos = %i, #neg = %i\n' %
+                         (self.volume , self.density, self.charge, npos,
+                          nneg) )
+
+            leapin += 'addIonsRand s Na+ %i Cl- %i 2.0\n' % (npos, nneg)
+
 
         leapin += ('saveAmberParm s "%s" "%s"\nsavepdb s "%s"\n' %
                    (self.amber_top, self.amber_crd, self.amber_pdb) )
@@ -551,28 +605,22 @@ class Common(object):
 
     def get_box_info(self):
         """
-        Use Sire to get information about the system.
-
-        :returns: volume
-        :returns: density
-        :returns: box dimensions
-        :rtype: float
+        Use Sire to get information about the system: volume, density,
+        box dimensions.
         """
 
         # Sire.Mol.Molecules, Sire.Vol.PeriodicBox or Sire.Vol.Cartesian
         molecules, space = \
                    Sire.IO.Amber().readCrdTop(self.amber_crd, self.amber_top)
 
-        volume, density = 0.0, 0.0
-        x, y, z = 0.0, 0.0, 0.0
-        
         if space.isPeriodic():
-            volume = space.volume().value()
+            self.volume = space.volume().value()
 
             # NOTE: currently rectangular box only
             x = space.dimensions().x()
             y = space.dimensions().y()
             z = space.dimensions().z()
+            self.box_dims = (x, y, z)
  
             total_mass = 0.0
             
@@ -582,6 +630,4 @@ class Common(object):
                 for atom in mol.atoms():
                     total_mass += atom.property('mass').value()
 
-            density = total_mass * const.AMU2GRAMS / volume
-
-        return volume, (x, y, z), density
+            self.density = total_mass * const.AMU2GRAMS / self.volume

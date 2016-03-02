@@ -219,6 +219,14 @@ def make_ligand(name, ff, opts, short = False):
                               neutralize = lig['neutralize'],
                               addcmd = load_cmds, remove_first = False)
 
+            if lig['ions.conc'] > 0.0:
+                ligand.create_top(boxtype = lig['box.type'],
+                                  boxlength = lig['box.length'],
+                                  neutralize = 2,
+                                  addcmd = load_cmds, remove_first = False,
+                                  conc = lig['ions.conc'],
+                                  dens = lig['ions.dens'])
+
             restr_force = lig['min.restr_force']
             nsteps = lig['min.nsteps']
 
@@ -228,8 +236,6 @@ def make_ligand(name, ff, opts, short = False):
 
             if nsteps > 0:
                 do_min(ligand, lig)
-
-            #ligand.md('%SHRINK', 200, 5.0, 1.0, ':LIG', 5.0, wrap = True)
 
             press_done = False
             nsteps = lig['md.heat.nsteps']
@@ -316,6 +322,14 @@ def make_protein(name, ff, opts, short = False):
                                align = prot['align_axes'],
                                addcmd = load_cmds, remove_first = True)
 
+            if prot['ions.conc'] > 0.0:
+                protein.create_top(boxtype = prot['box.type'],
+                                   boxlength = prot['box.length'],
+                                   neutralize = 2,
+                                   addcmd = load_cmds, remove_first = False,
+                                   conc = prot['ions.conc'],
+                                   dens = prot['ions.dens'])
+
             restr_force = prot['min.restr_force']
             nsteps = prot['min.nsteps']
 
@@ -400,6 +414,14 @@ def make_complex(prot, lig, ff, opts, load_cmds, short = False):
                                neutralize = com['neutralize'],
                                align = com['align_axes'],
                                addcmd = load_cmds, remove_first = True)
+
+            if com['ions.conc'] > 0.0:
+                complex.create_top(boxtype = com['box.type'],
+                                   boxlength = com['box.length'],
+                                   neutralize = 2,
+                                   addcmd = load_cmds, remove_first = False,
+                                   conc = com['ions.conc'],
+                                   dens = com['ions.dens'])
 
             restr_force = com['min.restr_force']
             nsteps = com['min.nsteps']
@@ -516,6 +538,8 @@ defaults[SECT_LIG] = {
     'box.type': ('', None),
     'box.length': (10.0, (float, ) ),
     'neutralize': (False, ('bool', ) ),
+    'ions.conc': (0.0, (float, ) ),
+    'ions.dens': (1.0, (float, ) ),
     'conf_search.numconf': (0, (int, ) ),
     'conf_search.geomsteps': (5, (int, ) ),
     'conf_search.steep_steps': (100, (int, ) ),
@@ -538,6 +562,8 @@ defaults[SECT_PROT] = {
     'box.type': ('', None),
     'box.length': (10.0, (float, ) ),
     'neutralize': (False, ('bool', ) ),
+    'ions.conc': (0.0, (float, ) ),
+    'ions.dens': (1.0, (float, ) ),
     'align_axes': (False, ('bool', ) ),
     'propka': (False, ('bool', ) ),
     'propka.pH': (7.0, (float, ) ),
@@ -548,6 +574,8 @@ defaults[SECT_COM] = {
     'box.type': ('', None),
     'box.length': (10.0, (float, ) ),
     'neutralize': (False, ('bool', ) ),
+    'ions.conc': (0.0, (float, ) ),
+    'ions.dens': (1.0, (float, ) ),
     'align_axes': (False, ('bool', ) ),
     'min.nsteps': (100, (int, ) ),
     'min.ncyc': (10, (int, ) ),

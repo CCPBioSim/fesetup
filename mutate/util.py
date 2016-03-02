@@ -472,10 +472,13 @@ def search_crd(system):
         crd = os.path.join(system.dst, files[-1])
         return crd
     else:
-        crd = os.path.join(system.dst, const.LEAP_SOLVATED + system.RST_EXT)
+        crd = os.path.join(system.dst, const.LEAP_IONIZED + system.RST_EXT)
+        crd2 = os.path.join(system.dst, const.LEAP_SOLVATED + system.RST_EXT)
 
         if os.path.exists(crd):
             return crd
+        elif os.path.exists(crd2):
+            return crd2
 
     return None
 

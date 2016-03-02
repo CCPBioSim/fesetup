@@ -183,7 +183,7 @@ class Complex(Common):
     @report
     def create_top(self, boxtype='', boxlength=10.0, boxfile=None,
                    align=False, neutralize=False, addcmd='', addcmd2='',
-                   remove_first=False):
+                   remove_first=False, conc = 0.0, dens = 1.0):
         """Generate an AMBER topology file via leap.
 
         :param boxtype: rectangular, octahedron or set (set dimensions explicitly)
@@ -193,11 +193,15 @@ class Complex(Common):
         :param neutralize: neutralise the system
         :param addcmd: inject additional leap commands
         :param remove_first: remove first unit/residue
+        :param conc: ion concentration
+        :type conc: float
+        :param dens: expected target density
+        :type dens: float
         :type boxtype: string
         :type boxlength: float
         :type boxfile: string
         :type align: bool
-        :type neutralize: bool
+        :type neutralize: int
         :type addcmd: string
         :type remove_first: bool
         """
@@ -211,7 +215,8 @@ class Complex(Common):
         #        reading PDB and MOL2
         leapin = self._amber_top_common(boxtype, boxlength, boxfile,
                                         neutralize, align=align,
-                                        remove_first=remove_first)
+                                        remove_first=remove_first,
+                                        conc=conc, dens=dens)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)
 

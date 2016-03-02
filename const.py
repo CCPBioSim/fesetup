@@ -126,6 +126,7 @@ PROPKA_OUT_FILE = 'propka.dat'
 LEAP_IN = 'leap.in'
 LEAP_SOLVATED = 'solvated'
 LEAP_VACUUM = 'vacuum'
+LEAP_IONIZED = 'ionized'
 LEAP_PERT0_FILE = 'pert0.leap'
 LEAP_PERT1_FILE = 'pert1.leap'
 
