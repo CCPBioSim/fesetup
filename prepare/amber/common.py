@@ -614,15 +614,15 @@ class Common(object):
                    Sire.IO.Amber().readCrdTop(self.amber_crd, self.amber_top)
 
         if space.isPeriodic():
-            self.volume = space.volume().value()
+            self.volume = space.volume().value()  # in A^3
 
             # NOTE: currently rectangular box only
             x = space.dimensions().x()
             y = space.dimensions().y()
             z = space.dimensions().z()
-            self.box_dims = (x, y, z)
+            self.box_dims = (x, y, z)   # in Angstrom
  
-            total_mass = 0.0
+            total_mass = 0.0            # in amu
             
             for num in molecules.molNums():
                 mol = molecules.at(num).molecule()
@@ -630,4 +630,5 @@ class Common(object):
                 for atom in mol.atoms():
                     total_mass += atom.property('mass').value()
 
+            # in g/cc
             self.density = total_mass * const.AMU2GRAMS / self.volume

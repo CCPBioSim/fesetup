@@ -127,8 +127,6 @@ LEAP_IN = 'leap.in'
 LEAP_SOLVATED = 'solvated'
 LEAP_VACUUM = 'vacuum'
 LEAP_IONIZED = 'ionized'
-LEAP_PERT0_FILE = 'pert0.leap'
-LEAP_PERT1_FILE = 'pert1.leap'
 
 MAX_HYDROGEN_MASS = 2.0
 
@@ -152,6 +150,10 @@ NOT_FIRST_PDB = 'not_first' + PDB_EXT
 DLFIELD_UDFF_NAME = 'dl_field.udff'
 DLFIELD_PDB_NAME = 'dl_field' + PDB_EXT
 RSTAR_CONV = math.pow(2.0, 1.0 / 6.0) / 2.0
+
+SIRE_ABS_PERT_FILE = 'morph_1step.pert'
+SIRE_ABS_PERT_EL_FILE = 'morph_el.pert'
+SIRE_ABS_PERT_VDW_FILE = 'morph_vdw.pert'
 
 GROMACS_GRO_EXT = os.extsep + 'gro'
 GROMACS_ITP_EXT = os.extsep + 'itp'

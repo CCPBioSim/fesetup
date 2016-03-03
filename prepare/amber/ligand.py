@@ -752,6 +752,93 @@ class Ligand(Common):
             raise errors.SetupError('Unknow QM program %s' % program)
 
 
+    def create_absolute(self, prog='Sire'):
+        """
+        Create input file for absolute transformation.
+        """
+
+        amber = Sire.IO.Amber()
+
+        try:
+            molecules = amber.readCrdTop(self.amber_crd, self.amber_top)[0]
+        except UserWarning as error:
+            raise errors.SetupError('error opening %s/%s: %s' %
+                                    (initial_crd, initial_top, error) )
+
+        nmol = molecules.molNums()
+        nmol.sort()
+
+        ligand = molecules.at(nmol[0]).molecule()
+
+        # 1-step
+        outstr = ['version 1', 'molecule %s' % (const.LIGAND_NAME)]
+
+        for atom in ligand.atoms():
+            # ambertype, connectivity, charge, bond, mass, element,
+            # amberparameters, intrascale, LJ, angle, dihedral, improper,
+            # coordinates
+            outstr.extend((
+                '\tatom',
+                '\t\tname           %s' % atom.name().value(),
+                '\t\tinitial_type   %s' % atom.property('ambertype'),
+                '\t\tfinal_type     du',
+                '\t\tinitial_charge %-8.5f' % atom.property('charge').value(),
+                '\t\tfinal_charge   0.0',
+                ('\t\tinitial_LJ    %8.5f %8.5f' %
+                 (atom.property('LJ').sigma().value(),
+                  atom.property('LJ').epsilon().value())),
+                '\t\tfinal_LJ       0.0 0.0',
+                '\tendatom'))
+
+        outstr.append('endmolecule\n')
+
+        with open(const.SIRE_ABS_PERT_FILE, 'w') as pfile:
+            pfile.write('\n'.join(outstr))
+
+        # 2-step
+        outstr = ['version 1', 'molecule %s' % (const.LIGAND_NAME)]
+
+        for atom in ligand.atoms():
+            # ambertype, connectivity, charge, bond, mass, element,
+            # amberparameters, intrascale, LJ, angle, dihedral, improper,
+            # coordinates
+            outstr.extend((
+                '\tatom',
+                '\t\tname           %s' % atom.name().value(),
+                '\t\tinitial_charge %-8.5f' % atom.property('charge').value(),
+                '\t\tfinal_charge   0.0',
+                '\tendatom'))
+
+        outstr.append('endmolecule\n')
+
+        with open(const.SIRE_ABS_PERT_EL_FILE, 'w') as pfile:
+            pfile.write('\n'.join(outstr))
+
+        outstr = ['version 1', 'molecule %s' % (const.LIGAND_NAME)]
+
+        for atom in ligand.atoms():
+            # ambertype, connectivity, charge, bond, mass, element,
+            # amberparameters, intrascale, LJ, angle, dihedral, improper,
+            # coordinates
+            outstr.extend((
+                '\tatom',
+                '\t\tname           %s' % atom.name().value(),
+                '\t\tinitial_type   %s' % atom.property('ambertype'),
+                '\t\tfinal_type     du',
+                '\t\tinitial_charge 0.0',
+                '\t\tfinal_charge   0.0',
+                ('\t\tinitial_LJ    %8.5f %8.5f' %
+                 (atom.property('LJ').sigma().value(),
+                  atom.property('LJ').epsilon().value())),
+                '\t\tfinal_LJ       0.0 0.0',
+                '\tendatom'))
+
+        outstr.append('endmolecule\n')
+
+        with open(const.SIRE_ABS_PERT_VDW_FILE, 'w') as pfile:
+            pfile.write('\n'.join(outstr))
+
+
     def get_charge(self):
         """
         Read the ligand charge from the charge file.

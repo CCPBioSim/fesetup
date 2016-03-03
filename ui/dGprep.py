@@ -202,6 +202,9 @@ def make_ligand(name, ff, opts, short = False):
 
         nconf = lig['conf_search.numconf']
 
+        if lig['morph.absolute'] and options[SECT_DEF]['FE_type'] == 'Sire':
+            ligand.create_absolute()
+
         if nconf > 0:
             ligand.conf_search(numconf = nconf,
                                geomsteps = lig['conf_search.geomsteps'],
@@ -537,6 +540,7 @@ defaults[SECT_LIG] = {
     'file.format': ('', None),
     'molecules': ('', ('list', LIST_SEP) ),
     'morph_pairs': ('', ('pairlist', LIST_SEP, MORPH_PAIR_SEP) ),
+    'morph.absolute': (False, ('bool', ) ), 
     'box.type': ('', None),
     'box.length': (10.0, (float, ) ),
     'neutralize': (False, ('bool', ) ),
