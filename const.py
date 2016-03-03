@@ -151,9 +151,9 @@ DLFIELD_UDFF_NAME = 'dl_field.udff'
 DLFIELD_PDB_NAME = 'dl_field' + PDB_EXT
 RSTAR_CONV = math.pow(2.0, 1.0 / 6.0) / 2.0
 
-SIRE_ABS_PERT_FILE = 'morph_1step.pert'
-SIRE_ABS_PERT_EL_FILE = 'morph_el.pert'
-SIRE_ABS_PERT_VDW_FILE = 'morph_vdw.pert'
+SIRE_ABS_PERT_FILE = 'MORPH.1step.pert'
+SIRE_ABS_PERT_EL_FILE = 'MORPH.elec.pert'
+SIRE_ABS_PERT_VDW_FILE = 'MORPH.vdw.pert'
 
 GROMACS_GRO_EXT = os.extsep + 'gro'
 GROMACS_ITP_EXT = os.extsep + 'itp'
