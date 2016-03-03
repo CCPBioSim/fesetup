@@ -1,4 +1,4 @@
-#  Copyright (C) 2013  Hannes H Loeffler
+#  Copyright (C) 2013-2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -227,7 +227,7 @@ class IniParser(dict):
 
         if val == None:
             raise IniParserError('\ninput file error in %s: data type '
-                                 'conversion of "%s = %s" failed in '
+                                 'conversion of \'%s = %s\' failed in '
                                  'line %i' % (self.filename, self.key,
                                               self.val, self.lineno) )
 

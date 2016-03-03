@@ -22,7 +22,7 @@ Simple user interface for free energy simulation preparation.
 """
 
 from __future__ import print_function
-import os, sys
+import sys
 
 if ('%x' % sys.hexversion)[:3] != '207':
     print ('Python version 2.7 required, you have %i.%i' %
@@ -33,15 +33,19 @@ if ('%x' % sys.hexversion)[:3] != '207':
 __revision__ = "$Id$"
 __version__ = '0.8.0'
 
-
 vstring = 'FESetup SUI version: %s' % __version__
 print ('\n=== %s ===\n' % vstring)
 
 
-import os, shutil, argparse, signal, copy, glob, atexit
-from collections import OrderedDict, namedtuple
-
+import os
+import argparse
+import shutil
+import glob
+import copy
+import signal
+import atexit
 import warnings                         
+from collections import OrderedDict, namedtuple
 
 import FESetup.prepare as prep
 from FESetup import const, errors, create_logger, logger
@@ -703,6 +707,7 @@ if __name__ == '__main__':
     lig_failed = []
 
     morph_pairs = options[SECT_LIG]['morph_pairs']
+
 
     if morph_pairs:
         mols = [val for pairs in morph_pairs for val in pairs]  # flatten

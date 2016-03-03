@@ -1,4 +1,4 @@
-#  Copyright (C) 2015  Hannes H Loeffler
+#  Copyright (C) 2015-2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -84,6 +84,31 @@ def _psf_format(fileh, data):
         fileh.write('\n')
 
 
+def _makeseg(n):
+    """
+    Create character 'number' from n.
+    """
+
+    digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    base = len(digits)
+
+    if n < 0:
+        return ''
+
+    s = ''
+
+    while True:
+        r = n % base
+        s = digits[r] + s
+        n /= base
+        n -= 1
+
+        if n < 0:
+            break
+
+    return s
+
+
 class CharmmTop(object):
     """Basic CHARMM prm and psf writer."""
 
@@ -141,7 +166,7 @@ class CharmmTop(object):
         self.tot_natoms = sum(mols.at(num).molecule().nAtoms()
                               for num in mol_numbers)
 
-        segcnt = ord('A') - 1
+        segcnt = -1
         atomno = 0
         offset = 0
 
@@ -170,12 +195,19 @@ class CharmmTop(object):
                 lj = atom.property('LJ')
                 coords = atom.property('coordinates')
 
-                # FIXME: water name, large segments
+                # FIXME: water name, large segments, segid overflow
                 if residue.name().value() == 'WAT':
-                    segid = 'W'  # FIXME
+                    segid = 'WATER'
                     res = 'TIP3'
                 else:
-                    segid = chr(segcnt)  # FIXME: check for overflow
+                    if not is_atom:
+                        # FIXME: max is 475253
+                        segid = '{:A>4s}'.format(_makeseg(segcnt))
+                    else:
+                        if charge != 0.0:
+                            segid = 'ION'
+                        else:
+                            segid = 'ATOM'
 
                 amber_type = _check_type(amber_type, self.atomtypes, atomno-1)
 
