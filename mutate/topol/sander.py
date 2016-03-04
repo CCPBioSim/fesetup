@@ -39,11 +39,12 @@ class PertTopology(object):
 
     def __init__(self, FE_sub_type, sc_type, ff, con_morph, atoms_initial,
                  atoms_final, lig_initial, lig_final, atom_map,
-                 reverse_atom_map, zz_atoms):
+                 reverse_atom_map, zz_atoms, gaff):
 
         self.FE_sub_type = FE_sub_type
         self.sc_type = sc_type
         self.ff = ff
+        self.gaff = gaff
         self.con_morph = con_morph
         self.atoms_initial = atoms_initial
         self.atoms_final = atoms_final
@@ -90,10 +91,11 @@ class PertTopology(object):
         frcmod0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                '0.frcmod')
 
-        lig0 = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_0,
-                              start_fmt = 'mol2', frcmod = frcmod0)
+        lig0 = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+                              start_fmt='mol2', frcmod=frcmod0,
+                              gaff=self.gaff)
 
-        lig0.set_atomtype('gaff')
+        lig0.set_atomtype(self.gaff)
         lig0._parmchk(mol2_0, 'mol2', frcmod0)
         lig0._parm_overwrite = 'state0' + ow_add
 
@@ -111,10 +113,11 @@ class PertTopology(object):
         frcmod1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                '1.frcmod')
 
-        lig1 = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_1,
-                              start_fmt = 'mol2', frcmod = frcmod1)
+        lig1 = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_1,
+                              start_fmt='mol2', frcmod=frcmod1,
+                              gaff=self.gaff)
 
-        lig1.set_atomtype('gaff')
+        lig1.set_atomtype(self.gaff)
         lig1._parmchk(mol2_1, 'mol2', frcmod1)
         lig1._parm_overwrite = 'state1' + ow_add
 
@@ -142,9 +145,10 @@ class PertTopology(object):
                                     const.MOL2_EXT)
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_int,
-                             start_fmt = 'mol2', frcmod = frcmod1)
-            lig.set_atomtype('gaff')
+            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_int,
+                                 start_fmt='mol2', frcmod=frcmod1,
+                                 gaff=self.gaff)
+            lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'state_int'
 
             lig.prepare_top()
@@ -194,9 +198,9 @@ class PertTopology(object):
         com0.ligand_fmt = 'mol2'
 
         if pert0_info:
-            com0.prepare_top(pert=pert0_info)
+            com0.prepare_top(gaff=self.gaff, pert=pert0_info)
         else:
-            com0.prepare_top()
+            com0.prepare_top(gaff=self.gaff)
 
         com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                         addcmd = cmd1 + cmd2)
@@ -212,9 +216,9 @@ class PertTopology(object):
         com1._parm_overwrite = 'state1' + ow_add
 
         if pert1_info:
-            com1.prepare_top(pert=pert1_info)
+            com1.prepare_top(gaff=self.gaff, pert=pert1_info)
         else:
-            com1.prepare_top()
+            com1.prepare_top(gaff=self.gaff)
 
         com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                         addcmd = cmd1 + cmd2)

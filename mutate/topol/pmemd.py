@@ -39,11 +39,12 @@ class PertTopology(object):
 
     def __init__(self, FE_sub_type, sc_type, ff, con_morph, atoms_initial,
                  atoms_final, lig_initial, lig_final, atom_map,
-                 reverse_atom_map, zz_atoms):
+                 reverse_atom_map, zz_atoms, gaff):
 
         self.FE_sub_type = FE_sub_type
         self.sc_type = sc_type
         self.ff = ff
+        self.gaff = gaff
         self.con_morph = con_morph
         self.atoms_initial = atoms_initial
         self.atoms_final = atoms_final
@@ -99,10 +100,11 @@ class PertTopology(object):
                                '1.frcmod')
 
 
-        lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_0,
-                             start_fmt = 'mol2', frcmod = frcmod0)
+        lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+                             start_fmt='mol2', frcmod=frcmod0,
+                             gaff=self.gaff)
 
-        lig.set_atomtype('gaff')
+        lig.set_atomtype(self.gaff)
 
         lig._parmchk(mol2_0, 'mol2', frcmod0)
         lig._parmchk(mol2_1, 'mol2', frcmod1)
@@ -128,9 +130,10 @@ class PertTopology(object):
                                     const.MOL2_EXT)
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_0,
-                             start_fmt = 'mol2', frcmod = frcmod0)
-            lig.set_atomtype('gaff')
+            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+                                 start_fmt='mol2', frcmod=frcmod0,
+                                 gaff=self.gaff)
+            lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'pmemd_sc_2step_1'
 
             if self.initial_dummies:
@@ -143,9 +146,10 @@ class PertTopology(object):
             lig.leap.add_mol(mol2_int, 'mol2', frcmod1)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_int,
-                             start_fmt = 'mol2', frcmod = frcmod1)
-            lig.set_atomtype('gaff')
+            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_int,
+                                 start_fmt='mol2', frcmod=frcmod1,
+                                 gaff=self.gaff)
+            lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'pmemd_sc_2step_2'
 
             if self.final_dummies:
@@ -159,18 +163,20 @@ class PertTopology(object):
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
         # FIXME: residue name will be both the same
         elif self.FE_sub_type == 'softcore3':
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_0,
-                             start_fmt = 'mol2', frcmod = frcmod0)
-            lig.set_atomtype('gaff')
+            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+                                 start_fmt='mol2', frcmod=frcmod0,
+                                 gaff=self.gaff)
+            lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'pmemd_decharge' + ow_add
 
             lig.prepare_top()
             lig.leap.add_mol(mol2_0, 'mol2', frcmod0)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2_1,
-                             start_fmt = 'mol2', frcmod = frcmod1)
-            lig.set_atomtype('gaff')
+            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_1,
+                                 start_fmt='mol2', frcmod=frcmod1,
+                                 gaff=self.gaff)
+            lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'pmemd_recharge' + ow_add
 
             lig.prepare_top()
@@ -229,7 +235,7 @@ class PertTopology(object):
         com._parm_overwrite = 'pmemd' + ow_add
 
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
-            com.prepare_top()
+            com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod1)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2)
@@ -258,7 +264,7 @@ class PertTopology(object):
                                      ':%s' % const.LIGAND0_NAME, 
                                      ':%s' % const.INT_NAME) )
 
-            com.prepare_top(pert=pert0_info)
+            com.prepare_top(gaff=self.gaff, pert=pert0_info)
             # intermediate state does never have dummies
             com.leap.add_mol(mol2_int, 'mol2', self.frcmod1)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
@@ -275,7 +281,7 @@ class PertTopology(object):
                                      ':%s' % const.LIGAND1_NAME) )
 
             # intermediate state does never have dummies
-            com.prepare_top()
+            com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod0, pert=pert1_info)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2)
@@ -287,7 +293,7 @@ class PertTopology(object):
             com.frcmod = self.frcmod0
             com._parm_overwrite = 'pmemd_decharge' + ow_add
 
-            com.prepare_top()
+            com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_0, 'mol2', self.frcmod0)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2)
@@ -297,12 +303,12 @@ class PertTopology(object):
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'pmemd_recharge' + ow_add
 
-            com.prepare_top()
+            com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod1)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2)
         elif self.FE_sub_type == 'dummy':
-            com.prepare_top(pert=pert0_info)
+            com.prepare_top(gaff=self.gaff, pert=pert0_info)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod1, pert=pert1_info)
             com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
                            addcmd = cmd1 + cmd2)

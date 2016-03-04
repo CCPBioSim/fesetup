@@ -44,8 +44,10 @@ WD_TABLE = {'pertfile': 'sire'}
 
 class Morph(object):
     """The morphing class."""
-    def __init__(self, initial, final, forcefield, FE_type = 'pertfile',
-                 softcore_type = '', mcs_timeout = 60.0, mcs_sel = ''):
+
+    def __init__(self, initial, final, forcefield, FE_type='pertfile',
+                 softcore_type='', mcs_timeout=60.0, mcs_sel='',
+                 gaff='gaff'):
         """
         :param initial: the initial state of the morph pair
         :type initial: either Ligand or Complex
@@ -116,6 +118,7 @@ class Morph(object):
         self.frcmod1 = None
 
         self.ff = forcefield
+        self.gaff = gaff
 
         self.atoms_initial = None
         self.atoms_final = None
@@ -154,7 +157,7 @@ class Morph(object):
 
 
     @report
-    def setup(self, cmd1, cmd2, isotope_map=None):
+    def setup(self, cmd1, cmd2, isotope_map={}):
         """
         Compute the atom mapping based on MCSS calculations.  Find dummy
         atoms. Set up parameters and connectivities for create_coord().  Create
@@ -260,7 +263,7 @@ class Morph(object):
                                    self.ff, con_morph, atoms_initial,
                                    atoms_final, lig_initial, lig_final,
                                    self.atom_map, self.reverse_atom_map,
-                                   self.zz_atoms)
+                                   self.zz_atoms, self.gaff)
 
         topol.setup(os.getcwd(), lig_morph, cmd1, cmd2)
 

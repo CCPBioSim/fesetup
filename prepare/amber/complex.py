@@ -162,8 +162,8 @@ class Complex(Common):
             mol_file = const.GAFF_MOL2_FILE
             antechamber = utils.check_amber('antechamber')
             utils.run_amber(antechamber,
-                            '-i %s -fi ac -o %s -fo mol2 -j 1 -at gaff -pf y' %
-                            (const.LIGAND_AC_FILE, mol_file) )
+                            '-i %s -fi ac -o %s -fo mol2 -j 1 -at %s -pf y' %
+                            (const.LIGAND_AC_FILE, mol_file, gaff) )
             self.ligand_fmt = 'mol2'
         else:
             # antechamber has trouble with dummy atoms

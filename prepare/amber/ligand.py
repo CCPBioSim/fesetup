@@ -182,11 +182,11 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
 
         # NOTE: only -c bcc (and -c resp) symmetrise charges
         utils.run_amber(antechamber,
-                        '-c bcc -nc %i -at gaff -j 4 -s 2 -eq 2 -rn LIG '
+                        '-c bcc -nc %i -at %s -j 4 -s 2 -eq 2 -rn LIG '
                         '-ek "%s" '
                         '-i %s -fi mol2 '
                         '-o %s -fo mol2'
-                        % (charge, sqm_nml, tmp_mol2, mol2_file) )
+                        % (charge, self.gaff, sqm_nml, tmp_mol2, mol2_file) )
 
         # geometry converged?
         found = False
@@ -259,7 +259,8 @@ class Ligand(Common):
 
     def __init__(self, ligand_name, basedir, start_file = 'ligand.pdb',
                  start_fmt = 'pdb', workdir = const.LIGAND_WORKDIR,
-                 frcmod = const.LIGAND_FRCMOD_FILE, overwrite = False):
+                 frcmod = const.LIGAND_FRCMOD_FILE, overwrite = False,
+                 gaff='gaff'):
         """
         :param ligand_name: name of the ligand, will be used as directory name
         :type ligand_name: string
@@ -289,6 +290,11 @@ class Ligand(Common):
         self.orig_fmt = start_fmt
 
         self.charge = 0.0
+        self.gaff = gaff
+
+        if self.gaff != 'gaff' and self.gaff != 'gaff2':
+            raise errors.SetupError('Only known gaff versions are "gaff" '
+                                    'and "gaff2"')
 
         self.ref_file = ''
         self.ref_fmt = ''
@@ -331,7 +337,7 @@ class Ligand(Common):
             '-nc %s' % str(self.charge), # net molecular charge
             '-m 1',                     # FIXME: spin multiplicity (sqm only 1)
             '-df 2',                    # 0 = mopac, 2 = sqm
-            '-at gaff',                 # write GAFF types
+            '-at %s' % self.gaff,       # write GAFF types
             '-du y',                    # fix duplicate atom names
             '-an y',                    # adjust atom names
             '-j 4',                     # atom/bond type prediction = full
@@ -457,6 +463,9 @@ class Ligand(Common):
             if self.parmchk_version > 1:
                 parmchk = utils.check_amber('parmchk%s' %
                                             str(self.parmchk_version) )
+
+                if self.gaff == 'gaff2':
+                    params += '-s gaff2 '
             else:
                 parmchk = utils.check_amber('parmchk')
 
@@ -538,7 +547,7 @@ class Ligand(Common):
         #self.model['supports_mc'] = False
 
 
-    def _parmchk(self, infile, informat, outfile, gaff='gaff'):
+    def _parmchk(self, infile, informat, outfile):
         """
         Run parmcheck to generate missing parameters.
 
@@ -558,7 +567,7 @@ class Ligand(Common):
         if self.parmchk_version > 1:
             parmchk = utils.check_amber('parmchk%s' %
                                         str(self.parmchk_version) )
-            if gaff == 'gaff2':
+            if self.gaff == 'gaff2':
                 params += '-s gaff2 '
         else:
             parmchk = utils.check_amber('parmchk')
@@ -593,15 +602,16 @@ class Ligand(Common):
         """
 
         if self.mol_fmt == 'mol2':
-            if self.mol_atomtype != 'gaff':
+            if self.mol_atomtype != self.gaff:
                 mol_file = const.GAFF_MOL2_FILE
                 antechamber = utils.check_amber('antechamber')
 
                 utils.run_amber(antechamber,
                                 '-i %s -fi ac '
                                 '-o %s -fo mol2 '
-                                '-at gaff -s 2 -pf y' %
-                                (const.LIGAND_AC_FILE, mol_file) )
+                                '-at %s -s 2 -pf y' %
+                                (const.LIGAND_AC_FILE, mol_file,
+                                 self.gaff) )
             else:
                 mol_file = self.mol_file
         else:
@@ -609,7 +619,7 @@ class Ligand(Common):
                                     'mol2 and pdb)' % self.mol_fmt)
 
         if not self.leap_added:
-            self.leap.add_force_field(gaff)
+            self.leap.add_force_field(self.gaff)
             self.leap.add_mol(mol_file, self.mol_fmt, self.frcmod, pert=pert)
 
             self.leap_added = True

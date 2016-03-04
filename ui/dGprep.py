@@ -162,9 +162,9 @@ def make_ligand(name, ff, opts, short = False):
     else:
         fmt = lig['file.format']
 
-
     with ff.Ligand(name, lig['basedir'], lig['file.name'], fmt,
-                   overwrite = opts[SECT_DEF]['overwrite']) as ligand:
+                   overwrite=opts[SECT_DEF]['overwrite'],
+                   gaff=opts[SECT_DEF]['gaff']) as ligand:
 
         if not os.access(lig['file.name'], os.F_OK):
             raise errors.SetupError('start file %s does not exist in %s' %
@@ -523,6 +523,7 @@ defaults[SECT_DEF] = {
     'logfile': ('dGprep.log', None),
     'forcefield': (['amber', 'ff14SB', 'tip3p', 'hfe'], ('list', LIST_SEP) ),
     'ff_addons': ([], ('list', LIST_SEP) ),
+    'gaff': ('gaff', None),
     'mdengine': (['amber', 'sander'], ('list', LIST_SEP) ),
     'mdengine.prefix': ('', None),
     'mdengine.postfix': ('', None),
@@ -785,7 +786,7 @@ if __name__ == '__main__':
         cmd1 = l1.leapcmd
         cmd2 = l2.leapcmd
 
-        isotope_map = None
+        isotope_map = {}
 
         if (pair[0], pair[1]) in morph_maps:
             isotope_map = morph_maps[pair[0], pair[1]]
@@ -794,7 +795,8 @@ if __name__ == '__main__':
                           options[SECT_DEF]['FE_type'],
                           options[SECT_DEF]['softcore_type'],
                           options[SECT_DEF]['mcs.timeout'],
-                          options[SECT_DEF]['mcs.match_by']) as morph:
+                          options[SECT_DEF]['mcs.match_by'],
+                          options[SECT_DEF]['gaff']) as morph:
 
             print ('Morphing %s to %s...' % pair)
 

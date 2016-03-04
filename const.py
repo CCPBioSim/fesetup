@@ -89,7 +89,7 @@ DUMMY_TYPE = 'du'
 
 IGNORE_RESIDUES = frozenset((LIGAND_NAME, 'TIP', 'WAT', 'Cl-', 'Na+'))
 
-KNOWN_MOL2_ATOMTYPES = ('gaff', 'sybyl', 'amber')
+KNOWN_MOL2_ATOMTYPES = ('gaff', 'gaff2', 'sybyl', 'amber')
 
 LIGAND_WORKDIR = '_ligands'
 PROTEIN_WORKDIR = '_proteins'

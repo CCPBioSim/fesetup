@@ -42,9 +42,10 @@ class PertTopology(object):
 
     def __init__(self, FE_sub_type, sc_type, ff, con_morph, atoms_initial,
                  atoms_final, lig_initial, lig_final, atom_map,
-                 reverse_atom_map, zz_atoms):
+                 reverse_atom_map, zz_atoms, gaff):
 
         self.ff = ff
+        self.gaff = gaff
         self.atoms_final = atoms_final
         self.lig_initial = lig_initial
         self.lig_final = lig_final
@@ -67,10 +68,11 @@ class PertTopology(object):
 
         # FIXME: Ligand class needs some redesign!
         lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2,
-                             start_fmt = 'mol2', frcmod = self.frcmod)
+                             start_fmt = 'mol2', frcmod = self.frcmod,
+                             gaff=self.gaff)
 
         # prevent antechamber from running over the MOL2 file
-        lig.set_atomtype('gaff')
+        lig.set_atomtype(self.gaff)
 
         lig._parmchk(mol2, 'mol2', self.frcmod)
         lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
