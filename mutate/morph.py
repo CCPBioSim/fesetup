@@ -154,7 +154,7 @@ class Morph(object):
 
 
     @report
-    def setup(self, cmd1, cmd2):
+    def setup(self, cmd1, cmd2, isotope_map=None):
         """
         Compute the atom mapping based on MCSS calculations.  Find dummy
         atoms. Set up parameters and connectivities for create_coord().  Create
@@ -206,10 +206,14 @@ class Morph(object):
         lig_final = molecules_final.at(nmol_f[0]).molecule()
 
         # user tagging mechanism as per feature request #1074
-        lig0_isomap_file = os.path.join(self.topdir, self.initial.basedir,
-                                        self.name + os.extsep + 'map')
+        if not isotope_map:
+            lig0_isomap_file = os.path.join(self.topdir, self.initial.basedir,
+                                            self.name + os.extsep + 'map')
 
-        isotope_map = util.create_isotope_map(lig0_isomap_file)
+            isotope_map = util.create_isotope_map(lig0_isomap_file)
+
+        if isotope_map:
+            logger.write('User supplied tagging map: %s' % isotope_map)
 
         (lig_morph, self.atom_map, self.reverse_atom_map) = \
                     util.map_atoms(lig_initial, lig_final, self.mcs_timeout,

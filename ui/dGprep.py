@@ -515,7 +515,6 @@ def do_md(what, opts, how):
             opts['md.%s.restr_force' % how], wrap = True)
 
 
-
 defaults = {}
 
 # All valid keys with defaults
@@ -707,9 +706,35 @@ if __name__ == '__main__':
     lig_failed = []
 
     morph_pairs = options[SECT_LIG]['morph_pairs']
-
+    morph_maps = {}
 
     if morph_pairs:
+        temp_pairs = []
+
+        # FIXME: better error handling, parsing in IniParser?
+        for pair in morph_pairs:
+            p1 = pair[1].split('/')
+            temp_map = {}
+
+            if len(p1) > 1:
+                p1[0] = p1[0].strip()
+
+                for idx in p1[1:]:
+                    if (idx):
+                        a, b = idx.split('=')
+
+                        try:
+                            temp_map[int(a)] = int(b)
+                        except ValueError:
+                            print('Error: map contains non-integers')
+                            sys.exit(1)
+
+                morph_maps[pair[0],p1[0]] = temp_map
+
+            temp_pairs.append( (pair[0], p1[0]) )
+
+        morph_pairs = temp_pairs
+
         mols = [val for pairs in morph_pairs for val in pairs]  # flatten
         uniq = list(OrderedDict( (val, None) for val in mols) )
         options[SECT_LIG]['molecules'] = uniq
@@ -760,6 +785,11 @@ if __name__ == '__main__':
         cmd1 = l1.leapcmd
         cmd2 = l2.leapcmd
 
+        isotope_map = None
+
+        if (pair[0], pair[1]) in morph_maps:
+            isotope_map = morph_maps[pair[0], pair[1]]
+
         with mutate.Morph(ligand1, ligand2, ff,
                           options[SECT_DEF]['FE_type'],
                           options[SECT_DEF]['softcore_type'],
@@ -774,7 +804,7 @@ if __name__ == '__main__':
                 rev = None
 
             try:
-                morph.setup(cmd1, cmd2)
+                morph.setup(cmd1, cmd2, isotope_map)
 
                 if options[SECT_LIG]['box.type']:
                     morph.create_coords(ligand1, cmd1, cmd2, rev)

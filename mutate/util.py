@@ -176,8 +176,6 @@ def create_isotope_map(filename):
     isotope_map = {}
 
     if os.access(filename, os.F_OK):
-        logger.write('Reading user tag map from %s' % filename)
-
         with open(filename, 'r') as isomap:
             lcnt = 0
 

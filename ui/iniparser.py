@@ -149,7 +149,7 @@ class IniParser(dict):
                 ncont = True
 
                 try:
-                    self.key, self.val = line_check.split('=')
+                    self.key, self.val = line_check.split('=', 1)
                 except ValueError:
                     raise IniParserError('\ninput file error in %s: line %i '
                                          'not in "key = value" format' %
