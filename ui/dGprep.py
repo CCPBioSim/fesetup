@@ -200,6 +200,7 @@ def make_ligand(name, ff, opts, short = False):
 
         ligand.prepare_top()
         ligand.create_top(boxtype = '', addcmd = load_cmds)
+        ligand.save_model()
 
         if opts[SECT_DEF]['MC_prep']:
             ligand.flex()
@@ -291,6 +292,8 @@ def make_ligand(name, ff, opts, short = False):
                 if _minmd_done(lig):
                    ligand.to_rst7()
 
+            ligand.save_model(const.MODEL_SOLV_PREFIX)
+
     return ligand, load_cmds
 
 
@@ -320,6 +323,7 @@ def make_protein(name, ff, opts, short = False):
         protein.get_charge()    # must be done explicitly
         protein.prepare_top()
         protein.create_top(boxtype = '')
+        protein.save_model()
 
         # FIXME: also check for boxlength and neutralize
         if prot['box.type']:
@@ -398,6 +402,8 @@ def make_protein(name, ff, opts, short = False):
                 if _minmd_done(prot):
                    protein.to_rst7()
 
+            protein.save_model(const.MODEL_SOLV_PREFIX)
+
     return protein, load_cmds
 
 
@@ -414,6 +420,7 @@ def make_complex(prot, lig, ff, opts, load_cmds, short = False):
         complex.ligand_fmt = lig.mol_fmt
         complex.prepare_top()
         complex.create_top(boxtype = '', addcmd = load_cmds)
+        complex.save_model()
 
         # FIXME: also check for boxlength and neutralize
         if com['box.type']:
@@ -494,6 +501,8 @@ def make_complex(prot, lig, ff, opts, load_cmds, short = False):
             if opts[SECT_DEF]['mdengine'][0] != 'amber':
                 if _minmd_done(com):
                     complex.to_rst7()
+
+            complex.save_model(const.MODEL_SOLV_PREFIX)
 
     return complex, load_cmds
 

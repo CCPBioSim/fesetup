@@ -443,6 +443,8 @@ class Common(object):
 
         self.mdengine.minimize(namelist, nsteps, ncyc, restraint, restr_force)
 
+        # FIXME: report back new box info
+
 
     @report
     def md(self, namelist = '', nsteps = 1000, T = 300.0, p = 1.0,
@@ -480,6 +482,8 @@ class Common(object):
         # FIXME: clean up nrestr to be consistent between MD programs
         self.mdengine.md(namelist, nsteps, T, p, restraint, restr_force,
                          nrestr, wrap)
+
+        # FIXME: report back new box info
 
 
     def to_rst7(self):
@@ -582,18 +586,19 @@ class Common(object):
         self.mol_fmt = 'pdb'
 
 
-    def get_box_dims(self, rst_filen = None):
+    # called in morph.py (1x), common.py/setup_MDEngine (1x)
+    def get_box_dims(self, filename=None):
         """
         Get box dimensions from sander .rst file.
 
-        :param rst_filen: name of .rst file
-        :type rst_filen: string
+        :param filename: name of .rst file
+        :type filename: string
         """
 
-        if not rst_filen:
-            rst_filen = self.sander_rst
+        if not filename:
+            filename = self.sander_rst
 
-        with open(rst_filen, 'r') as rst:
+        with open(filename, 'r') as rst:
             for line in rst:
                 self.box_dims = line
 
@@ -603,10 +608,13 @@ class Common(object):
         self.box_dims = self.box_dims.split()
 
 
+    # called in common.py/_amber_top_common (1x)
     def get_box_info(self):
         """
         Use Sire to get information about the system: volume, density,
         box dimensions.
+
+        NOTE: Sire prmtop reader is slow!
         """
 
         # Sire.Mol.Molecules, Sire.Vol.PeriodicBox or Sire.Vol.Cartesian
@@ -632,3 +640,33 @@ class Common(object):
 
             # in g/cc
             self.density = total_mass * const.AMU2GRAMS / self.volume
+
+
+    def save_model(self, name_prefix=''):
+        """
+        Save the current model.
+
+        :param name_prefix: an optional name prefix for the model file name
+        :type name_prefix: string
+        """
+
+        # add only latest info
+        self.model['crd.filename'] = self.amber_crd
+        self.model['crd.filetype'] = 'amber'
+        self.model['top.filename'] = self.amber_top
+        self.model['top.filetype'] = 'amber'
+
+        self.model.add_file(self.amber_top)
+        self.model.add_file(self.amber_crd)
+
+        # FIXME: check when minimisation/equilibration
+        if self.box_dims:
+            self.model['box.dimensions'] = self.box_dims
+            self.model['box.density'] = self.density
+            self.model['box.type'] = 'bla'  # FIXME: boxlengths-angle
+
+        filename = name_prefix + self.model['name'] + const.MODEL_EXT
+
+        self.model.write(filename)
+        shutil.move(filename, os.path.join(self.topdir, self.workdir,
+                                           filename))

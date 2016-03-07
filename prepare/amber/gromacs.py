@@ -253,7 +253,7 @@ class GromacsTop(object):
         for num in mol_numbers:
             mol = mols.at(num).molecule()
             natoms = mol.nAtoms()
-            key = tuple([str(res.name().value() ) for res in mol.residues() ])
+            key = tuple([str(res.name().value()) for res in mol.residues()])
 
             # store unique molecules because only topological data is needed
             try:
@@ -319,6 +319,8 @@ class GromacsTop(object):
 
         mcnt = 0
 
+        # FIXME: we need to preserve molecule order, e.g. ions may be
+        #        alternating
         for seq, num in resnames.iteritems():
             slen = len(seq)
 
@@ -620,7 +622,7 @@ class GromacsTop(object):
                 top.write('\n[ system ]\n%s\n\n[ molecules ]\n; Compound        '
                    'nmols\n' % 'SysX')
 
-                for num, name, cnt in self.moltypes:
+                for _, name, cnt in self.moltypes:
                     top.write('%s %i\n' % (name, cnt) )
 
                 if self.nwat:

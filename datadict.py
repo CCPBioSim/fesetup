@@ -1,4 +1,4 @@
-#  Copyright (C) 2013  Hannes H Loeffler
+#  Copyright (C) 2013,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,8 @@
 #  that should have come with this distribution.
 
 r"""
-DataDict class.
+The DataDict class to store and retrieve a dictionary plus associated
+data files.
 """
 
 __revision__ = "$Id$"
@@ -37,22 +38,23 @@ class DataDictError(Exception):
 
 
 class DataDict(dict):
-    """Simple class for a standard dictionary plus an added data part.
+    """
+    Simple class for a standard dictionary plus an added data part.
 
     Arbitrary key-value pairs can be created just like with the built-in
-    dict.  A data part consisting of an arbitrary set of file is a mandatory
+    dict.  The data part consisting of an arbitrary set of file is a mandatory
     part of the class.  This set of file is internally handled via a tar
     (pax) archive and compressed (bz2 or gz).  A checksum is calculated for
-    the data.
+    the data and a manifest added to the archive.
 
-    The class can be written to a file which is a mixture of ASCII key-value
-    pairs and binary data.  The format is each key=value pair on a line by
-    itself followed by a END_TAG.  The data part is then written to the final
-    line.
+    The class can be written to a file as a mixture of ASCII key-value pairs
+    and the binary data archive.  The format is each key=value pair on a line
+    by itself followed by the END_TAG.  The data part is then written to the
+    final 'line'.
     """
 
 
-    END_TAG = '_END'
+    _END_TAG = '_END'
 
 
     # NOTE: check if subclassing from dict is really a good idea
@@ -66,7 +68,12 @@ class DataDict(dict):
 
 
     def write(self, filename):
-        """Write dictionary header (key/value pairs) and data to filename."""
+        """
+        Write dictionary header (key/value pairs) and data to filename.
+
+        :param filename: the file name to be write to
+        :type filename: string
+        """
 
         if not self.data:
             raise DataDictError('no data files')
@@ -75,13 +82,17 @@ class DataDict(dict):
             for key, val in sorted(self.iteritems() ):
                 outfile.write('%s = %s\n' % (key, val) )
 
-            outfile.write('%s\n' % self.__class__.END_TAG)
-
+            outfile.write('%s\n' % self.__class__._END_TAG)
             outfile.write(self.data)
 
 
     def read(self, filename):
-        """Read a datadict file."""
+        """
+        Read a datadict file.
+
+        :param filename: the file name to be read from
+        :type filename: string
+        """
 
         lineno = 0
 
@@ -89,7 +100,7 @@ class DataDict(dict):
             while True:
                 line = infile.readline()
 
-                if line[:-1] == self.__class__.END_TAG or not line:
+                if line[:-1] == self.__class__._END_TAG or not line:
                     break
 
                 lineno += 1
@@ -135,11 +146,19 @@ class DataDict(dict):
 
 
     # NOTE: merge with write()?
-    def add_files(self, files, hash_type = 'sha1',
-                       compression_type = 'bz2'):
-        """Add a list of files to an interal tar(pax) archive.  A manifest is
+    def add_files(self, files, hash_type = 'sha1', compression_type = 'bz2'):
+        """
+        Add a list of files to an internal tar(pax) archive.  A manifest is
         automatically created.  The tar(pax) archive will be compressed.  A
-        checksum will be computed for the final archive."""
+        checksum will be computed for the final archive.
+
+        :param files: the file names to be added
+        :type files: set of strings
+        :param hash_type: the type of hash (see hashlib.algorithms)
+        :type hash_type: string
+        :param compression_type: the compression type (gz or bz2)
+        :type compression_type: string
+        """
         
         memtar = cStringIO.StringIO()
         manifest = []
@@ -174,8 +193,15 @@ class DataDict(dict):
         return hash_val.hexdigest()
 
 
-    def check_data(self, hash, hash_type):
-        """Check checksum of data."""
+    def check_data(self, hashv, hash_type):
+        """
+        Check checksum of data against the hash value.
+
+        :param hashv: the hash to be checked against
+        :type hashv: string
+        :param hash_type: the type of hash as supported by hashlib
+        :type hash_type: string
+        """
 
         if not self.data:
             raise DataDictError('no data files')
@@ -183,19 +209,20 @@ class DataDict(dict):
         hash_val = hashlib.new(hash_type)
         hash_val.update(self.data)
 
-        if hash != hash_val.hexdigest():
+        if hashv != hash_val.hexdigest():
             raise DataDictError('data corruption: checksum doesn\'t match')
 
 
     def list(self, compression_type = '*'):
-        """List contents of internal tar(pax) archive.
+        """
+        List contents of internal tar(pax) archive.
 
-        Compression type by default is transparent.  Other possible types
-        are 'gz' and 'bz2'.
+        :param compression_type: the compression type (*=transparent)
+        :type compression_type: string
         """
 
         if not self.data:
-            raise DataDictError('not data files')
+            raise DataDictError('no data files')
 
         with tarfile.open(mode = 'r:%s' % compression_type,
                           format = tarfile.PAX_FORMAT,
@@ -204,19 +231,23 @@ class DataDict(dict):
 
 
     def extract(self, compression_type = '*', direc = '.'):
-        """Extract contents of internal tar(pax) archive.
+        """
+        Extract contents of internal tar(pax) archive.
 
-        Compression type by default is transparent.  Other possible types
-        are 'gz' and 'bz2'.
+        :param compression_type: the compression type (*=transparent)
+        :type compression_type: string
+        :param direc: path to extract to
+        :type direc: string
         """
 
         if not self.data:
-            raise DataDictError('not data files')
+            raise DataDictError('no data files')
 
         with tarfile.open(mode = 'r:%s' % compression_type,
                           format = tarfile.PAX_FORMAT,
                           fileobj = cStringIO.StringIO(self.data) ) as tar:
             tar.extractall(direc)
+
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-#  Copyright (C) 2013  Hannes H Loeffler
+#  Copyright (C) 2013,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 
 r"""
 Version 1 of the ModelConfig class which is a DataDict with certain required
-dictionary keys.
+dictionary keys and associated files.
 """
 
 __revision__ = "$Id$"
@@ -32,61 +32,79 @@ from FESetup.datadict import DataDict, DataDictError
 
 
 class ModelConfig(DataDict):
+    """
+    A class to hold a dictionary plus associated files.  This is a particular
+    implementation of the more generic DataDict.
+    """
 
     # None is used to signal unset values
-    mandatory = {
-        'version': 1,
+    mandatory_fields = {
+        'version': 0,
         'name': None,
+        'charge.total': None,
+#        'charge.filename': None,
+#        'charge.filetype': None,
+#        'charge.type': None,
         'forcefield': None,
-        'type': None,
+        'molecule.type': None,
         'crd.filename': None,
         'crd.filetype': None,
         'top.filename': None,
         'top.filetype': None,
-        'charge.filename': None,
-        'charge.filetype': None,
-        'charge.type': None,
-        'isvalid': None,
-        'ismorph': None,
-        'supports_md': None,
-        'supports_mc': None,
         'data.checksum': None ,
         'data.checksum_type': 'sha1',
-        'data.compression_type': 'bz2'
-        }
-
-    optional = {
-        'header': None,
-        'time': None,
-        'mc_type': None,
-        'state0': None,
-        'state1': None
+        'data.compression_type': 'bz2',
+#        'isvalid': None,
+        'timestamp': None
         }
 
 
-    def __init__(self, name = 'unnamed'):
-        super(ModelConfig, self).__init__(self.mandatory)
+    def __init__(self, name):
+        """
+        :param name: the model name
+        :type name: string
+        """
 
-        #self.update(self.optional)
+        super(ModelConfig, self).__init__(self.__class__.mandatory_fields)
 
         self['name'] = name
         self.files = set()
-        self.filename = self['name'] + const.MODEL_EXT
 
 
-    def add_file(self, file):
-        self.files.add(file)
+    def add_file(self, filename):
+        """
+        Add a file name to this class.
+
+        :param filename: the file name to be added
+        :type filename: string
+        """
+
+        self.files.add(filename)
 
 
-    def remove_files(self):
+    def remove_all_files(self):
+        """
+        Remove all files from the class.
+        """
+
         self.files = set()
 
 
-    def write(self):
+    def write(self, filename):
+        """
+        Write out this class into a dictionary plus compressed file archive.
+
+        :param filename: the file name
+        :type filename: string
+        """
+
         self['data.checksum'] = self.add_files(self.files,
                                                self['data.checksum_type'],
                                                self['data.compression_type'])
-        for elem in self.mandatory:
+
+        self['timestamp'] = time.ctime()
+
+        for elem in self.__class__.mandatory_fields:
             if elem not in self:
                 raise DataDictError('mandatory field "%s" not present' %
                                     self[elem])
@@ -95,7 +113,4 @@ class ModelConfig(DataDict):
                     raise DataDictError('mandatory field "%s" not set' %
                                         elem)
 
-        self['isvalid'] = True
-        self['time'] = time.ctime()
-
-        super(ModelConfig, self).write(self.filename)
+        super(ModelConfig, self).write(filename)

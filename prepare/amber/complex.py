@@ -31,6 +31,7 @@ __revision__ = "$Id$"
 
 import FESetup
 from FESetup import const, errors, logger
+from FESetup.modelconf import ModelConfig
 import utils
 from ligand import Ligand
 from protein import Protein
@@ -145,6 +146,15 @@ class Complex(Common):
         # FIXME: needed for __enter__ and __exit__ in class Common
         self.dst = dst
         self.topdir = ligand.topdir
+
+        # FIXME: get these from either Ligand/Protein or model
+        self.model = ModelConfig(complex_name)
+        self.model.update(self.protein.model)
+        self.model.update(self.ligand.model)
+        self.model['name'] = complex_name
+        self.model['charge.total'] = self.charge
+        self.model['forcefield'] = 'AMBER'
+        self.model['molecule.type'] = 'complex'
 
 
     @report

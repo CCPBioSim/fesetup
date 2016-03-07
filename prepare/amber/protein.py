@@ -32,6 +32,7 @@ import os
 
 import FESetup
 from FESetup import const, errors, logger
+from FESetup.modelconf import ModelConfig
 from common import *
 import utils
 
@@ -69,6 +70,11 @@ class Protein(Common):
 
         self.mol_file = start_file
         self.mol_fmt = 'pdb'
+
+        self.model = ModelConfig(protein_name)
+        self.model['charge.type'] = 'RESP'  # FIXME: check
+        self.model['forcefield'] = 'AMBER'  # FIXME: more refined
+        self.model['molecule.type'] = 'biomolecule'  # FIXME: may not be true!
 
 
     # import force field independent functionality (to avoid mixins)
@@ -119,6 +125,7 @@ class Protein(Common):
                 self.charge = float(chf.read() )
 
         logger.write('Protein charge: %.3f' % self.charge)
+        self.model['charge.total'] = self.charge
 
 
     @report

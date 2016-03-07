@@ -27,7 +27,7 @@ __revision__ = "$Id$"
 
 
 
-import os, math
+import os
 
 import Sire.Units
 
@@ -138,7 +138,9 @@ PDB_EXT = os.extsep + 'pdb'
 PRMTOP_EXT = os.extsep + 'parm7'
 INPCRD_EXT = os.extsep + 'rst7'
 MOL2_EXT = os.extsep + 'mol2'
+
 MODEL_EXT = os.extsep + 'model'
+MODEL_SOLV_PREFIX = 'solv_'
 
 FLAT_RINGS_FILE = 'flatrings' + PDB_EXT
 PROTONATED_PDB_FILE = 'protonated' + PDB_EXT
@@ -149,7 +151,7 @@ NOT_FIRST_PDB = 'not_first' + PDB_EXT
 
 DLFIELD_UDFF_NAME = 'dl_field.udff'
 DLFIELD_PDB_NAME = 'dl_field' + PDB_EXT
-RSTAR_CONV = math.pow(2.0, 1.0 / 6.0) / 2.0
+RSTAR_CONV = 0.5612310241546865         # math.pow(2.0, 1.0 / 6.0) / 2.0
 
 SIRE_ABS_PERT_FILE = 'MORPH.1step.pert'
 SIRE_ABS_PERT_EL_FILE = 'MORPH.elec.pert'
@@ -162,7 +164,7 @@ GROMACS_POSRES_PREFIX = 'posres_'
 GROMACS_PERT_ITP = 'pert' + GROMACS_ITP_EXT
 GROMACS_PERT_ATP = 'pert' + os.extsep + 'atp'
 
-RAD2DEG = 180.0 / math.pi
+RAD2DEG = 57.29577951308232             # 180.0 / math.pi
 AMBER_VELCONV = 20.455                  # AMBER time in 1/20.455 ps
 A2NM = 0.1
 CAL2J = 4.184

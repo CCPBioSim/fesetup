@@ -523,7 +523,7 @@ class Ligand(Common):
                         const.LIGAND_AC_FILE + os.extsep + '0')
         shutil.move(const.CORR_AC_FILE, const.LIGAND_AC_FILE)
 
-        self.charge = sum(charges)
+        self.charge = float('%.12f' % sum(charges))
         logger.write('Total molecule charge is %.2f\n' % self.charge)
 
         with open(const.CHARGE_FILE, 'w') as chf:
@@ -532,19 +532,14 @@ class Ligand(Common):
         self.ref_file = self.mol_file
         self.ref_fmt = self.mol_fmt
 
-        #self.model.add_file(self.mol_file)
-        #self.model.add_file(const.LIGAND_AC_FILE)
-        #self.model['charge'] = self.charge
-        #self.model['charge.filename'] = const.LIGAND_AC_FILE
-        #self.model['charge.filetype'] = 'ac'
-        #self.model['charge.type'] = 'AM1-BCC'
+        self.model['charge.total'] = self.charge
+        self.model['charge.filename'] = const.LIGAND_AC_FILE
+        self.model['charge.filetype'] = 'ac'
+        self.model['charge.type'] = 'AM1-BCC'
+        self.model.add_file(const.LIGAND_AC_FILE)
 
-        #self.model['forcefield'] = 'gaff'
-        #self.model['type'] = 'ligand'
-        #self.model['isvalid'] = False
-        #self.model['ismorph'] = False
-        #self.model['supports_md'] = True
-        #self.model['supports_mc'] = False
+        self.model['forcefield'] = self.gaff
+        self.model['molecule.type'] = 'ligand'
 
 
     def _parmchk(self, infile, informat, outfile):
@@ -617,6 +612,8 @@ class Ligand(Common):
         else:
             raise errors.SetupError('unsupported leap input format: %s (only '
                                     'mol2 and pdb)' % self.mol_fmt)
+
+        self.model.add_file(mol_file)
 
         if not self.leap_added:
             self.leap.add_force_field(self.gaff)
@@ -697,15 +694,6 @@ class Ligand(Common):
 
             lig = mols.molNums()[0]
             dlfield.dlf_write(mols.at(lig).molecule(), '_AG')
-
-        self.model.add_file(self.mol_file)
-        self.model.add_file(self.amber_top)
-        self.model.add_file(self.amber_crd)
-
-        self.model['crd.filename'] = self.amber_crd
-        self.model['crd.filetype'] = 'amber'
-        self.model['top.filename'] = self.amber_top
-        self.model['top.filetype'] = 'amber'
 
 
     @report
@@ -888,21 +876,3 @@ class Ligand(Common):
                                     str(const.KNOWN_MOL2_ATOMTYPES) )
 
         self.mol_atomtype = atomtype
-
-
-    def new_model(self, name = 'unnamed'):
-        """
-        Create a new model.
-
-        :param name: model name
-        :type name: string
-        """
-
-        
-        self.model['name'] = name
-        self.model.filename = name + const.MODEL_EXT
-
-        self.model.write()
-
-        shutil.move(self.model.filename, os.path.join(self.topdir,
-                                                      self.model.filename) )
