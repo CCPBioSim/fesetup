@@ -118,6 +118,7 @@ def prelude(opts):
     ff_opts.append(opts[SECT_DEF]['ff_addons'])
     ff_opts.append(opts[SECT_DEF]['mdengine'][0])
     ff_opts.append(opts[SECT_DEF]['parmchk_version'])
+    ff_opts.append(opts[SECT_DEF]['gaff'])
 
     return prep.ForceField(*ff_opts)
 
@@ -163,8 +164,7 @@ def make_ligand(name, ff, opts, short = False):
         fmt = lig['file.format']
 
     with ff.Ligand(name, lig['basedir'], lig['file.name'], fmt,
-                   overwrite=opts[SECT_DEF]['overwrite'],
-                   gaff=opts[SECT_DEF]['gaff']) as ligand:
+                   overwrite=opts[SECT_DEF]['overwrite']) as ligand:
 
         if not os.access(lig['file.name'], os.F_OK):
             raise errors.SetupError('start file %s does not exist in %s' %

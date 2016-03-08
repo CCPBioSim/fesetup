@@ -100,7 +100,7 @@ GB_MIN_IN = '''Minimise whole system
 '''
 
 def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
-                    sqm_extra, antechamber):
+                    sqm_extra, antechamber, gaff):
     """
     Compute AM1/BCC charges using a GB model via the sander QM/MM
     interface. So far, this does not prevent zwitterions from 'folding'
@@ -121,6 +121,8 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
     :type sqm_extra: string
     :param antechamber: the antechamber executable
     :type antechamber: string
+    :param gaff: 'gaff' or 'gaff2'
+    :type gaff: string
     :returns: bool if converged or not
     """
 
@@ -142,7 +144,6 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
                "%s" % (tight, scfconv, sqm_extra + ',') )
 
     sqm_params='scfconv=%s,tight_p_conv=%i,%s' % (scfconv, tight, sqm_extra)
-
 
     utils.run_amber(antechamber,
                     '-i %s -fi ac '
@@ -186,7 +187,7 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
                         '-ek "%s" '
                         '-i %s -fi mol2 '
                         '-o %s -fo mol2'
-                        % (charge, self.gaff, sqm_nml, tmp_mol2, mol2_file) )
+                        % (charge, gaff, sqm_nml, tmp_mol2, mol2_file) )
 
         # geometry converged?
         found = False
@@ -290,7 +291,6 @@ class Ligand(Common):
         self.orig_fmt = start_fmt
 
         self.charge = 0.0
-        self.gaff = gaff
 
         if self.gaff != 'gaff' and self.gaff != 'gaff2':
             raise errors.SetupError('Only known gaff versions are "gaff" '
@@ -475,7 +475,7 @@ class Ligand(Common):
             converged = _calc_gb_charge(const.LIGAND_AC_FILE,
                                         const.GB_FRCMOD_FILE, self.charge,
                                         scfconv, tight, sqm_extra,
-                                        antechamber)
+                                        antechamber, self.gaff)
 
             if not converged:
                 logger.write('Error: GB parameterisation failed\n')
@@ -515,9 +515,9 @@ class Ligand(Common):
                         '-i %s -fi ac '
                         '-o %s -fo ac '
                         '-cf %s -c rc '
-                        '-s 2 -pf y' %
+                        '-s 2 -pf y -at %s' %
                         (const.LIGAND_AC_FILE, const.CORR_AC_FILE,
-                         const.CORR_CH_FILE) )
+                         const.CORR_CH_FILE, self.gaff) )
 
         shutil.copyfile(const.LIGAND_AC_FILE,
                         const.LIGAND_AC_FILE + os.extsep + '0')

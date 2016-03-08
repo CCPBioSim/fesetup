@@ -44,7 +44,7 @@ class ForceField(object):
 
     def __init__(self, forcefield = 'amber', type = 'ff14SB',
                  solvent = 'tip3p', div_ions = 'hfe', add_ons = [],
-                 mdengine = 'amber', parmchk_version = 2):
+                 mdengine = 'amber', parmchk_version = 2, gaff='gaff'):
         """
         Pull in the right classes for the chosen forcefield.
 
@@ -62,6 +62,8 @@ class ForceField(object):
         :type mdengine: string
         :param parmchk_version: version of parmchk, either 1 or 2
         :type parmchk_version: int
+        :param gaff: GAFF version, either 'gaff' or 'gaff2'
+        :type gaff: string
         """
 
         try:
@@ -80,7 +82,7 @@ class ForceField(object):
             sys.exit(err_msg)
 
         mdeng = mde.get_MDEngine(mdengine)
-        ff.init(type, solvent, div_ions, add_ons, mdeng, parmchk_version)
+        ff.init(type, solvent, div_ions, add_ons, mdeng, parmchk_version, gaff)
 
         self.Ligand = ff.Ligand
         self.Protein = ff.Protein

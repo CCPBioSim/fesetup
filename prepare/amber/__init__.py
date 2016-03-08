@@ -61,7 +61,8 @@ AMBER_DIVALENT_TYPES = frozenset( ('hfe', 'cm', 'iod') )
 
 
 
-def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version = 2):
+def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version=2,
+         gaff='gaff'):
     """
     Set force field and solvent types for *all* classes in the amber
     hierarchy.  Leap commands and names are directly written into the Common
@@ -79,6 +80,8 @@ def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version = 2):
     :type mdengine: string
     :param parmchk_version: version of parmchk, either 1 or 2
     :type parmchk_version: int
+    :param gaff: GAFF version, either 'gaff' or 'gaff2'
+    :type gaff: string
     """
 
     if ff_type in AMBER_FF_TYPES:
@@ -117,5 +120,6 @@ def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version = 2):
     Common.solvent_box = solvent_box
     Common.MDEngine = mdengine
     Common.parmchk_version = parmchk_version
+    Common.gaff = gaff
 
     Common.force_fields = force_fields

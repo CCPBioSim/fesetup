@@ -199,11 +199,8 @@ class Common(object):
 
         # set in __init__.py before this __init__(): do not set here or anywhere
         # else as they are meant to be constants for the whole class hierarchy!
-        #self.ff_cmd
-        #self.solvent
-        #self.solvent_load 
-        #self.solvent_box 
-        #self.MDEngine
+        #self.ff_cmd, self.ff_addon, self.solvent, self.solvent_load 
+        #self.solvent_box, self.MDEngine, self.parmchk_version, self.gaff
 
         self.leap = Leap(self.force_fields, self.solvent_load)
 
