@@ -260,8 +260,7 @@ class Ligand(Common):
 
     def __init__(self, ligand_name, basedir, start_file = 'ligand.pdb',
                  start_fmt = 'pdb', workdir = const.LIGAND_WORKDIR,
-                 frcmod = const.LIGAND_FRCMOD_FILE, overwrite = False,
-                 gaff='gaff'):
+                 frcmod = const.LIGAND_FRCMOD_FILE, overwrite = False):
         """
         :param ligand_name: name of the ligand, will be used as directory name
         :type ligand_name: string
@@ -288,13 +287,7 @@ class Ligand(Common):
         # reference to original coordinates, may be converted to other format
         # in convert()
         self.orig_file = start_file
-        self.orig_fmt = start_fmt
-
-        self.charge = 0.0
-
-        if self.gaff != 'gaff' and self.gaff != 'gaff2':
-            raise errors.SetupError('Only known gaff versions are "gaff" '
-                                    'and "gaff2"')
+        #self.orig_fmt = start_fmt
 
         self.ref_file = ''
         self.ref_fmt = ''
@@ -318,7 +311,7 @@ class Ligand(Common):
 
         :param gb_charges: use a GB model for parameterisation
         :type gb_charges: bool
-        :param sqm_strategy: a strategy patter using preminimize() and setting
+        :param sqm_strategy: a strategy pattern using preminimize() and setting
            the SCF convergence criterion for sqm
         :type sqm_strategy: list of 2-tuples
         :raises: SetupError
@@ -331,12 +324,12 @@ class Ligand(Common):
         ac_cmd = [
             '-i %s' % self.mol_file,    # input file
             '-fi %s' % self.mol_fmt,    # input file format
-            '-o %s' % const.LIGAND_AC_FILE, # output file
+            '-o %s' % const.LIGAND_AC_FILE, # output file, crds from input file
             '-fo ac',                   # output file format
             '-c bcc',                   # charge method
             '-nc %s' % str(self.charge), # net molecular charge
             '-m 1',                     # FIXME: spin multiplicity (sqm only 1)
-            '-df 2',                    # 0 = mopac, 2 = sqm
+            '-df 2',                    # 0 = mopac, 2 = sqm, (1 was divcon)
             '-at %s' % self.gaff,       # write GAFF types
             '-du y',                    # fix duplicate atom names
             '-an y',                    # adjust atom names
@@ -344,8 +337,11 @@ class Ligand(Common):
             '-s 2',                     # status information = verbose
             '-eq 2',                    # equalise atom charges (path+geometry)
             '-pf y',                    # clean up temporary files
-            '-rn %s' % const.LIGAND_NAME
+            '-rn %s' % const.LIGAND_NAME  # overwrite ligand name
             ]
+
+        tmp_file = const.LIGAND_TMP + os.extsep + self.mol_fmt
+        shutil.copyfile(self.mol_file, tmp_file)
 
         # NOTE: The main problem is SCF convergence. If this happens MM
         #       minimisation is used to hope to obtain a better structure with a
@@ -353,6 +349,9 @@ class Ligand(Common):
         #       assignment of force field parameters which may fail if the
         #       structure is "too" distorted and no bonding information, etc. are
         #       available a priori.
+        #       A test on a few thousand ZINC structures showed that this feature
+        #       is rarly useful.  It also complicates the code because the
+        #       coordinates are changed and this mus be guarded against.
         if not sqm_strategy:
             if not gb_charges:
                 sqm_strategy = (
@@ -378,12 +377,14 @@ class Ligand(Common):
                     )
 
         logger.write('Optimizing structure and creating AM1/BCC charges')
+        premin_done = False
 
         for premin, scfconv, tight, itrmax, maxcyc, sqm_extra in sqm_strategy:
             converged = False
 
             if premin:
                 self.preminimize(nsteps = premin)
+                premin_done = True
 
             sqm_nlv = ("qm_theory='AM1',grms_tol=0.0002,tight_p_conv=%i,\n  "
                        "scfconv=%s,itrmax=%i,pseudo_diag=1,\n  "
@@ -434,6 +435,17 @@ class Ligand(Common):
             else:
                 logger.write('Error: failed to produce atom charges\n')
                 raise errors.SetupError('failed to produce atom charges')
+
+        # make sure we do not carry over the coordinates from a possible
+        # preminimisation step above
+        if premin_done:
+            utils.run_amber(antechamber,
+                            '-i %s -fi ac '
+                            '-a %s -fa %s -ao crd '
+                            '-o %s -fo ac' %
+                            (const.LIGAND_AC_FILE,
+                             tmp_file, self.mol_fmt,
+                             const.LIGAND_AC_FILE))  # FIXME: dangerous?
 
         if not gb_charges:
             logger.write('SCF has converged with %i preminimisation steps and '
@@ -519,8 +531,11 @@ class Ligand(Common):
                         (const.LIGAND_AC_FILE, const.CORR_AC_FILE,
                          const.CORR_CH_FILE, self.gaff) )
 
+        # FIXME: Do we really need this? It only documents the charge orginally
+        #        derived via antechamber.
         shutil.copyfile(const.LIGAND_AC_FILE,
                         const.LIGAND_AC_FILE + os.extsep + '0')
+
         shutil.move(const.CORR_AC_FILE, const.LIGAND_AC_FILE)
 
         self.charge = float('%.12f' % sum(charges))

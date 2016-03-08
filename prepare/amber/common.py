@@ -211,7 +211,6 @@ class Common(object):
         self.topdir = os.getcwd()
 
         self.dst = os.path.join(self.topdir, workdir, self.mol_name)
-        self.rel_dst = os.path.join(workdir, self.mol_name)
 
         self._parm_overwrite = None
 

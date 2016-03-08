@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2013  Hannes H Loeffler, Julien Michel
+#  Copyright (C) 2012-2016  Hannes H Loeffler, Julien Michel
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -51,29 +51,28 @@ def ob_read_one(conv, filen, mol, ifmt, ofmt):
     :raises: SetupError
     """
 
+    if not conv.SetInAndOutFormats(ifmt, ofmt):
+        raise errors.SetupError('conversion from %s to %s not supported '
+                                'by Openbabel' % (ifmt, ofmt) )
+
+    # set error level to avoid warnings about non-standard input
+    errlev = ob.obErrorLog.GetOutputLevel()
+    ob.obErrorLog.SetOutputLevel(0)
+
     try:
-        if not conv.SetInAndOutFormats(ifmt, ofmt):
-            raise errors.SetupError('conversion from %s to %s not supported '
-                                    'by Openbabel' % (ifmt, ofmt) )
-
-        # set error level to avoid warnings about non-standard input
-        errlev = ob.obErrorLog.GetOutputLevel()
-        ob.obErrorLog.SetOutputLevel(0)
-
         success = conv.ReadFile(mol, filen)
-
-        ob.obErrorLog.SetOutputLevel(errlev)
-
-        if not success:
-            txt = 'cannot read %s (%s format), ' % (filen, ifmt)
-
-            if not os.path.isfile(filen):
-                raise errors.SetupError(txt + 'file does not exist')
-            else:
-                raise errors.SetupError(txt + 'check if file/format is valid')
-
     except IOError as why:
         raise errors.SetupError(why)
+
+    ob.obErrorLog.SetOutputLevel(errlev)
+
+    if not success:
+        txt = 'cannot read %s (%s format), ' % (filen, ifmt)
+
+        if not os.path.isfile(filen):
+            raise errors.SetupError(txt + 'file does not exist')
+        else:
+            raise errors.SetupError(txt + 'check if file/format is valid')
 
     return mol, conv
 
@@ -108,7 +107,8 @@ def prepare(self, to_format = 'mol2', addH = False, calc_charge = False,
 
     # FIXME: does this test for the right thing?
     if mol.GetDimension() != 3:
-        raise errors.SetupError('input cooridnates must have 3 dimensions')
+        raise errors.SetupError('input cooridnates (%s) must have 3 dimensions'
+                                % self.mol_file)
 
     orig_atoms = []
 
@@ -152,7 +152,8 @@ def prepare(self, to_format = 'mol2', addH = False, calc_charge = False,
 
 
     if mol.GetTotalSpinMultiplicity() != 1:
-        raise errors.SetupError('multiplicities other than 1 not supported')
+        raise errors.SetupError('only multiplicity=1 supported (%s)'
+                                % self.mol_file)
 
     if to_format:
         logger.write('Converting/Writing %s (%s format) to %s format' %
