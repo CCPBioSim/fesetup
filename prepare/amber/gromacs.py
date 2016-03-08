@@ -205,7 +205,7 @@ class GromacsTop(object):
         self.parmtop = ""
         self.inpcrd = ""
 
-        self.moltypes = None
+        self.moltypes = []
         self.tot_natoms = 0
         self.nwat = 0
 
@@ -262,6 +262,17 @@ class GromacsTop(object):
                 resnames[key] = [num, 1, [], natoms]
 
             idx = []
+            mcnt = 0
+
+            if key[0] != 'WAT':
+                if len(key) == 1:
+                    mol_name = '%s' % key[0]
+                else:
+                    # FIXME: analyse names e.g. if protein, etc.
+                    mcnt += 1
+                    mol_name = 'MOL%i' % mcnt
+
+                self.moltypes.append( (mol_name, 1) )
 
             for atom in mol.atoms():
                 ambertype = str(atom.property('ambertype') )
@@ -301,7 +312,6 @@ class GromacsTop(object):
 
             resnames[key][2].extend(idx)
 
-
         # FIXME: only orthorombic box
         try:
             dims = perbox.dimensions() # Sire.Maths.Vector
@@ -315,8 +325,7 @@ class GromacsTop(object):
         self.box_dims = x * const.A2NM, y * const.A2NM, z * const.A2NM
 
 
-        self.moltypes = []
-
+        mols_tmp = []
         mcnt = 0
 
         # FIXME: we need to preserve molecule order, e.g. ions may be
@@ -335,13 +344,12 @@ class GromacsTop(object):
                     mcnt += 1
                     mol_name = 'MOL%i' % mcnt
 
-                self.moltypes.append( (num[0], mol_name, num[1]) )
+                mols_tmp.append( (num[0], mol_name, num[1]) )
 
             self.molidx[mol_name] = (num[2], num[3])
 
-
         # third pass only over unique molecules (molecule types)
-        for num, mol_name, mol_cnt in self.moltypes:
+        for num, mol_name, mol_cnt in mols_tmp:
             mol = mols.at(num).molecule()
             is_atom = False
 
@@ -622,7 +630,7 @@ class GromacsTop(object):
                 top.write('\n[ system ]\n%s\n\n[ molecules ]\n; Compound        '
                    'nmols\n' % 'SysX')
 
-                for _, name, cnt in self.moltypes:
+                for name, cnt in self.moltypes:
                     top.write('%s %i\n' % (name, cnt) )
 
                 if self.nwat:
