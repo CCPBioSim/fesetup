@@ -260,7 +260,8 @@ class Ligand(Common):
 
     def __init__(self, ligand_name, basedir, start_file = 'ligand.pdb',
                  start_fmt = 'pdb', workdir = const.LIGAND_WORKDIR,
-                 frcmod = const.LIGAND_FRCMOD_FILE, overwrite = False):
+                 frcmod = const.LIGAND_FRCMOD_FILE, overwrite = False,
+                 gaff='gaff'):    # gaff only for compatibility with morph code
         """
         :param ligand_name: name of the ligand, will be used as directory name
         :type ligand_name: string
