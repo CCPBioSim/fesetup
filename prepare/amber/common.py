@@ -648,18 +648,18 @@ class Common(object):
 
         # add only latest info
         self.model['crd.filename'] = self.amber_crd
-        self.model['crd.filetype'] = 'amber'
+        self.model['crd.filetype'] = 'amber-rst7'
         self.model['top.filename'] = self.amber_top
-        self.model['top.filetype'] = 'amber'
+        self.model['top.filetype'] = 'amber-parm7'
 
         self.model.add_file(self.amber_top)
         self.model.add_file(self.amber_crd)
 
-        # FIXME: check when minimisation/equilibration
+        # FIXME: check for minimisation/equilibration
         if self.box_dims:
             self.model['box.dimensions'] = self.box_dims
             self.model['box.density'] = self.density
-            self.model['box.type'] = 'bla'  # FIXME: boxlengths-angle
+            self.model['box.format'] = 'bla'  # FIXME: boxlengths-angle
 
         filename = name_prefix + self.model['name'] + const.MODEL_EXT
 

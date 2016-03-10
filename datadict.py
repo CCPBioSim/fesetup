@@ -137,7 +137,8 @@ class DataDict(dict):
 
                 self[key] = val
 
-            data = infile.read()
+            data = infile.read()        # FIXME: maybe we just keep a pointer
+                                        #        to the archive location?
 
         if not data:
             raise DataDictError('%s does not contain data files' % filename)
@@ -168,14 +169,18 @@ class DataDict(dict):
                           fileobj = memtar) as tar:
 
             for name in files:
-                tar.add(name)
-
+                tinfo = tar.gettarinfo(name)
                 hash_val = hashlib.new(hash_type)
 
                 with open(name, 'rb') as member:
                     hash_val.update(member.read())
 
-                manifest.append('%s  %s\n' % (hash_val.hexdigest(), name) )
+                hexdig = hash_val.hexdigest()
+
+                tinfo.pax_headers = {'comment': hexdig}
+                tar.addfile(tinfo, open(name, 'rb'))
+
+                manifest.append('%s  %s\n' % (hexdig, name) )
 
             manifest = ''.join(manifest)
 
