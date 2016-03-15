@@ -551,7 +551,7 @@ class Ligand(Common):
         self.model['charge.total'] = self.charge
         self.model['charge.filename'] = const.LIGAND_AC_FILE
         self.model['charge.filetype'] = 'ac'
-        self.model['charge.type'] = 'AM1-BCC'
+        self.model['charge.method'] = 'AM1-BCC'
         self.model.add_file(const.LIGAND_AC_FILE)
 
         self.model['forcefield'] = self.gaff

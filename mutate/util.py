@@ -575,11 +575,13 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
             atom_j = atoms_final.select(jidx)
             jname = atom_j.name()
         except KeyError:
+            # NOTE: Sire indexes are 0 based so increment dummy_count aftewards
+            jidx = Sire.Mol.AtomIdx(dummy_count)
+
             dummy_count += 1
 
             atom_j = None
             jname = Sire.Mol.AtomName('DU%s' % dummy_count)
-            jidx = Sire.Mol.AtomIdx(dummy_count) # use int as tag
 
         jinfo = _AtomInfo(atom_j, jidx, jname)
 
@@ -612,7 +614,7 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
 
     # molecule has no properties yet, see parm_conn()
     lig_morph = lig_morph.molecule().commit()
- 
+
     return lig_morph, atom_map, reverse_atom_map
 
 
@@ -1720,5 +1722,28 @@ def transfer_charges(mol0, mol1, atom_map, dum=False):
  
         mol = new.molecule()        # MolEditor
 
+
+    return mol.commit()
+
+
+def zero_charges(mol1, atom_map):
+    """
+    Set charges to zero.
+
+    :param mol1: molecule to be modified
+    :type mol1: Sire.Mol.Molecule
+    :param atom_map: the forward atom map
+    :type atom_map: dict of _AtomInfo to _AtomInfo
+    """
+
+    mol_m = Sire.Mol.Molecule(mol1)
+    mol = mol_m.edit()                  # MolEditor
+
+    for finfo in atom_map.values():
+        new = mol.atom(finfo.index)     # AtomEditor
+
+        if not finfo.atom:
+            new.setProperty('charge', 0.0 * Sire.Units.mod_electron)
+            mol = new.molecule()        # MolEditor
 
     return mol.commit()
