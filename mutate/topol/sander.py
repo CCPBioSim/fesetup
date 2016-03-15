@@ -57,6 +57,10 @@ class PertTopology(object):
         self.int_state = None           # for GROMACS
         self.parmtop = None             # for GROMACS
         self.inpcrd = None              # for GROMACS
+        self.parmtop0 = None            # for GROMACS
+        self.inpcrd0 = None             # for GROMACS
+        self.parmtop1 = None            # for GROMACS
+        self.inpcrd1 = None             # for GROMACS
         self.frcmod0 = None
         self.frcmod1 = None
 
@@ -72,8 +76,7 @@ class PertTopology(object):
 
             pert0_info, pert1_info = None, None
             ow_add = '_sc'
-        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2' or\
-                 self.FE_sub_type == 'dummy3':
+        elif self.FE_sub_type[:5] == 'dummy':
             # also for Gromacs and CHARMM
             state0 = lig_morph
             state1, pert0_info, pert1_info = \
@@ -161,14 +164,14 @@ class PertTopology(object):
 
             util.patch_parmtop(top0, top1, ':%s' % const.LIGAND_NAME, '')
 
-        if self.FE_sub_type == 'dummy3':  # GROMACS and CHARMM
+        if self.FE_sub_type == 'dummy3':  # for GROMACS and CHARMM
             ow_add = '_int'
 
             int_mol = util.zero_charges(state1, self.atom_map)
 
             mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                     const.MOL2_EXT)
-            util.write_mol2(int_mol, mol2_int, resname = const.INT_NAME)
+            util.write_mol2(int_mol, mol2_int, resname = const.LIGAND_NAME)
 
             lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_int,
                                  start_fmt='mol2', frcmod=frcmod1,
@@ -202,7 +205,8 @@ class PertTopology(object):
 
             pert0_info, pert1_info = None, None
             ow_add = '_sc'
-        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
+        elif self.FE_sub_type[:5] == 'dummy':
+            # also for Gromacs and CHARMM
             state0 = lig_morph
             state1, pert0_info, pert1_info = \
                     amber.dummy(lig_morph, self.con_morph,
@@ -276,3 +280,36 @@ class PertTopology(object):
             self.parmtop = top0
             self.inpcrd = com0._parm_overwrite + com0.RST_EXT
 
+        if self.FE_sub_type == 'dummy3':  # for GROMACS and CHARMM
+            ow_add = '_int'
+
+            int_mol = util.zero_charges(state1, self.atom_map)
+
+            mol2_int = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
+                                    const.MOL2_EXT)
+            util.write_mol2(int_mol, mol2_int, resname = const.LIGAND_NAME)
+
+            com = self.ff.Complex(pdb_file, mol2_int)
+            com.ligand_fmt = 'mol2'
+            com.frcmod = self.frcmod1
+            com._parm_overwrite = 'state_int'
+
+            if pert1_info:
+                com.prepare_top(gaff=self.gaff, pert=pert1_info)
+            else:
+                com.prepare_top(gaff=self.gaff)
+
+            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS)
+
+            top0 = com0._parm_overwrite + com0.TOP_EXT
+            int_name = com._parm_overwrite + com.TOP_EXT
+            top1 = com1._parm_overwrite + com1.TOP_EXT
+
+            util.patch_parmtop(top0, int_name, ':%s' % const.LIGAND_NAME, '')
+            util.patch_parmtop(int_name, top1, ':%s' % const.LIGAND_NAME, '')
+
+            self.parmtop0 = top0
+            self.inpcrd0 = com0._parm_overwrite + com0.RST_EXT
+            self.parmtop1 = top1
+            self.inpcrd1 = com1._parm_overwrite + com1.RST_EXT
+            self.int_state = com

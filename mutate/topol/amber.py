@@ -29,6 +29,7 @@ import Sire.Mol
 import Sire.Units
 
 from FESetup import const
+from FESetup.mutate import util
 
 
 def dummy(lig_morph, con_morph, lig_final, atom_map):

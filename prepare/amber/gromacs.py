@@ -514,17 +514,19 @@ class GromacsTop(object):
 
 
     # FIXME: #include 'atomtypes.itp'
-    def writeTop(self, topname, typename = 'atomtypes.atp', pertlig = '',
-                 itp = True):
+    def writeTop(self, topname, typename='atomtypes.atp', pertname='',
+                 itp=True, itp_inc_file=const.GROMACS_PERT_ITP):
         """Write top or itp file.
         :param topname: AMBER parmtop file name
         :type topname: string
-        :param typename: filename for atom types, if empy include in TOP/ITP
+        :param typename: filename for atom types, if empty include in TOP/ITP
         :type typename: string
-        :param pertlig: perturbed ligand name
-        :type pertlig: string
+        :param pertname: perturbed ligand name
+        :type pertname: string
         :param itp: write ITP or TOP
         :type itp: bool
+        :param itp_inc_file: ITP file to include
+        :type itp_inc_file: string
         """
 
         with open(topname, 'w') as top:
@@ -549,12 +551,12 @@ class GromacsTop(object):
             first = False
 
             for mt in self.top.moleculetype:
-                if pertlig and not first:  # FIXME: ligand first mol
+                if pertname and not first:  # FIXME: ligand first mol
                     if typename:
                         top.write('#include "%s"\n' % typename)
 
-                    top.write('\n#include "%s"\n' % const.GROMACS_PERT_ITP)
-                    mt.molname = pertlig
+                    top.write('\n#include "%s"\n' % itp_inc_file)
+                    mt.molname = pertname
                     first = True
                     continue
 

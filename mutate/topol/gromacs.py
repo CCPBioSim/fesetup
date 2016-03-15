@@ -39,8 +39,18 @@ MORPH_TOP = 'morph.top'
 MORPH1_TOP = 'morph1.top'
 MORPH2_TOP = 'morph2.top'
 MORPH_GRO = 'morph.gro'
+MORPH1_GRO = 'morph1.gro'
+MORPH2_GRO = 'morph2.gro'
 VAC_MDP_FILE = '_vac.mdp'
+VAC1_MDP_FILE = '_vac1.mdp'
+VAC2_MDP_FILE = '_vac2.mdp'
 SOL_MDP_FILE = '_sol.mdp'
+SOL1_MDP_FILE = '_sol1.mdp'
+SOL2_MDP_FILE = '_sol2.mdp'
+PERT1_ITP = 'pert1.itp'
+PERT2_ITP = 'pert2.itp'
+PERT1_ATP = 'pert1.atp'
+PERT2_ATP = 'pert2.atp'
 
 
 def _lambda_paths(dummies0, dummies1):
@@ -125,7 +135,6 @@ class PertTopology(object):
 
         topol.setup(curr_dir, lig_morph, cmd1, cmd2)
 
-
         lig0 = topol.lig0._parm_overwrite
         lig1 = topol.lig1._parm_overwrite
         top = topol.lig0.TOP_EXT
@@ -142,12 +151,12 @@ class PertTopology(object):
         top1.writeTop(lig1 + const.GROMACS_ITP_EXT, lig1 + '.atp')
         top1.writeGro(lig1 + const.GROMACS_GRO_EXT)
 
-        # FIXME: ugly kludges!
-        if not os.access(MORPH_GRO, os.F_OK):
-            os.symlink(lig0 + const.GROMACS_GRO_EXT, MORPH_GRO)
-
         if self.FE_sub_type == 'dummy':
             gromacs.mixer(top0, top1)
+
+            # FIXME: ugly kludges!
+            if not os.access(MORPH_GRO, os.F_OK):
+                os.symlink(lig0 + const.GROMACS_GRO_EXT, MORPH_GRO)
 
             with open(MORPH_TOP, 'w') as mtop:
                 mtop.write(TOP_TMPL.format(title='one-step TI/FEP',
@@ -176,29 +185,57 @@ class PertTopology(object):
                                int_name + '.atp')
             int_state.writeGro(int_name + const.GROMACS_GRO_EXT)
 
-            n1 = 'pert1' + os.extsep
-            n2 = 'pert2' + os.extsep
-            itp1 = n1 + 'itp'
-            atp1 = n1 + 'atp'
-            itp2 = n2 + 'itp'
-            atp2 = n2 + 'atp'
+            gromacs.mixer(top0, int_state, PERT1_ITP, PERT1_ATP)
+            gromacs.mixer(int_state, top1, PERT2_ITP, PERT2_ATP)
 
-            gromacs.mixer(top0, int_state, itp1, atp1)
-            gromacs.mixer(int_state, top1, itp2, atp2)
+            # FIXME: ugly kludges!
+            if not os.access(MORPH1_GRO, os.F_OK):
+                os.symlink(lig0 + const.GROMACS_GRO_EXT, MORPH1_GRO)
 
-            with open(MORPH_TOP1, 'w') as mtop:
+            if not os.access(MORPH2_GRO, os.F_OK):
+                os.symlink(lig1 + const.GROMACS_GRO_EXT, MORPH2_GRO)
+
+            with open(MORPH1_TOP, 'w') as mtop:
                 mtop.write(TOP_TMPL.format(title='step 1/2: q_off and vdW '
                                            'on/off',
-                                           atp=atp1, itp=itp1,
+                                           atp=PERT1_ATP, itp=PERT1_ITP,
                                            ligname=const.LIGAND_NAME))
 
-            with open(MORPH_TOP2, 'w') as mtop:
+            with open(MORPH2_TOP, 'w') as mtop:
                 mtop.write(TOP_TMPL.format(title='step 2/2: q_on',
-                                           atp=atp2, itp=itp2,
+                                           atp=PERT2_ATP, itp=PERT2_ITP,
                                            ligname=const.LIGAND_NAME))
 
-            with open(VAC_MDP_FILE, 'w') as mdp:
-                mdp.write(VAC_MDP)
+            fepl = ('0.0 0.2 0.4 0.6 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 '
+                    '1.0 1.0 1.0')
+            vdwl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 '
+                    '0.8 0.9 1.0')
+            masl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 '
+                    '0.0 0.0 0.0')
+            seps = 'step 1: q_off (disappearing) followed by vdW on/off'
+
+            with open(VAC1_MDP_FILE, 'w') as mdp:
+                mdp.write(
+                    (VAC_MDP % (COMMON_MDP_TMPL,
+                                FE_TMPL)).format(nsteps='2000000',
+                                                 seps=seps,
+                                                 fep_lambdas=fepl,
+                                                 vdw_lambdas=vdwl,
+                                                 mass_lambdas=masl))
+
+            fepl = '0.0 0.2 0.4 0.6 0.8 1.0'
+            vdwl = '0.0 0.2 0.4 0.6 0.8 1.0'
+            masl = '0.0 0.0 0.0 0.0 0.0 0.0'
+            seps = 'step 2: q_on (appearing)'
+
+            with open(VAC2_MDP_FILE, 'w') as mdp:
+                mdp.write(
+                    (VAC_MDP % (COMMON_MDP_TMPL,
+                                FE_TMPL)).format(nsteps='2000000',
+                                                 seps=seps,
+                                                 fep_lambdas=fepl,
+                                                 vdw_lambdas=vdwl,
+                                                 mass_lambdas=masl))
         else:
             raise NotImplementedError
 
@@ -220,10 +257,10 @@ class PertTopology(object):
                 os.symlink('../%s' % const.GROMACS_PERT_ATP,
                            '%s' % const.GROMACS_PERT_ATP)
 
-            # FIXME: ugly kludge, assuming the file is one level up
             if not os.access(const.GROMACS_PERT_ITP, os.F_OK):
                 os.symlink('../%s' % const.GROMACS_PERT_ITP,
                            '%s' % const.GROMACS_PERT_ITP)
+
 
             top = gromacs.GromacsTop()
             top.readParm(self.topol.parmtop, self.topol.inpcrd)
@@ -251,6 +288,87 @@ class PertTopology(object):
                                                  fep_lambdas=fepl,
                                                  vdw_lambdas=vdwl,
                                                  mass_lambdas=masl))
+        elif self.FE_sub_type == 'dummy3':
+            # FIXME: ugly kludge, assuming the file is one level up
+            if not os.access(PERT1_ATP, os.F_OK):
+                os.symlink('../%s' % PERT1_ATP, '%s' % PERT1_ATP)
+
+            if not os.access(PERT2_ATP, os.F_OK):
+                os.symlink('../%s' % PERT2_ATP, '%s' % PERT2_ATP)
+
+            if not os.access(PERT1_ITP, os.F_OK):
+                os.symlink('../%s' % PERT1_ITP, '%s' % PERT1_ITP)
+
+            if not os.access(PERT2_ITP, os.F_OK):
+                os.symlink('../%s' % PERT2_ITP, '%s' % PERT2_ITP)
+
+
+            top0 = gromacs.GromacsTop()
+            top0.readParm(self.topol.parmtop0, self.topol.inpcrd0)
+
+            # FIXME: need to reparse ATP file
+            with open(PERT1_ATP, 'r') as atp:
+                atomtypes = []
+
+                for line in atp:
+                    tmp = line.split()
+                    atomtypes.append( (tmp[0], float(tmp[2]), float(tmp[5]),
+                                       float(tmp[6]) ) )
+
+            top0.addAtomTypes(atomtypes)
+            top0.writeTop(MORPH1_TOP, PERT1_ATP, const.LIGAND_NAME, False,
+                          PERT1_ITP)
+            top0.writeGro(MORPH1_GRO)
+
+            fepl = ('0.0 0.2 0.4 0.6 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 '
+                    '1.0 1.0 1.0')
+            vdwl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 '
+                    '0.8 0.9 1.0')
+            masl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 '
+                    '0.0 0.0 0.0')
+            seps = 'step 1: q_off (disappearing) followed by vdW on/off'
+
+            with open(SOL1_MDP_FILE, 'w') as mdp:
+                mdp.write(
+                    (SOL_MDP % (COMMON_MDP_TMPL,
+                                FE_TMPL)).format(nsteps='500000',
+                                                 seps=seps,
+                                                 fep_lambdas=fepl,
+                                                 vdw_lambdas=vdwl,
+                                                 mass_lambdas=masl))
+
+            top1 = gromacs.GromacsTop()
+            top1.readParm(self.topol.parmtop1, self.topol.inpcrd1)
+
+            # FIXME: need to reparse ATP file
+            with open(PERT2_ATP, 'r') as atp:
+                atomtypes = []
+
+                for line in atp:
+                    tmp = line.split()
+                    atomtypes.append( (tmp[0], float(tmp[2]), float(tmp[5]),
+                                       float(tmp[6]) ) )
+
+            top1.addAtomTypes(atomtypes)
+            top1.writeTop(MORPH2_TOP, PERT2_ATP, const.LIGAND_NAME, False,
+                          PERT2_ITP)
+            top1.writeGro(MORPH2_GRO)
+
+            fepl = '0.0 0.2 0.4 0.6 0.8 1.0'
+            vdwl = '0.0 0.2 0.4 0.6 0.8 1.0'
+            masl = '0.0 0.0 0.0 0.0 0.0 0.0'
+            seps = 'step 2: q_on (appearing)'
+
+            with open(SOL2_MDP_FILE, 'w') as mdp:
+                mdp.write(
+                    (SOL_MDP % (COMMON_MDP_TMPL,
+                                 FE_TMPL)).format(nsteps='500000',
+                                                  seps=seps,
+                                                  fep_lambdas=fepl,
+                                                  vdw_lambdas=vdwl,
+                                                  mass_lambdas=masl))
+        else:
+            raise NotImplementedError
 
 
 TOP_TMPL = '''\
@@ -279,7 +397,6 @@ bd-fric                  = 0
 dt                       = 0.001
 nsteps                   = {nsteps}
 nstcomm                  = 100
-comm-mode                = Angular
 
 nstxout                  = 10000  ; != nstdhdl (in case of -rerun)
 nstvout                  = 0
@@ -319,6 +436,8 @@ dh_hist_spacing          = 0.1
 
 VAC_MDP = '''; TI/FEP mdp template for vacuum
 %s
+comm-mode                = Angular
+
 cutoff-scheme            = group
 nstlist                  = 0
 ns_type                  = simple
@@ -349,6 +468,8 @@ continuation             = no
 
 SOL_MDP = '''; TI/FEP mdp template for solution
 %s
+comm-mode                = Linear
+
 cutoff-scheme            = group
 nstcalclr                = 1
 nstlist                  = 10
