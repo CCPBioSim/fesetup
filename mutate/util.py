@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler, Julien Michel
+#  Copyright (C) 2012-2014,2016  Hannes H Loeffler, Julien Michel
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -399,6 +399,9 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
 
         mapping = dict(zip(m1, m2) )
 
+    # FIXME: we may have to reconsider this and understand when rings have
+    #        to be assumed "broken"
+    #
     # delete atoms from mapping that are also part of an map-external ring
     ring_info1 = mol1.GetRingInfo()
     ring_info2 = mol2.GetRingInfo()

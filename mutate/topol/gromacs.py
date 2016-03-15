@@ -1,4 +1,4 @@
-#  Copyright (C) 2014  Hannes H Loeffler
+#  Copyright (C) 2014-2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -223,8 +223,7 @@ class PertTopology(object):
                                                  vdw_lambdas=vdwl,
                                                  mass_lambdas=masl))
 
-            fepl = '0.0 0.2 0.4 0.6 0.8 1.0'
-            vdwl = '0.0 0.2 0.4 0.6 0.8 1.0'
+            fepvdw = '0.0 0.2 0.4 0.6 0.8 1.0'
             masl = '0.0 0.0 0.0 0.0 0.0 0.0'
             seps = 'step 2: q_on (appearing)'
 
@@ -233,8 +232,8 @@ class PertTopology(object):
                     (VAC_MDP % (COMMON_MDP_TMPL,
                                 FE_TMPL)).format(nsteps='2000000',
                                                  seps=seps,
-                                                 fep_lambdas=fepl,
-                                                 vdw_lambdas=vdwl,
+                                                 fep_lambdas=fepvdw,
+                                                 vdw_lambdas=fepvdw,
                                                  mass_lambdas=masl))
         else:
             raise NotImplementedError
@@ -354,8 +353,7 @@ class PertTopology(object):
                           PERT2_ITP)
             top1.writeGro(MORPH2_GRO)
 
-            fepl = '0.0 0.2 0.4 0.6 0.8 1.0'
-            vdwl = '0.0 0.2 0.4 0.6 0.8 1.0'
+            fepvdw = '0.0 0.2 0.4 0.6 0.8 1.0'
             masl = '0.0 0.0 0.0 0.0 0.0 0.0'
             seps = 'step 2: q_on (appearing)'
 
@@ -364,8 +362,8 @@ class PertTopology(object):
                     (SOL_MDP % (COMMON_MDP_TMPL,
                                  FE_TMPL)).format(nsteps='500000',
                                                   seps=seps,
-                                                  fep_lambdas=fepl,
-                                                  vdw_lambdas=vdwl,
+                                                  fep_lambdas=fepvdw,
+                                                  vdw_lambdas=fepvdw,
                                                   mass_lambdas=masl))
         else:
             raise NotImplementedError
