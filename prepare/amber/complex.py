@@ -31,8 +31,8 @@ __revision__ = "$Id$"
 
 import FESetup
 from FESetup import const, errors, logger
-from FESetup.modelconf import ModelConfig
 import utils
+
 from ligand import Ligand
 from protein import Protein
 from common import *
@@ -58,19 +58,19 @@ class Complex(Common):
         self.workdir = const.COMPLEX_WORKDIR
         self.leap_added = False
 
-        # FIXME: ugly type checking!
-        if type(protein) == str and type(ligand) == str:
-            super(Complex, self).__init__(protein + const.PROT_LIG_SEP +
-                                          ligand, '', self.workdir,
-                                          overwrite)
+#         # FIXME: remove when ModelConfig is done
+#         if type(protein) == str and type(ligand) == str:
+#             super(Complex, self).__init__(protein + const.PROT_LIG_SEP +
+#                                           ligand, '', self.workdir,
+#                                           overwrite)
 
-            self.protein_file = protein
-            self.ligand_file = ligand
+#             self.protein_file = protein
+#             self.ligand_file = ligand
 
-            # FIXME: quick fix to allow dGprep to redo complex morph
-            self.ligand = Ligand(ligand, '')
+#             # FIXME: quick fix to allow dGprep to redo complex morph
+#             self.ligand = Ligand(ligand, '')
 
-            return
+#             return
 
         assert type(protein) == Protein
         assert type(ligand) == Ligand
@@ -130,10 +130,6 @@ class Complex(Common):
         else:
             self.protein_file = protein.mol_file
 
-        # ensure we get the charge also in restarts
-        protein.get_charge()
-        ligand.get_charge()
-
         self.charge = protein.charge + ligand.charge
 
         if abs(self.charge) > const.TINY_CHARGE:
@@ -141,20 +137,12 @@ class Complex(Common):
 
         self.protein = protein
         self.ligand = ligand
+        self.complex_name = complex_name
         self.frcmod = self.ligand.frcmod
 
         # FIXME: needed for __enter__ and __exit__ in class Common
         self.dst = dst
         self.topdir = ligand.topdir
-
-        # FIXME: get these from either Ligand/Protein or model
-        self.model = ModelConfig(complex_name)
-        self.model.update(self.protein.model)
-        self.model.update(self.ligand.model)
-        self.model['name'] = complex_name
-        self.model['charge.total'] = self.charge
-        self.model['forcefield'] = 'AMBER'
-        self.model['molecule.type'] = 'complex'
 
 
     @report

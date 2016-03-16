@@ -74,8 +74,6 @@ SECT_COM = 'complex'
 
 ALL_SECTIONS = (SECT_DEF, SECT_LIG, SECT_PROT, SECT_COM)
 
-DONE_LOG = '_mols.done'
-
 PARAM_CMDS = {
     'frcmod': 'loadAmberParams',
     'prep': 'loadAmberPrep',
@@ -146,9 +144,33 @@ def _minmd_done(dico):
 
     return False
 
+
+def read_model(filename):
+    """
+    Read a ModelConfig model.
+
+    :param filename: name of file to be saved to
+    :type filename: string
+    """
+
+    model = ModelConfig()
+    model.read(filename)
+
+    try:
+        model.check_data(model['data.checksum'], model['data.checksum_type'])
+
+        if not model['is.valid']:
+            # FIXME: change exception type
+            raise errors.SetupError('invalid model %s' % model['name'])
+    except KeyError:
+        raise errors.SetupError('invalid model %s' % model['name'])
+
+    return model
+
+    
 def save_model(model, mol, filename, dest_dir):
     """
-    Save the current model.
+    Save the current ModelConfig model.
 
     :param model: the model to be saved
     :type model: ModelConfig
@@ -175,25 +197,79 @@ def save_model(model, mol, filename, dest_dir):
         model['box.density'] = mol.density
         model['box.format'] = 'bla'  # FIXME: boxlengths-angle
 
+    # the final blessing
+    model['is.valid'] = 1
+
     model.write(filename)
+
+    # FIXME: checks
     shutil.move(filename, dest_dir)
 
 
-def make_ligand(name, ff, opts, short = False):
+def make_ligand(name, ff, opts):
     """
     Prepare ligands for simulation: charge parameters, vacuum top/crd,
     confomer search + alignment (both optional), optionally hydrated
     top/crd and minimisation/MD simulation.
+
+    :param name: the name of the ligandx
+    :type name: str
+    :param ff: the ForceField class holding all relevant data for setup and
+               also simulation
+    :type ff: ForceField
+    :param opts: the name of the ligandx
+    :type opts: IniParser
     """
-    
+
     lig = opts[SECT_LIG]
 
-    # FIXME: check here if we already have a model and create Ligand
-    #        from the model
+    vac_model_filename = name + const.MODEL_EXT
+    sol_model_filename = 'solv_' + name + const.MODEL_EXT
+    vac_path = os.path.join(const.LIGAND_WORKDIR, vac_model_filename)
+    sol_path = os.path.join(const.LIGAND_WORKDIR, sol_model_filename)
+    model_path = None
+
+    # FIXME: do not make assumption where models are located?
+    if os.access(sol_path, os.F_OK):
+        model_path = sol_path
+    elif os.access(vac_path, os.F_OK):
+        model_path = vac_path
+
+    load_cmds = ''
+
+    if opts[SECT_DEF]['user_params']:
+        load_cmds = _param_glob(PARAM_CMDS)
+
+    # FIXME: check for KeyError
+    if model_path:
+        model = read_model(model_path)
+        name = model['name']
+
+        print('Found model %s, extracting data' % name)
+
+        # FIXME: only extract when const.LIGAND_WORKDIR not present?
+        model.extract(direc = os.path.join(const.LIGAND_WORKDIR, name))
+
+        ligand = ff.Ligand(name, lig['basedir'])
+
+        # FIXME: do basic checks
+        ligand.charge = float(model['charge.total'])
+        ligand.gaff = model['forcefield']
+        ligand.amber_top = model['top.filename']
+        ligand.amber_crd = model['crd.filename']
+
+        if 'box.dimensions' in model:
+            ligand.box_dims = model['box.dimensions']
+            ligand.density = model['box.density']
+
+        return ligand, load_cmds
+
+    print('Making ligand %s...' % name)
+
     model = ModelConfig(name)
 
     if not lig['basedir']:
-        raise dGprepError('[%s] "basedir" must be set' % SECT_LIG)
+        raise dGprepError('[%s] "basedir" must be set' % SECTLIG)
 
     if not lig['file.format']:
         fmt = os.path.splitext(lig['file.name'])[1][1:]
@@ -206,14 +282,6 @@ def make_ligand(name, ff, opts, short = False):
         if not os.access(lig['file.name'], os.F_OK):
             raise errors.SetupError('start file %s does not exist in %s' %
                                     (lig['file.name'], os.getcwd() ) )
-
-        load_cmds = ''
-
-        if opts[SECT_DEF]['user_params']:
-            load_cmds = _param_glob(PARAM_CMDS)
-
-        if short:
-            return ligand, load_cmds
 
         if lig['skip_param']:
             if fmt != 'pdb' and fmt != 'mol2':
@@ -247,7 +315,7 @@ def make_ligand(name, ff, opts, short = False):
         model['molecule.type'] = 'ligand'
         model.add_file(ligand.mol_file)
 
-        save_model(model, ligand, model['name'] + const.MODEL_EXT, '..')
+        save_model(model, ligand, vac_model_filename, '..')
 
         if opts[SECT_DEF]['MC_prep']:
             ligand.flex()
@@ -339,31 +407,68 @@ def make_ligand(name, ff, opts, short = False):
                 if _minmd_done(lig):
                    ligand.to_rst7()
 
-            save_model(model, ligand,
-                       'solv_' + model['name'] + const.MODEL_EXT, '..')
+            save_model(model, ligand, sol_model_filename, '..')
 
     return ligand, load_cmds
 
 
-def make_protein(name, ff, opts, short = False):
+def make_protein(name, ff, opts):
     """
     Prepare proteins for simulation:
     """
 
     prot = opts[SECT_PROT]
 
+    vac_model_filename = name + const.MODEL_EXT
+    sol_model_filename = 'solv_' + name + const.MODEL_EXT
+    vac_path = os.path.join(const.PROTEIN_WORKDIR, vac_model_filename)
+    sol_path = os.path.join(const.PROTEIN_WORKDIR, sol_model_filename)
+    model_path = None
+
+    # FIXME: do not make assumption where models are located?
+    if os.access(sol_path, os.F_OK):
+        model_path = sol_path
+    elif os.access(vac_path, os.F_OK):
+        model_path = vac_path
+
+    load_cmds = ''
+
+    if opts[SECT_DEF]['user_params']:
+        load_cmds = _param_glob(PARAM_CMDS)
+
+    # FIXME: check for KeyError
+    if model_path:
+        model = read_model(model_path)
+        name = model['name']
+
+        print('Found model %s, extracting data' % name)
+
+        # FIXME: only extract when const.PROTEIN_WORKDIR not present?
+        model.extract(direc = os.path.join(const.PROTEIN_WORKDIR, name))
+
+        protein = ff.Protein(name, prot['basedir'])
+
+        # FIXME: do basic checks
+        protein.charge = float(model['charge.total'])
+        #ligand.gaff = model['forcefield']
+        protein.amber_top = model['top.filename']
+        protein.amber_crd = model['crd.filename']
+
+        if 'box.dimensions' in model:
+            protein.box_dims = model['box.dimensions']
+            protein.density = model['box.density']
+
+        return protein, load_cmds
+
+    print('Making biomolecule %s...' % name)
+
+    model = ModelConfig(name)
+
     if not prot['basedir']:
         raise dGprepError('[%s] "basedir" must be set' % SECT_PROT)
 
     with ff.Protein(name, prot['basedir'], prot['file.name'],
                     overwrite = opts[SECT_DEF]['overwrite']) as protein:
-        load_cmds = ''
-
-        if opts[SECT_DEF]['user_params']:
-            load_cmds = _param_glob(PARAM_CMDS)
-
-        if short:
-            return protein, load_cmds
 
         if prot['propka']:
             protein.protonate_propka(pH = prot['propka.pH'])
@@ -371,7 +476,12 @@ def make_protein(name, ff, opts, short = False):
         protein.get_charge()    # must be done explicitly
         protein.prepare_top()
         protein.create_top(boxtype = '')
-        protein.save_model()
+
+        model['charge.total'] = protein.charge
+        model['forcefield'] = 'AMBER'    # FIXME
+        model['molecule.type'] = 'biomolecule'
+
+        save_model(model, protein, vac_model_filename, '..')
 
         # FIXME: also check for boxlength and neutralize
         if prot['box.type']:
@@ -450,25 +560,68 @@ def make_protein(name, ff, opts, short = False):
                 if _minmd_done(prot):
                    protein.to_rst7()
 
-            protein.save_model(const.MODEL_SOLV_PREFIX)
+            save_model(model, protein, sol_model_filename, '..')
 
     return protein, load_cmds
 
 
-def make_complex(prot, lig, ff, opts, load_cmds, short = False):
+def make_complex(prot, lig, ff, opts, load_cmds):
 
     com = opts[SECT_COM]
+
+    name = prot.mol_name + const.PROT_LIG_SEP + lig.mol_name
+    vac_model_filename = name + const.MODEL_EXT
+    sol_model_filename = 'solv_' + name + const.MODEL_EXT
+    vac_path = os.path.join(const.COMPLEX_WORKDIR, vac_model_filename)
+    sol_path = os.path.join(const.COMPLEX_WORKDIR, sol_model_filename)
+    model_path = None
+
+    # FIXME: do not make assumption where models are located?
+    if os.access(sol_path, os.F_OK):
+        model_path = sol_path
+    elif os.access(vac_path, os.F_OK):
+        model_path = vac_path
+
+    if model_path:
+        model = read_model(model_path)
+        name = model['name']
+
+        print('Found model %s, extracting data' % name)
+
+        # FIXME: only extract when const.COMPLEX_WORKDIR not present?
+        model.extract(direc = os.path.join(const.COMPLEX_WORKDIR, name))
+
+        complex = ff.Complex(prot, lig)
+
+        # FIXME: do basic checks
+        complex.charge = float(model['charge.total'])
+        #ligand.gaff = model['forcefield']
+        complex.amber_top = model['top.filename']
+        complex.amber_crd = model['crd.filename']
+
+        if 'box.dimensions' in model:
+            complex.box_dims = model['box.dimensions']
+            complex.density = model['box.density']
+
+        return complex, load_cmds
+
+    print('Making complex from %s and %s...' % (prot.mol_name, lig.mol_name))
+
+    model = ModelConfig(name)
 
     with ff.Complex(prot, lig,
                     overwrite = opts[SECT_DEF]['overwrite']) as complex:
 
-        if short:
-            return complex, load_cmds
-
         complex.ligand_fmt = lig.mol_fmt
         complex.prepare_top()
         complex.create_top(boxtype = '', addcmd = load_cmds)
-        complex.save_model()
+
+        model['name'] = complex.complex_name
+        model['charge.total'] = complex.charge
+        model['forcefield'] = 'AMBER'   # FIXME
+        model['molecule.type'] = 'complex'  # FIXME
+
+        save_model(model, complex, vac_model_filename, '..')
 
         # FIXME: also check for boxlength and neutralize
         if com['box.type']:
@@ -550,7 +703,7 @@ def make_complex(prot, lig, ff, opts, load_cmds, short = False):
                 if _minmd_done(com):
                     complex.to_rst7()
 
-            complex.save_model(const.MODEL_SOLV_PREFIX)
+            save_model(model, complex, sol_model_filename, '..')
 
     return complex, load_cmds
 
@@ -709,29 +862,8 @@ if __name__ == '__main__':
 
     logger.write('Force field and MD engine:\n%s\n' % ff)
 
-
-    done = set()
-
-    if not options[SECT_DEF]['remake']:
-        try:
-            with open(DONE_LOG, 'r') as done_log:
-                for line in done_log:
-                    done.add(line.rstrip() )
-        except IOError:
-            pass
-
-        mode = 'a'
-    else:
-        mode = 'w'
-
-    done_log = open(DONE_LOG, mode, 1)
-
-    def sigusr2_handler(*args):
-        done_log.flush()
-        os.fsync(done_log.fileno() )
-
-    signal.signal(signal.SIGUSR2, sigusr2_handler)
-
+    # FIXME: recreate remake feature
+    #if not options[SECT_DEF]['remake']:
 
     # FIXME: We keep all molecule objects in memory.  For 2000 morph pairs
     #        this may mean more than 1 GB on a 64 bit machine.
@@ -742,19 +874,12 @@ if __name__ == '__main__':
     prot_failed = []
 
     for prot_name in options[SECT_PROT]['molecules']:
-        if prot_name not in done:
-            print ('Making protein %s...' % prot_name)
-
-            try:
-                protein, cmds = make_protein(prot_name, ff, options)
-                proteins[protein] = cmds
-                done_log.write(prot_name + '\n')
-            except errors.SetupError as why:
-                prot_failed.append(prot_name)
-                print ('ERROR: %s failed: %s' % (prot_name, why))
-        else:
-            protein, cmds = make_protein(prot_name, ff, options, True)
+        try:
+            protein, cmds = make_protein(prot_name, ff, options)
             proteins[protein] = cmds
+        except errors.SetupError as why:
+            prot_failed.append(prot_name)
+            print ('ERROR: %s failed: %s' % (prot_name, why))
 
 
     ### ligands
@@ -769,7 +894,7 @@ if __name__ == '__main__':
     if morph_pairs:
         temp_pairs = []
 
-        # FIXME: better error handling, parsing in IniParser?
+        # FIXME: better error handling, parsing through IniParser?
         for pair in morph_pairs:
             p1 = pair[1].split('/')
             temp_map = {}
@@ -798,24 +923,12 @@ if __name__ == '__main__':
         options[SECT_LIG]['molecules'] = uniq
 
     for lig_name in options[SECT_LIG]['molecules']:
-        if lig_name not in done:
-            print ('Making ligand %s...' % lig_name)
-
-            try:
-                ligand, cmds = make_ligand(lig_name, ff, options)
-                ligands[lig_name] = Ligdata(ligand, cmds)
-                done_log.write(lig_name + '\n')
-            except errors.SetupError as why:
-                lig_failed.append(lig_name)
-                print ('ERROR: %s failed: %s' % (lig_name, why))
-        else:
-            if not options[SECT_LIG]['file.format']:
-                fmt = os.path.splitext(options[SECT_LIG]['file.name'])[1][1:]
-            else:
-                fmt = options[SECT_LIG]['file.format']
-
-            ligand, cmds = make_ligand(lig_name, ff, options, True)
+        try:
+            ligand, cmds = make_ligand(lig_name, ff, options)
             ligands[lig_name] = Ligdata(ligand, cmds)
+        except errors.SetupError as why:
+            lig_failed.append(lig_name)
+            print('ERROR: %s failed: %s' % (lig_name, why))
 
 
     ### ligand morphs
@@ -911,29 +1024,19 @@ if __name__ == '__main__':
             if bfound:
                 name = '%s:%s' % (protein.mol_name, lig_name)
 
-                if name not in done:
-                    print ('Making complex from protein %s and ligand %s... ' %
-                           (protein.mol_name, lig_name) )
+                try:
+                    complex, cmds = make_complex(protein,
+                                                 ligands[lig_name].ref, ff,
+                                                 options, cmds)
 
-                    try:
-                        complex, cmds = make_complex(protein,
-                                                     ligands[lig_name].ref, ff,
-                                                     options, cmds)
-
-                        # NOTE: no real need here to limit the list of complexes
-                        #       as it is checked again below
-                        for pair in morph_pairs:
-                            if complex.ligand.mol_name == pair[0]:
-                                complexes[complex] = cmds
-
-                        done_log.write(name + '\n')
-                    except errors.SetupError as why:
-                        com_failed.append(name)
-                        print ('ERROR: %s failed: %s' % (name, why))
-                else:
-                    complex, cmds = make_complex(protein.mol_name, lig_name, ff,
-                                                 options, cmds, True)
-                    complexes[complex] = cmds
+                    # NOTE: no real need here to limit the list of complexes
+                    #       as it is checked again below
+                    for pair in morph_pairs:
+                        if complex.ligand.mol_name == pair[0]:
+                            complexes[complex] = cmds
+                except errors.SetupError as why:
+                    com_failed.append(name)
+                    print ('ERROR: %s failed: %s' % (name, why))
 
 
     ### complex morphs
@@ -943,15 +1046,12 @@ if __name__ == '__main__':
             name = complex.mol_name + '/' + morph.name
 
             # FIXME: Complex has no ligand component after restart
-            if complex.ligand.mol_name == morph.initial_name and \
-                name not in done:
-
+            if complex.ligand.mol_name == morph.initial_name:
                 print('Creating complex %s with ligand morph %s...' %
                       (complex.mol_name, morph.name) )
 
                 try:
                     morph.create_coords(complex, complexes[complex], '')
-                    #done_log.write(name + '\n')
                 except errors.SetupError as why:
                     morph_failed.append(name)
                     print ('ERROR: complex %s with ligand morph %s failed: %s'
@@ -960,7 +1060,6 @@ if __name__ == '__main__':
 
     ### final message
 
-    done_log.close()
     success = True
 
     for failed in ( (prot_failed, 'proteins'), (lig_failed, 'ligands'),

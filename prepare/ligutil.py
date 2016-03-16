@@ -219,11 +219,6 @@ Net charge: %i
 Molecular weight: %f\n''' % (mol.GetFormula(), smiles, inchi_key, self.charge,
                              mol.GetMolWt() ) )
 
-    charge_file = os.path.join(self.dst, const.CHARGE_FILE)
-
-    with open(charge_file, 'w') as chf:
-        chf.write('%s' % mol.GetTotalCharge() )
-
 
 @report
 def preminimize(self, add_hyd = False, ffield = 'mmff94', nsteps = 10):

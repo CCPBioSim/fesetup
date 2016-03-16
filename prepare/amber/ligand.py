@@ -539,9 +539,6 @@ class Ligand(Common):
         self.charge = float('%.12f' % sum(charges))
         logger.write('Total molecule charge is %.2f\n' % self.charge)
 
-        with open(const.CHARGE_FILE, 'w') as chf:
-            chf.write('%s' % self.charge)
-
         self.ref_file = self.mol_file
         self.ref_fmt = self.mol_fmt
 
@@ -847,17 +844,6 @@ class Ligand(Common):
 
         with open(const.SIRE_ABS_PERT_VDW_FILE, 'w') as pfile:
             pfile.write('\n'.join(outstr))
-
-
-    def get_charge(self):
-        """
-        Read the ligand charge from the charge file.
-        """
-
-        charge_file = os.path.join(self.dst, const.CHARGE_FILE)
-
-        with open(charge_file, 'r') as chf:
-            self.charge = float(chf.read() )
 
 
     def get_topcrd(self):

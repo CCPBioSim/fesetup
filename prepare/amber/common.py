@@ -598,9 +598,6 @@ class Common(object):
             for line in rst:
                 self.box_dims = line
 
-        with open(const.BOX_DIMS, 'w') as box:
-            box.write(self.box_dims)
-
         self.box_dims = self.box_dims.split()
 
 

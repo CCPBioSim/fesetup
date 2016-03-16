@@ -54,12 +54,12 @@ class ModelConfig(DataDict):
         'data.checksum': None ,
         'data.checksum_type': 'sha1',
         'data.compression_type': 'bz2',
-#        'isvalid': None,
+        'is.valid': None,
         'timestamp': None
         }
 
 
-    def __init__(self, name):
+    def __init__(self, name = ''):
         """
         :param name: the model name
         :type name: string

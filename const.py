@@ -84,8 +84,6 @@ LIGAND_FRCMOD_FILE = 'ligand.frcmod'
 OFF_FILE = 'ligand.off'
 GAFF_MOL2_FILE = 'gaff.mol2'
 
-CHARGE_FILE = 'total_charge'
-
 DUMMY_TYPE = 'du'
 
 IGNORE_RESIDUES = frozenset((LIGAND_NAME, 'TIP', 'WAT', 'Cl-', 'Na+'))
@@ -112,8 +110,6 @@ BASE_MAXVAR = 10
 BASE_MAXBONDVAR = 5
 BASE_MAXANGLEVAR = 5
 BASE_MAXDIHEDRALVAR = 5
-
-BOX_DIMS = 'box.dim'
 
 MAX_CHARGE = 1.0
 MAX_CHARGE_DIFF = 0.01
