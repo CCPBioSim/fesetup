@@ -43,7 +43,6 @@ import openbabel as ob
 import FESetup
 from FESetup import const, errors, logger
 from . import dlfield
-from FESetup.modelconf import ModelConfig
 from common import *
 import utils
 
@@ -300,8 +299,6 @@ class Ligand(Common):
 
         self.leap_added = False
 
-        self.model = ModelConfig(ligand_name)
-
 
     @report
     def param(self, gb_charges = False, sqm_strategy = None):
@@ -548,15 +545,6 @@ class Ligand(Common):
         self.ref_file = self.mol_file
         self.ref_fmt = self.mol_fmt
 
-        self.model['charge.total'] = self.charge
-        self.model['charge.filename'] = const.LIGAND_AC_FILE
-        self.model['charge.filetype'] = 'ac'
-        self.model['charge.method'] = 'AM1-BCC'
-        self.model.add_file(const.LIGAND_AC_FILE)
-
-        self.model['forcefield'] = self.gaff
-        self.model['molecule.type'] = 'ligand'
-
 
     def _parmchk(self, infile, informat, outfile):
         """
@@ -629,7 +617,7 @@ class Ligand(Common):
             raise errors.SetupError('unsupported leap input format: %s (only '
                                     'mol2 and pdb)' % self.mol_fmt)
 
-        self.model.add_file(mol_file)
+        self.mol_file = mol_file
 
         if not self.leap_added:
             self.leap.add_force_field(self.gaff)

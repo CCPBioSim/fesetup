@@ -636,33 +636,3 @@ class Common(object):
 
             # in g/cc
             self.density = total_mass * const.AMU2GRAMS / self.volume
-
-
-    def save_model(self, name_prefix=''):
-        """
-        Save the current model.
-
-        :param name_prefix: an optional name prefix for the model file name
-        :type name_prefix: string
-        """
-
-        # add only latest info
-        self.model['crd.filename'] = self.amber_crd
-        self.model['crd.filetype'] = 'amber-rst7'
-        self.model['top.filename'] = self.amber_top
-        self.model['top.filetype'] = 'amber-parm7'
-
-        self.model.add_file(self.amber_top)
-        self.model.add_file(self.amber_crd)
-
-        # FIXME: check for minimisation/equilibration
-        if self.box_dims:
-            self.model['box.dimensions'] = self.box_dims
-            self.model['box.density'] = self.density
-            self.model['box.format'] = 'bla'  # FIXME: boxlengths-angle
-
-        filename = name_prefix + self.model['name'] + const.MODEL_EXT
-
-        self.model.write(filename)
-        shutil.move(filename, os.path.join(self.topdir, self.workdir,
-                                           filename))

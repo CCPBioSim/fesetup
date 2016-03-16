@@ -50,6 +50,7 @@ from collections import OrderedDict, namedtuple
 import FESetup.prepare as prep
 from FESetup import const, errors, create_logger, logger
 from FESetup.ui.iniparser import IniParser
+from FESetup.modelconf import ModelConfig
 
 # FIXME: That's here solely to suppress a warning over a fmcs/Sire double
 # data type registration collision.  Impact limited as much as possible but
@@ -145,6 +146,38 @@ def _minmd_done(dico):
 
     return False
 
+def save_model(model, mol, filename, dest_dir):
+    """
+    Save the current model.
+
+    :param model: the model to be saved
+    :type model: ModelConfig
+    :param mol: the 'molecule' class
+    :param mol: Common
+    :param filename: name of file to be saved to
+    :type filename: string
+    :param dest_dir: name of destination directory
+    :type dest_dir: string
+    """
+
+    # add only latest info
+    model['crd.filename'] = mol.amber_crd
+    model['crd.filetype'] = 'amber-rst7'
+    model['top.filename'] = mol.amber_top
+    model['top.filetype'] = 'amber-parm7'
+
+    model.add_file(mol.amber_top)
+    model.add_file(mol.amber_crd)
+
+    # FIXME: check for minimisation/equilibration
+    if mol.box_dims:
+        model['box.dimensions'] = mol.box_dims
+        model['box.density'] = mol.density
+        model['box.format'] = 'bla'  # FIXME: boxlengths-angle
+
+    model.write(filename)
+    shutil.move(filename, dest_dir)
+
 
 def make_ligand(name, ff, opts, short = False):
     """
@@ -154,6 +187,10 @@ def make_ligand(name, ff, opts, short = False):
     """
     
     lig = opts[SECT_LIG]
+
+    # FIXME: check here if we already have a model and create Ligand
+    #        from the model
+    model = ModelConfig(name)
 
     if not lig['basedir']:
         raise dGprepError('[%s] "basedir" must be set' % SECT_LIG)
@@ -200,7 +237,17 @@ def make_ligand(name, ff, opts, short = False):
 
         ligand.prepare_top()
         ligand.create_top(boxtype = '', addcmd = load_cmds)
-        ligand.save_model()
+
+        model['charge.total'] = ligand.charge
+        model['charge.filename'] = const.LIGAND_AC_FILE
+        model.add_file(const.LIGAND_AC_FILE)
+        model['charge.filetype'] = 'ac'
+        model['charge.method'] = 'AM1-BCC'
+        model['forcefield'] = ligand.gaff
+        model['molecule.type'] = 'ligand'
+        model.add_file(ligand.mol_file)
+
+        save_model(model, ligand, model['name'] + const.MODEL_EXT, '..')
 
         if opts[SECT_DEF]['MC_prep']:
             ligand.flex()
@@ -292,7 +339,8 @@ def make_ligand(name, ff, opts, short = False):
                 if _minmd_done(lig):
                    ligand.to_rst7()
 
-            ligand.save_model(const.MODEL_SOLV_PREFIX)
+            save_model(model, ligand,
+                       'solv_' + model['name'] + const.MODEL_EXT, '..')
 
     return ligand, load_cmds
 
