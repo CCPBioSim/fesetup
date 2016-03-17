@@ -441,8 +441,6 @@ class Common(object):
 
         self.mdengine.minimize(namelist, nsteps, ncyc, restraint, restr_force)
 
-        # FIXME: report back new box info
-
 
     @report
     def md(self, namelist = '', nsteps = 1000, T = 300.0, p = 1.0,
@@ -481,7 +479,8 @@ class Common(object):
         self.mdengine.md(namelist, nsteps, T, p, restraint, restr_force,
                          nrestr, wrap)
 
-        # FIXME: report back new box info
+        # FIXME: do we also want to density?
+        self.box_dims = self.mdengine.get_box_dims()
 
 
     def to_rst7(self):

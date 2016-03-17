@@ -1,4 +1,4 @@
-#  Copyright (C) 2014  Hannes H Loeffler
+#  Copyright (C) 2014,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -193,6 +193,21 @@ class MDEngine(mdebase.MDEBase):
 
 
         self._run_mdprog(mdebase.MD_PREFIX, namelist, mask, constp)
+
+
+    def get_box_dims(self):
+        """
+        Extract box information from rst7 file.
+
+        :returns: box dimensions
+        """
+
+        with open(self.sander_rst, 'r') as rst:
+            for line in rst:
+                box_dims = line
+
+        # FIXME: rectangular box only
+        return [float(d) for d in box_dims.split()]
 
 
     def _run_mdprog(self, prefix, namelist, mask, constp):

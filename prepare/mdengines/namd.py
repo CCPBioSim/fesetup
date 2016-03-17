@@ -98,6 +98,7 @@ class MDEngine(mdebase.MDEBase):
         self.mdpost = mdpost
 
         self.prev = ''
+        self.prefix = ''
 
 
     def update_files(self, amber_top, amber_crd, sander_crd, sander_rst,
@@ -170,6 +171,7 @@ class MDEngine(mdebase.MDEBase):
                                    STEPS_PER_CYCLE)
 
         self._run_mdprog(prefix, config)
+        self.prefix = prefix
 
 
     def md(self, config = '%STD', nsteps = 1000, T = 300.0, p = 1.0,
@@ -239,6 +241,27 @@ class MDEngine(mdebase.MDEBase):
                                    STEPS_PER_CYCLE, dt)
 
         self._run_mdprog(prefix, config)
+        self.prefix = prefix
+
+
+    def get_box_dims(self):
+        """
+        Extract box information from rst7 file.
+
+        :returns: box dimensions
+        """
+
+        xst_file = self.prefix + os.extsep + 'xst'
+
+        with open(xst_file, 'r') as rst:
+            for line in rst:
+                last_line = line
+
+        # FIXME: rectangular box only
+        d = last_line.split()
+        box_dims = [float(d[1]), float(d[5]), float(d[9]), 90.0, 90.0, 90.0]
+                        
+        return box_dims
 
 
     def to_rst7(self):

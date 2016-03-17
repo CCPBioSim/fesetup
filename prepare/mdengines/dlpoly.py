@@ -183,6 +183,52 @@ class MDEngine(mdebase.MDEBase):
             self._run_mdprog(suffix, ctrl, mask, restr_force)
 
 
+    def get_box_dims(self):
+        """
+        Extract box information from rst7 file.
+
+        :returns: box dimensions
+        """
+
+        config_file = REVCON_FILENAME + os.extsep + '%05i' % (self.run_no - 1)
+        line_no = 0
+        box_dims = []
+
+        with open(config_file, 'r') as cfg:
+            for line in cfg:
+                line_no += 1
+
+                if line_no == 1:
+                    continue
+
+                if line_no == 2:
+                    try:
+                        imcon = int(line.split()[1])
+                    except ValueError:
+                        raise errors.SetupError('invalid line %i in file %s'
+                                                % (line_no, config_file) )
+                    continue
+
+                if line_no < 5 and imcon > 0:
+                    # FIXME: rectangular box only
+                    try:
+                        x, y, z = line.split()
+                        box_dims.append(float(x))
+
+                        x, y, z = cfg.next().split()
+                        box_dims.append(float(y))
+
+                        x, y, z = cfg.next().split()
+                        box_dims.append(float(z))
+                    except ValueError:
+                        raise errors.SetupError('invalid cell in file %s'
+                                                % config_file)
+                    break
+
+        box_dims.extend( (90.0, 90.0, 90.0) )
+        return box_dims
+
+
     def _run_mdprog(self, suffix, config, mask, restr_force):
         """
         Run DL_POLY executable.
@@ -240,8 +286,8 @@ class MDEngine(mdebase.MDEBase):
         :raises: SetupError
         """
 
-        suffix = CONFIG_FILENAME + '_%05i' % (self.run_no - 1)
-        self.prev = suffix
+        config_file = CONFIG_FILENAME + os.extsep + '%05i' % (self.run_no - 1)
+        self.prev = config_file
 
         line_no = 0
         natoms = 0
@@ -249,7 +295,7 @@ class MDEngine(mdebase.MDEBase):
         coords = []
         vels = []
 
-        with open(CONFIG_FILENAME, 'r') as crdvel:
+        with open(config_file, 'r') as crdvel:
             for line in crdvel:
                 line_no += 1
 
@@ -262,7 +308,7 @@ class MDEngine(mdebase.MDEBase):
                         imcon = int(imcon)
                     except ValueError:
                         raise errors.SetupError('invalid line %i in file %s'
-                                                % (line_no, revcon) )
+                                                % (line_no, config_file) )
 
                     continue
 
@@ -278,7 +324,7 @@ class MDEngine(mdebase.MDEBase):
                         cell.extend( (float(x), float(y), float(z) ) )
                     except ValueError:
                         raise errors.SetupError('invalid cell in file %s'
-                                                % revcon)
+                                                % config_file)
 
                     line_no += 3
 

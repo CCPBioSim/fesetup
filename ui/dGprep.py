@@ -209,6 +209,8 @@ def save_model(model, mol, filename, dest_dir):
     :type dest_dir: string
     """
 
+    model['mdengine'] = options[SECT_DEF]['mdengine']
+
     # add only latest info
     model['crd.filename'] = mol.amber_crd
     model['crd.filetype'] = 'amber-rst7'
@@ -220,8 +222,12 @@ def save_model(model, mol, filename, dest_dir):
 
     # FIXME: check for minimisation/equilibration
     if mol.box_dims:
-        model['box.dimensions'] = mol.box_dims
-        model['box.density'] = mol.density
+        box_dims = []
+
+        for v in mol.box_dims:
+            box_dims.append(float(v))
+
+        model['box.dimensions'] = box_dims
         model['box.format'] = 'bla'  # FIXME: boxlengths-angle
 
     # the final blessing
@@ -229,8 +235,12 @@ def save_model(model, mol, filename, dest_dir):
 
     model.write(filename)
 
-    if not os.access(os.path.join(dest_dir, filename), os.F_OK):
-        shutil.move(filename, dest_dir)
+    mname = os.path.join(dest_dir, filename)
+
+    if os.access(mname, os.F_OK):
+        os.remove(mname)
+
+    shutil.move(filename, dest_dir)
 
 
 def make_ligand(name, ff, opts):
