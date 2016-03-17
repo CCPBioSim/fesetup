@@ -145,32 +145,27 @@ def _minmd_done(dico):
     return False
 
 
-def _search_model(name, workdir):
+def _search_model(names, workdir):
     """
     Check if a model file is available.
 
-    :param name: name of model file
-    :type name: str
+    :param names: list of model names to be searcher for, highest ranking
+                  first
+    :type names: str
     :param workdir: the workdir where the model file is located
+    :type name: str
     :type workdir: str
 
-    :returns: the path to the model file or None if model file not found,
-              the filename of the model
+    :returns: the path to the model file or None if model file not found
     """
 
-    vac_model_filename = name + const.MODEL_EXT
-    sol_model_filename = 'solv_' + name + const.MODEL_EXT
-    vac_path = os.path.join(workdir, vac_model_filename)
-    sol_path = os.path.join(workdir, sol_model_filename)
-    path = None
+    for name in names:
+        path = os.path.join(workdir, name)
 
-    # FIXME: do not make assumption where models are located?
-    if os.access(sol_path, os.F_OK):
-        path = sol_path
-    elif os.access(vac_path, os.F_OK):
-        path = vac_path
+        if os.access(path, os.F_OK):
+            return path
 
-    return path, vac_model_filename, sol_model_filename
+    return None
 
 
 def read_model(filename):
@@ -232,8 +227,8 @@ def save_model(model, mol, filename, dest_dir):
 
     model.write(filename)
 
-    # FIXME: checks
-    shutil.move(filename, dest_dir)
+    if not os.access(os.path.join(dest_dir, filename), os.F_OK):
+        shutil.move(filename, dest_dir)
 
 
 def make_ligand(name, ff, opts):
@@ -258,32 +253,37 @@ def make_ligand(name, ff, opts):
     if opts[SECT_DEF]['user_params']:
         load_cmds = _param_glob(PARAM_CMDS)
 
-    model_path, vac_model_filename, sol_model_filename =  \
-                _search_model(name, const.LIGAND_WORKDIR)
+    vac_model_filename = name + const.MODEL_EXT
+    sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
-    # FIXME: check for KeyError
-    if model_path:
-        model = read_model(model_path)
-        name = model['name']
+    if not options[SECT_DEF]['remake']:
+        model_path =  \
+                   _search_model([sol_model_filename, vac_model_filename],
+                                 const.LIGAND_WORKDIR)
 
-        print('Found model %s, extracting data' % name)
+        # FIXME: check for KeyError
+        if model_path:
+            model = read_model(model_path)
+            name = model['name']
 
-        # FIXME: only extract when const.LIGAND_WORKDIR not present?
-        model.extract(direc = os.path.join(const.LIGAND_WORKDIR, name))
+            print('Found model %s, extracting data' % name)
 
-        ligand = ff.Ligand(name, lig['basedir'])
+            # FIXME: only extract when const.LIGAND_WORKDIR not present?
+            model.extract(direc = os.path.join(const.LIGAND_WORKDIR, name))
 
-        # FIXME: do basic checks
-        ligand.charge = float(model['charge.total'])
-        ligand.gaff = model['forcefield']
-        ligand.amber_top = model['top.filename']
-        ligand.amber_crd = model['crd.filename']
+            ligand = ff.Ligand(name, lig['basedir'])
 
-        if 'box.dimensions' in model:
-            ligand.box_dims = model['box.dimensions']
-            ligand.density = model['box.density']
+            # FIXME: do basic checks
+            ligand.charge = float(model['charge.total'])
+            ligand.gaff = model['forcefield']
+            ligand.amber_top = model['top.filename']
+            ligand.amber_crd = model['crd.filename']
 
-        return ligand, load_cmds
+            if 'box.dimensions' in model:
+                ligand.box_dims = model['box.dimensions']
+                ligand.density = model['box.density']
+
+            return ligand, load_cmds
 
     print('Making ligand %s...' % name)
 
@@ -445,32 +445,37 @@ def make_protein(name, ff, opts):
     if opts[SECT_DEF]['user_params']:
         load_cmds = _param_glob(PARAM_CMDS)
 
-    model_path, vac_model_filename, sol_model_filename = \
-                                   _search_model(name, const.PROTEIN_WORKDIR)
+    vac_model_filename = name + const.MODEL_EXT
+    sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
-    # FIXME: check for KeyError
-    if model_path:
-        model = read_model(model_path)
-        name = model['name']
+    if not options[SECT_DEF]['remake']:
+        model_path =  \
+                   _search_model([sol_model_filename, vac_model_filename],
+                                 const.PROTEIN_WORKDIR)
 
-        print('Found model %s, extracting data' % name)
+        # FIXME: check for KeyError
+        if model_path:
+            model = read_model(model_path)
+            name = model['name']
 
-        # FIXME: only extract when const.PROTEIN_WORKDIR not present?
-        model.extract(direc = os.path.join(const.PROTEIN_WORKDIR, name))
+            print('Found model %s, extracting data' % name)
 
-        protein = ff.Protein(name, prot['basedir'])
+            # FIXME: only extract when const.PROTEIN_WORKDIR not present?
+            model.extract(direc = os.path.join(const.PROTEIN_WORKDIR, name))
 
-        # FIXME: do basic checks
-        protein.charge = float(model['charge.total'])
-        #ligand.gaff = model['forcefield']
-        protein.amber_top = model['top.filename']
-        protein.amber_crd = model['crd.filename']
+            protein = ff.Protein(name, prot['basedir'])
 
-        if 'box.dimensions' in model:
-            protein.box_dims = model['box.dimensions']
-            protein.density = model['box.density']
+            # FIXME: do basic checks
+            protein.charge = float(model['charge.total'])
+            #ligand.gaff = model['forcefield']
+            protein.amber_top = model['top.filename']
+            protein.amber_crd = model['crd.filename']
 
-        return protein, load_cmds
+            if 'box.dimensions' in model:
+                protein.box_dims = model['box.dimensions']
+                protein.density = model['box.density']
+
+            return protein, load_cmds
 
     print('Making biomolecule %s...' % name)
 
@@ -581,31 +586,36 @@ def make_complex(prot, lig, ff, opts, load_cmds):
 
     com = opts[SECT_COM]
 
-    model_path, vac_model_filename, sol_model_filename = \
-                _search_model(name, const.COMPLEX_WORKDIR)
+    vac_model_filename = name + const.MODEL_EXT
+    sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
-    if model_path:
-        model = read_model(model_path)
-        name = model['name']
+    if not options[SECT_DEF]['remake']:
+        model_path =  \
+                   _search_model([sol_model_filename, vac_model_filename],
+                                 const.COMPLEX_WORKDIR)
 
-        print('Found model %s, extracting data' % name)
+        if model_path:
+            model = read_model(model_path)
+            name = model['name']
 
-        # FIXME: only extract when const.COMPLEX_WORKDIR not present?
-        model.extract(direc = os.path.join(const.COMPLEX_WORKDIR, name))
+            print('Found model %s, extracting data' % name)
 
-        complex = ff.Complex(prot, lig)
+            # FIXME: only extract when const.COMPLEX_WORKDIR not present?
+            model.extract(direc = os.path.join(const.COMPLEX_WORKDIR, name))
 
-        # FIXME: do basic checks
-        complex.charge = float(model['charge.total'])
-        #ligand.gaff = model['forcefield']
-        complex.amber_top = model['top.filename']
-        complex.amber_crd = model['crd.filename']
+            complex = ff.Complex(prot, lig)
 
-        if 'box.dimensions' in model:
-            complex.box_dims = model['box.dimensions']
-            complex.density = model['box.density']
+            # FIXME: do basic checks
+            complex.charge = float(model['charge.total'])
+            #ligand.gaff = model['forcefield']
+            complex.amber_top = model['top.filename']
+            complex.amber_crd = model['crd.filename']
 
-        return complex, load_cmds
+            if 'box.dimensions' in model:
+                complex.box_dims = model['box.dimensions']
+                complex.density = model['box.density']
+
+            return complex, load_cmds
 
     print('Making complex from %s and %s...' % (prot.mol_name, lig.mol_name))
 
@@ -864,8 +874,6 @@ if __name__ == '__main__':
 
     logger.write('Force field and MD engine:\n%s\n' % ff)
 
-    # FIXME: recreate remake feature
-    #if not options[SECT_DEF]['remake']:
 
     # FIXME: We keep all molecule objects in memory.  For 2000 morph pairs
     #        this may mean more than 1 GB on a 64 bit machine.
