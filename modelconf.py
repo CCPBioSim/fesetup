@@ -98,11 +98,22 @@ class ModelConfig(DataDict):
         :type filename: string
         """
 
-        self['data.checksum'] = self.add_files(self.files,
-                                               self['data.checksum_type'],
-                                               self['data.compression_type'])
-
+        if self.files:
+            self['data.checksum'] = \
+                                  self.add_files(self.files,
+                                                 self['data.checksum_type'],
+                                                 self['data.compression_type'])
         self['timestamp'] = time.ctime()
+
+        self.check_keys()
+
+        super(ModelConfig, self).write(filename)
+
+
+    def check_keys(self):
+        """
+        Check if the mandatory keys are present.
+        """
 
         for elem in self.__class__.mandatory_fields:
             if elem not in self:
@@ -112,5 +123,3 @@ class ModelConfig(DataDict):
                 if self[elem] == None:
                     raise DataDictError('mandatory field "%s" not set' %
                                         elem)
-
-        super(ModelConfig, self).write(filename)

@@ -190,9 +190,11 @@ def read_model(filename):
     except KeyError:
         raise errors.SetupError('invalid model %s' % model['name'])
 
+    model.check_keys()
+
     return model
 
-    
+
 def save_model(model, mol, filename, dest_dir):
     """
     Save the current ModelConfig model.
@@ -257,23 +259,21 @@ def make_ligand(name, ff, opts):
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
     if not options[SECT_DEF]['remake']:
-        model_path =  \
-                   _search_model([sol_model_filename, vac_model_filename],
-                                 const.LIGAND_WORKDIR)
+        model_path =_search_model([sol_model_filename, vac_model_filename],
+                                  const.LIGAND_WORKDIR)
 
         # FIXME: check for KeyError
         if model_path:
             model = read_model(model_path)
             name = model['name']
 
-            print('Found model %s, extracting data' % name)
+            logger.write('Found model %s, extracting data' % name)
 
             # FIXME: only extract when const.LIGAND_WORKDIR not present?
             model.extract(direc = os.path.join(const.LIGAND_WORKDIR, name))
 
             ligand = ff.Ligand(name, lig['basedir'])
 
-            # FIXME: do basic checks
             ligand.charge = float(model['charge.total'])
             ligand.gaff = model['forcefield']
             ligand.amber_top = model['top.filename']
@@ -449,25 +449,22 @@ def make_protein(name, ff, opts):
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
     if not options[SECT_DEF]['remake']:
-        model_path =  \
-                   _search_model([sol_model_filename, vac_model_filename],
-                                 const.PROTEIN_WORKDIR)
+        model_path = _search_model([sol_model_filename, vac_model_filename],
+                                   const.PROTEIN_WORKDIR)
 
         # FIXME: check for KeyError
         if model_path:
             model = read_model(model_path)
             name = model['name']
 
-            print('Found model %s, extracting data' % name)
+            logger.write('Found model %s, extracting data' % name)
 
             # FIXME: only extract when const.PROTEIN_WORKDIR not present?
             model.extract(direc = os.path.join(const.PROTEIN_WORKDIR, name))
 
             protein = ff.Protein(name, prot['basedir'])
 
-            # FIXME: do basic checks
             protein.charge = float(model['charge.total'])
-            #ligand.gaff = model['forcefield']
             protein.amber_top = model['top.filename']
             protein.amber_crd = model['crd.filename']
 
@@ -586,28 +583,26 @@ def make_complex(prot, lig, ff, opts, load_cmds):
 
     com = opts[SECT_COM]
 
+    name = prot.mol_name + const.PROT_LIG_SEP + lig.mol_name
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
     if not options[SECT_DEF]['remake']:
-        model_path =  \
-                   _search_model([sol_model_filename, vac_model_filename],
-                                 const.COMPLEX_WORKDIR)
+        model_path = _search_model([sol_model_filename, vac_model_filename],
+                                   const.COMPLEX_WORKDIR)
 
         if model_path:
             model = read_model(model_path)
             name = model['name']
 
-            print('Found model %s, extracting data' % name)
+            logger.write('Found model %s, extracting data' % name)
 
             # FIXME: only extract when const.COMPLEX_WORKDIR not present?
             model.extract(direc = os.path.join(const.COMPLEX_WORKDIR, name))
 
             complex = ff.Complex(prot, lig)
 
-            # FIXME: do basic checks
             complex.charge = float(model['charge.total'])
-            #ligand.gaff = model['forcefield']
             complex.amber_top = model['top.filename']
             complex.amber_crd = model['crd.filename']
 
