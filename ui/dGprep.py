@@ -145,12 +145,42 @@ def _minmd_done(dico):
     return False
 
 
+def _search_model(name, workdir):
+    """
+    Check if a model file is available.
+
+    :param name: name of model file
+    :type name: str
+    :param workdir: the workdir where the model file is located
+    :type workdir: str
+
+    :returns: the path to the model file or None if model file not found,
+              the filename of the model
+    """
+
+    vac_model_filename = name + const.MODEL_EXT
+    sol_model_filename = 'solv_' + name + const.MODEL_EXT
+    vac_path = os.path.join(workdir, vac_model_filename)
+    sol_path = os.path.join(workdir, sol_model_filename)
+    path = None
+
+    # FIXME: do not make assumption where models are located?
+    if os.access(sol_path, os.F_OK):
+        path = sol_path
+    elif os.access(vac_path, os.F_OK):
+        path = vac_path
+
+    return path, vac_model_filename, sol_model_filename
+
+
 def read_model(filename):
     """
     Read a ModelConfig model.
 
     :param filename: name of file to be saved to
-    :type filename: string
+    :type filename: str
+
+    :returns: a ModelConfig model
     """
 
     model = ModelConfig()
@@ -223,22 +253,13 @@ def make_ligand(name, ff, opts):
 
     lig = opts[SECT_LIG]
 
-    vac_model_filename = name + const.MODEL_EXT
-    sol_model_filename = 'solv_' + name + const.MODEL_EXT
-    vac_path = os.path.join(const.LIGAND_WORKDIR, vac_model_filename)
-    sol_path = os.path.join(const.LIGAND_WORKDIR, sol_model_filename)
-    model_path = None
-
-    # FIXME: do not make assumption where models are located?
-    if os.access(sol_path, os.F_OK):
-        model_path = sol_path
-    elif os.access(vac_path, os.F_OK):
-        model_path = vac_path
-
     load_cmds = ''
 
     if opts[SECT_DEF]['user_params']:
         load_cmds = _param_glob(PARAM_CMDS)
+
+    model_path, vac_model_filename, sol_model_filename =  \
+                _search_model(name, const.LIGAND_WORKDIR)
 
     # FIXME: check for KeyError
     if model_path:
@@ -419,22 +440,13 @@ def make_protein(name, ff, opts):
 
     prot = opts[SECT_PROT]
 
-    vac_model_filename = name + const.MODEL_EXT
-    sol_model_filename = 'solv_' + name + const.MODEL_EXT
-    vac_path = os.path.join(const.PROTEIN_WORKDIR, vac_model_filename)
-    sol_path = os.path.join(const.PROTEIN_WORKDIR, sol_model_filename)
-    model_path = None
-
-    # FIXME: do not make assumption where models are located?
-    if os.access(sol_path, os.F_OK):
-        model_path = sol_path
-    elif os.access(vac_path, os.F_OK):
-        model_path = vac_path
-
     load_cmds = ''
 
     if opts[SECT_DEF]['user_params']:
         load_cmds = _param_glob(PARAM_CMDS)
+
+    model_path, vac_model_filename, sol_model_filename = \
+                                   _search_model(name, const.PROTEIN_WORKDIR)
 
     # FIXME: check for KeyError
     if model_path:
@@ -569,18 +581,8 @@ def make_complex(prot, lig, ff, opts, load_cmds):
 
     com = opts[SECT_COM]
 
-    name = prot.mol_name + const.PROT_LIG_SEP + lig.mol_name
-    vac_model_filename = name + const.MODEL_EXT
-    sol_model_filename = 'solv_' + name + const.MODEL_EXT
-    vac_path = os.path.join(const.COMPLEX_WORKDIR, vac_model_filename)
-    sol_path = os.path.join(const.COMPLEX_WORKDIR, sol_model_filename)
-    model_path = None
-
-    # FIXME: do not make assumption where models are located?
-    if os.access(sol_path, os.F_OK):
-        model_path = sol_path
-    elif os.access(vac_path, os.F_OK):
-        model_path = vac_path
+    model_path, vac_model_filename, sol_model_filename = \
+                _search_model(name, const.COMPLEX_WORKDIR)
 
     if model_path:
         model = read_model(model_path)
@@ -940,6 +942,7 @@ if __name__ == '__main__':
 
     morphs = []
     morph_failed = []
+
     for pair in morph_pairs:
         try:
             l1 = ligands[pair[0] ]

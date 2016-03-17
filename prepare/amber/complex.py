@@ -58,19 +58,20 @@ class Complex(Common):
         self.workdir = const.COMPLEX_WORKDIR
         self.leap_added = False
 
-#         # FIXME: remove when ModelConfig is done
-#         if type(protein) == str and type(ligand) == str:
-#             super(Complex, self).__init__(protein + const.PROT_LIG_SEP +
-#                                           ligand, '', self.workdir,
-#                                           overwrite)
+        # FIXME: remove when ModelConfig is done
+        #        this is still used for the Morph class
+        if type(protein) == str and type(ligand) == str:
+            super(Complex, self).__init__(protein + const.PROT_LIG_SEP +
+                                          ligand, '', self.workdir,
+                                          overwrite)
 
-#             self.protein_file = protein
-#             self.ligand_file = ligand
+            self.protein_file = protein
+            self.ligand_file = ligand
 
-#             # FIXME: quick fix to allow dGprep to redo complex morph
-#             self.ligand = Ligand(ligand, '')
+            # FIXME: quick fix to allow dGprep to redo complex morph
+            self.ligand = Ligand(ligand, '')
 
-#             return
+            return
 
         assert type(protein) == Protein
         assert type(ligand) == Ligand

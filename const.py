@@ -111,6 +111,8 @@ BASE_MAXBONDVAR = 5
 BASE_MAXANGLEVAR = 5
 BASE_MAXDIHEDRALVAR = 5
 
+BOX_DIMS = 'box.dim'                    # FIXME: for Morph class only
+
 MAX_CHARGE = 1.0
 MAX_CHARGE_DIFF = 0.01
 TINY_CHARGE = 0.01

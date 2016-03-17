@@ -86,6 +86,8 @@ def ssbonds(ss_file):
     return pairs
 
 
+# FIXME: only still here to support Morph class which would otherwise have
+#        no box information
 def read_box_file(box_file):
     """
     Read box dimensions from file.
@@ -597,6 +599,10 @@ class Common(object):
         with open(filename, 'r') as rst:
             for line in rst:
                 self.box_dims = line
+
+        # FIXME: only used for Morph class
+        with open(const.BOX_DIMS, 'w') as box:
+            box.write(self.box_dims)
 
         self.box_dims = self.box_dims.split()
 
