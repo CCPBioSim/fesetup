@@ -44,8 +44,10 @@ class DataDict(dict):
     Arbitrary key-value pairs can be created just like with the built-in
     dict.  The data part consisting of an arbitrary set of file is a mandatory
     part of the class.  This set of file is internally handled via a tar
-    (pax) archive and compressed (bz2 or gz).  A checksum is calculated for
-    the data and a manifest added to the archive.
+    (pax) archive and compressed (bz2 or gz).  A hash is calculated for
+    the data and a manifest added to the archive.  The manifest contains the
+    individual hashes of the archive data.  The hashes are also stored for
+    each file in the comment field of the pax header.
 
     The class can be written to a file as a mixture of ASCII key-value pairs
     and the binary data archive.  The format is each key=value pair on a line
@@ -147,11 +149,13 @@ class DataDict(dict):
 
 
     # NOTE: merge with write()?
-    def add_files(self, files, hash_type = 'sha1', compression_type = 'bz2'):
+    def add_files(self, files, hash_type='sha1', compression_type='bz2'):
         """
         Add a list of files to an internal tar(pax) archive.  A manifest is
-        automatically created.  The tar(pax) archive will be compressed.  A
-        checksum will be computed for the final archive.
+        automatically created and contains the hashes of every file.  Hashes
+        are also stored in the comment field of the PAX header of every file.
+        The tar(pax) archive will be compressed.  A hash will be computed for
+        the final archive.
 
         :param files: the file names to be added
         :type files: set of strings
@@ -218,7 +222,7 @@ class DataDict(dict):
             raise DataDictError('data corruption: checksum doesn\'t match')
 
 
-    def list(self, compression_type = '*'):
+    def list(self, compression_type='*'):
         """
         List contents of internal tar(pax) archive.
 
@@ -235,7 +239,7 @@ class DataDict(dict):
             tar.list()
 
 
-    def extract(self, compression_type = '*', direc = '.'):
+    def extract(self, compression_type='*', direc='.'):
         """
         Extract contents of internal tar(pax) archive.
 
@@ -248,6 +252,7 @@ class DataDict(dict):
         if not self.data:
             raise DataDictError('no data files')
 
+        # FIXME: add hash check for data archive, each file?
         with tarfile.open(mode = 'r:%s' % compression_type,
                           format = tarfile.PAX_FORMAT,
                           fileobj = cStringIO.StringIO(self.data) ) as tar:

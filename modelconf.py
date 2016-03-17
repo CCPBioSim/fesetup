@@ -18,16 +18,16 @@
 #  that should have come with this distribution.
 
 r"""
-Version 1 of the ModelConfig class which is a DataDict with certain required
-dictionary keys and associated files.
+Version 0 of the ModelConfig class which is a DataDict with certain required
+dictionary keys describing associated files in a packaged archive.
 """
 
 __revision__ = "$Id$"
 
 
-import os, time
-from FESetup import const
-from FESetup.datadict import DataDict, DataDictError
+import time
+
+from datadict import DataDict, DataDictError
 
 
 
@@ -42,9 +42,6 @@ class ModelConfig(DataDict):
         'version': 0,
         'name': None,
         'charge.total': None,
-#        'charge.filename': None,
-#        'charge.filetype': None,
-#        'charge.type': None,
         'forcefield': None,
         'molecule.type': None,
         'crd.filename': None,
@@ -59,7 +56,7 @@ class ModelConfig(DataDict):
         }
 
 
-    def __init__(self, name = ''):
+    def __init__(self, name=''):
         """
         :param name: the model name
         :type name: string
