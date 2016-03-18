@@ -217,8 +217,8 @@ def save_model(model, mol, filename, dest_dir):
     model['top.filename'] = mol.amber_top
     model['top.filetype'] = 'amber-parm7'
 
-    model.add_file(mol.amber_top)
     model.add_file(mol.amber_crd)
+    model.add_file(mol.amber_top)
 
     # FIXME: check for minimisation/equilibration
     if mol.box_dims:

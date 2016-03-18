@@ -92,6 +92,8 @@ class MDEBase(object):
         6F12.7 vels (if MD)
         ...
         6F12.7 box size
+
+        :returns: file name of created rst7 file
         """
 
         delx = dely = delz = 0.0
@@ -167,3 +169,5 @@ class MDEBase(object):
             # FIXME: only cuboid box
             rst7.write('%12.7f%12.7f%12.7f%12.7f%12.7f%12.7f\n' %
                        (xx, yy, zz, 90.0, 90.0, 90.0) )
+
+        return self.prev + RST_EXT

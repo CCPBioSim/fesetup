@@ -248,6 +248,10 @@ class MDEngine(mdebase.MDEBase):
         self.run_no += 1
 
 
+    def to_rst7(self):
+        pass
+
+
 PROTOCOLS = dict(
     MIN_FIXH = '''Fix hydrogens
  &cntrl

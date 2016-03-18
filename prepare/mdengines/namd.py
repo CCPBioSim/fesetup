@@ -290,7 +290,8 @@ class MDEngine(mdebase.MDEBase):
         # FIXME: only cuboid box
         xx, yy, zz = float(ext[1]), float(ext[5]), float(ext[9])
 
-        self._write_rst7(natoms, xx, yy, zz, coords, vels, True)
+        self.sander_crd = self._write_rst7(natoms, xx, yy, zz, coords, vels,
+                                           True)
 
 
     def _run_mdprog(self, prefix, config):

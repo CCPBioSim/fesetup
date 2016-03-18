@@ -367,7 +367,8 @@ class MDEngine(mdebase.MDEBase):
 
         # FIXME: may fail
         self.dlpoly.unwrap(coords, la, lb, lc)
-        self._write_rst7(natoms, la, lb, lc, coords, vels, True)
+        self.sander_crd = self._write_rst7(natoms, la, lb, lc, coords, vels,
+                                           True)
 
                 
 

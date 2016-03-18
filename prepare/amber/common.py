@@ -440,6 +440,7 @@ class Common(object):
                                     'Please run amber_create_top first.')
 
         self.mdengine.minimize(namelist, nsteps, ncyc, restraint, restr_force)
+        self.amber_crd = self.mdengine.sander_crd  # FIXME: only for AMBER
 
 
     @report
@@ -481,10 +482,18 @@ class Common(object):
 
         # FIXME: do we also want to density?
         self.box_dims = self.mdengine.get_box_dims()
+        self.amber_crd = self.mdengine.sander_crd  # FIXME: only for AMBER
 
 
     def to_rst7(self):
+        """
+        Ask MD engine to convert coordinates to rst7 format.
+
+        FIXME: must be called explicitly!
+        """
+
         self.mdengine.to_rst7()
+        self.amber_crd = self.mdengine.sander_crd
 
 
     @report

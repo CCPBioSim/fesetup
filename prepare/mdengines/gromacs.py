@@ -351,7 +351,8 @@ class MDEngine(mdebase.MDEBase):
 
         # FIXME: may fail
         self.gtop.unwrap(coords, xx, yy, zz)
-        self._write_rst7(natoms, xx, yy, zz, coords, vels, False)
+        self.sander_crd = self._write_rst7(natoms, xx, yy, zz, coords, vels,
+                                           False)
 
 
 NB_PARAMS = '''\
