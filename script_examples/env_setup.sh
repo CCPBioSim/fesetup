@@ -25,7 +25,7 @@
 #               pygccxml0.95
 #
 
-FES_HOME=/usr/local/Sire_dev
+FES_HOME=/home/hhl/projects/ccpbiosim/FESetup
 #RDBASE=/usr/local/RDKit_2015_03_1
 #DYLD_LIBRARY_PATH=$RDBASE/lib
 #LD_LIBRARY_PATH=$RDBASE/lib
@@ -38,7 +38,7 @@ DLPOLYHOME=/usr/local/dl_poly_4.06
 
 # first dir includes FESetup
 #PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$RDBASE/lib/python2.7/site-packages:$AMBERHOME/bin
-PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$AMBERHOME/bin:/usr/local/Sire_dev/lib/python2.7/site-packages
+PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$AMBERHOME/bin #:/usr/local/Sire_dev/lib/python2.7/site-packages
 
 export DYLD_LIBRARY_PATH LD_LIBRARY_PATH PYTHONPATH NAMDHOME GMXHOME DLPOLYHOME
 export FES_HOME

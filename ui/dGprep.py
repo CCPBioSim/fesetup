@@ -291,7 +291,6 @@ def make_ligand(name, ff, opts):
 
             if 'box.dimensions' in model:
                 ligand.box_dims = model['box.dimensions']
-                ligand.density = model['box.density']
 
             return ligand, load_cmds
 
@@ -480,7 +479,6 @@ def make_protein(name, ff, opts):
 
             if 'box.dimensions' in model:
                 protein.box_dims = model['box.dimensions']
-                protein.density = model['box.density']
 
             return protein, load_cmds
 
@@ -618,7 +616,6 @@ def make_complex(prot, lig, ff, opts, load_cmds):
 
             if 'box.dimensions' in model:
                 complex.box_dims = model['box.dimensions']
-                complex.density = model['box.density']
 
             return complex, load_cmds
 
