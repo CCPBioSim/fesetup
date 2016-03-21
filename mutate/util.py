@@ -721,8 +721,7 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
                 raise errors.SetupError('%s not found in reference: %s'
                                         % (info.name, error) )
 
-            element = Sire.Mol.Element(lig_morph.select(info.index) \
-                                       .name().value() )
+            element = Sire.Mol.Element(info.name.value())
             coordinates = base.property('coordinates')
             charge = base.property('charge')
             lj = base.property('LJ')
