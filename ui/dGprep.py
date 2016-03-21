@@ -145,7 +145,7 @@ def _minmd_done(dico):
     return False
 
 
-def _search_model(names, workdir):
+def _search_for_model(names, workdir):
     """
     Check if a model file is available.
 
@@ -269,8 +269,9 @@ def make_ligand(name, ff, opts):
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
     if not options[SECT_DEF]['remake']:
-        model_path =_search_model([sol_model_filename, vac_model_filename],
-                                  const.LIGAND_WORKDIR)
+        # FIXME: when we have a vacuum model only, do solvation etc.
+        model_path =_search_for_model([sol_model_filename, vac_model_filename],
+                                      const.LIGAND_WORKDIR)
 
         # FIXME: check for KeyError
         if model_path:
@@ -458,8 +459,8 @@ def make_protein(name, ff, opts):
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
     if not options[SECT_DEF]['remake']:
-        model_path = _search_model([sol_model_filename, vac_model_filename],
-                                   const.PROTEIN_WORKDIR)
+        model_path = _search_for_model([sol_model_filename, vac_model_filename],
+                                       const.PROTEIN_WORKDIR)
 
         # FIXME: check for KeyError
         if model_path:
@@ -596,8 +597,8 @@ def make_complex(prot, lig, ff, opts, load_cmds):
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
     if not options[SECT_DEF]['remake']:
-        model_path = _search_model([sol_model_filename, vac_model_filename],
-                                   const.COMPLEX_WORKDIR)
+        model_path = _search_for_model([sol_model_filename, vac_model_filename],
+                                       const.COMPLEX_WORKDIR)
 
         if model_path:
             model = read_model(model_path)

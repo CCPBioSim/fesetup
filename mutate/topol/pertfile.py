@@ -73,8 +73,8 @@ class PertTopology(object):
 
         # prevent antechamber from running over the MOL2 file
         lig.set_atomtype(self.gaff)
-
         lig._parmchk(mol2, 'mol2', self.frcmod)
+        lig.prepare_top()
         lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         patch_element(lig.amber_top, lig_morph, self.lig_initial,
@@ -118,6 +118,7 @@ class PertTopology(object):
         com.frcmod = self.frcmod
 
         com.ligand_fmt = 'mol2'
+        com.prepare_top(gaff=self.gaff)
         com.create_top(boxtype = 'set',
                        addcmd = cmd1 + cmd2)
 
