@@ -403,29 +403,30 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
     #        to be assumed "broken"
     #
     # delete atoms from mapping that are also part of an map-external ring
-    ring_info1 = mol1.GetRingInfo()
-    ring_info2 = mol2.GetRingInfo()
+    if False:
+        ring_info1 = mol1.GetRingInfo()
+        ring_info2 = mol2.GetRingInfo()
 
-    rings1 = ring_info1.AtomRings()
-    rings2 = ring_info2.AtomRings()
+        rings1 = ring_info1.AtomRings()
+        rings2 = ring_info2.AtomRings()
 
-    map1 = set(mapping.keys())
-    map2 = set(mapping.values())
+        map1 = set(mapping.keys())
+        map2 = set(mapping.values())
 
-    for ring in rings1:
-        if not set(ring).issubset(map1):
-            for idx in map1:
-                if idx in ring and ring_info1.NumAtomRings(idx) == 1:
-                    del(mapping[idx])
+        for ring in rings1:
+            if not set(ring).issubset(map1):
+                for idx in map1:
+                    if idx in ring and ring_info1.NumAtomRings(idx) == 1:
+                        del(mapping[idx])
 
-    delete_values = []
-    for ring in rings2:
-        if not set(ring).issubset(map2):
-            for idx in map2:
-                if idx in ring and ring_info2.NumAtomRings(idx) == 1:
-                    delete_values.append(idx)
+        delete_values = []
+        for ring in rings2:
+            if not set(ring).issubset(map2):
+                for idx in map2:
+                    if idx in ring and ring_info2.NumAtomRings(idx) == 1:
+                        delete_values.append(idx)
 
-    mapping = {k: v for k, v in mapping.items() if v not in delete_values}
+        mapping = {k: v for k, v in mapping.items() if v not in delete_values}
 
 
     delete_atoms = []
@@ -700,7 +701,7 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
     :rtype: Sire.Mol.Molecule, Sire.Mol.Connectivity, Sire.Mol.Connectivity
     """
 
-    ### assign initial force field parameters, also need coordinates
+    ### assign non-bonded force field parameters, also need coordinates
     ### for connectivity calculation below
     lig_morph = lig_morph.edit()
     atom_num = 0
@@ -754,7 +755,7 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
     con_initial = lig_initial.property('connectivity')
     con_final = lig_final.property('connectivity')
 
-    for i, f in atom_map.items():
+    for i, f in atom_map.iteritems():
         if not i.atom:
             bonded_indices = []
 
@@ -776,6 +777,8 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
     lig_morph = lig_morph.edit() \
         .setProperty('connectivity', con_morph) \
         .commit()
+
+    # NOTE: bonded parameters are assigned in make_pert_file() in pertfile.py
 
     return lig_morph, con_morph, con_final
 
