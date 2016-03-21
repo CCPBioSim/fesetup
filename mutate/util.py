@@ -745,7 +745,7 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
     lig_morph = lig_morph.commit()
 
 
-    ### now get connectivity
+    ### create connectivity for dummy atoms
     con_morph = Sire.Mol.Connectivity(lig_morph).edit()
 
     # We remove all bonds since there is no reason to expect the covalent
@@ -759,7 +759,7 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
         if not i.atom:
             bonded_indices = []
 
-            # no need to check f because dummy i must map to real f
+            # no need to check f because dummy i must map to real atom f
             for bonded_idx in con_final.connectionsTo(f.index):
                 reversed_idx = search_by_index(bonded_idx, reverse_atom_map)
 

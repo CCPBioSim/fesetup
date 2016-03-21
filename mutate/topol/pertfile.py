@@ -82,9 +82,10 @@ class PertTopology(object):
 
         lig.flex()
 
-        # to get bonds, angles and dihedrals we reload the morph top/crd and
-        # assume ligand is first molecule
-        top, crd = lig.get_topcrd()
+        # To get the bonded parameters we reload the morph topolgy because
+        # lig_morph does not have the "amberparameters" property. Would it be
+        # possible to create those? We assume the ligand is the first molecule.
+        top, crd = lig.amber_top, lig.amber_crd
 
         try:
             molecules = Sire.IO.Amber().readCrdTop(crd, top)[0]
@@ -96,6 +97,7 @@ class PertTopology(object):
 
         noangles = False
         shrinkbonds = False
+
         make_pert_file(lig_morph, new_morph, self.lig_initial,
                        self.lig_final, self.atoms_final, self.atom_map,
                        self.reverse_atom_map, self.zz_atoms,
@@ -277,7 +279,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     old_morph = old_morph.edit()
     atom_num = 0
 
-    # finalise morph
+    # finalise non-bonded terms of the morph
     for iinfo, finfo in atom_map.items():
         if not finfo.atom:
             final_charge = 0.0 * Sire.Units.mod_electron
@@ -375,8 +377,6 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         at0i = at0.index()
         at1i = at1.index()
-
-#         ipot = params_initial.getParams(bond)
 
         for ibond in bonds_initial:
             iat0 = lig_initial.select(ibond.atom0() ).index()

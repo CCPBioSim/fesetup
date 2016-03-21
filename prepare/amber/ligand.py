@@ -751,6 +751,7 @@ class Ligand(Common):
             raise errors.SetupError('Unknow QM program %s' % program)
 
 
+    # FIXME: Sire specific, move outside Ligand
     def create_absolute(self, prog='Sire'):
         """
         Create input file for absolute transformation.
@@ -844,14 +845,6 @@ class Ligand(Common):
 
         with open(const.SIRE_ABS_PERT_VDW_FILE, 'w') as pfile:
             pfile.write('\n'.join(outstr))
-
-
-    def get_topcrd(self):
-        """
-        :returns: file names of current topology and rst files
-        """
-
-        return self.amber_top, self.amber_crd
 
 
     def set_atomtype(self, atomtype):
