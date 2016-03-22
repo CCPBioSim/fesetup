@@ -179,7 +179,7 @@ class PertTopology(object):
             lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'state_int'
 
-            lig.prepare_top()
+            lig.prepare_top(pert=pert1_info)
             lig.create_top(boxtype = '')
 
             top0 = lig0._parm_overwrite + lig0.TOP_EXT
