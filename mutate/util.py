@@ -453,38 +453,6 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
     return mapping
 
 
-def search_crd(system):
-    """Silly kludge to find appropriate (=last one created) AMBER crd.
-
-    :param system: the system to be searched for appropriate coordinates
-    :type system: either Ligand or Complex
-    :returns: path to coordinate file or None
-    :rtype: string
-    """
-
-    md = glob.glob(os.path.join(system.dst, 'md?????.rst7') )
-    mn = glob.glob(os.path.join(system.dst, 'min?????.rst7') )
-
-    if md:
-        files = sorted(md)
-        crd = os.path.join(system.dst, files[-1])
-        return crd
-    elif mn:
-        files = sorted(mn)
-        crd = os.path.join(system.dst, files[-1])
-        return crd
-    else:
-        crd = os.path.join(system.dst, const.LEAP_IONIZED + system.RST_EXT)
-        crd2 = os.path.join(system.dst, const.LEAP_SOLVATED + system.RST_EXT)
-
-        if os.path.exists(crd):
-            return crd
-        elif os.path.exists(crd2):
-            return crd2
-
-    return None
-
-
 def split_system(mols):
     """Create new Sire molecule with first residue (=ligand) deleted.
 

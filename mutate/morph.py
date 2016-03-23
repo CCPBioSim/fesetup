@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2015  Hannes H Loeffler, Julien Michel
+#  Copyright (C) 2012-2016  Hannes H Loeffler, Julien Michel
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
