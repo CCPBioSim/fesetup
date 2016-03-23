@@ -278,20 +278,27 @@ def make_ligand(name, ff, opts):
             model = read_model(model_path)
             name = model['name']
 
-            logger.write('Found model %s, extracting data' % name)
-
             # FIXME: only extract when const.LIGAND_WORKDIR not present?
             model.extract(direc = os.path.join(const.LIGAND_WORKDIR, name))
 
-            ligand = ff.Ligand(name, lig['basedir'])
+            # invoke context manager to preset directory for absolute file
+            # creation below
+            with ff.Ligand(name, lig['basedir']) as ligand:
+                logger.write('Found model %s, extracting data' % name)
 
-            ligand.charge = float(model['charge.total'])
-            ligand.gaff = model['forcefield']
-            ligand.amber_top = model['top.filename']
-            ligand.amber_crd = model['crd.filename']
+                ligand.charge = float(model['charge.total'])
+                ligand.gaff = model['forcefield']
+                ligand.amber_top = model['top.filename']
+                ligand.amber_crd = model['crd.filename']
 
-            if 'box.dimensions' in model:
-                ligand.box_dims = model['box.dimensions']
+                if 'box.dimensions' in model:
+                    ligand.box_dims = model['box.dimensions']
+
+                    if lig['morph.absolute'] and \
+                           options[SECT_DEF]['FE_type'] == 'Sire':
+                        logger.write('Creating input files for absolute '
+                                     'transformations with Sire')
+                        ligand.create_absolute_Sire()
 
             return ligand, load_cmds
 
@@ -354,7 +361,7 @@ def make_ligand(name, ff, opts):
         nconf = lig['conf_search.numconf']
 
         if lig['morph.absolute'] and options[SECT_DEF]['FE_type'] == 'Sire':
-            ligand.create_absolute()
+            ligand.create_absolute_Sire()
 
         if nconf > 0:
             ligand.conf_search(numconf = nconf,

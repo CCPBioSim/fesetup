@@ -752,18 +752,19 @@ class Ligand(Common):
 
 
     # FIXME: Sire specific, move outside Ligand
-    def create_absolute(self, prog='Sire'):
+    def create_absolute_Sire(self, prog='Sire'):
         """
-        Create input file for absolute transformation.
+        Create Sire input file for absolute transformation.
         """
 
         amber = Sire.IO.Amber()
 
+        # FIXME: we only need vacuum.parm7/rst7
         try:
             molecules = amber.readCrdTop(self.amber_crd, self.amber_top)[0]
         except UserWarning as error:
             raise errors.SetupError('error opening %s/%s: %s' %
-                                    (initial_crd, initial_top, error) )
+                                    (self.amber_crd, self.amber_top, error) )
 
         nmol = molecules.molNums()
         nmol.sort()
