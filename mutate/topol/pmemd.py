@@ -195,7 +195,7 @@ class PertTopology(object):
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
-                      cmd1, cmd2):
+                      cmd1, cmd2, boxdims):
 
         patch_parms = []
 
@@ -229,6 +229,7 @@ class PertTopology(object):
         util.write_mol2(state1, mol2_1, resname = const.LIGAND1_NAME)
 
         com = self.ff.Complex(pdb_file, mol2_0)
+        com.box_dims = boxdims
         com.ligand_fmt = 'mol2'
         com.frcmod = self.frcmod0
         com._parm_overwrite = 'pmemd' + ow_add
@@ -236,8 +237,7 @@ class PertTopology(object):
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
             com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod1)
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2)
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
@@ -254,6 +254,7 @@ class PertTopology(object):
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
             com = self.ff.Complex(pdb_file, mol2_0)
+            com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0
             com._parm_overwrite = 'pmemd_sc_2step_1'
@@ -266,10 +267,10 @@ class PertTopology(object):
             com.prepare_top(gaff=self.gaff, pert=pert0_info)
             # intermediate state does never have dummies
             com.leap.add_mol(mol2_int, 'mol2', self.frcmod1)
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2)
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
             com = self.ff.Complex(pdb_file, mol2_int)
+            com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'pmemd_sc_2step_2'
@@ -282,35 +283,33 @@ class PertTopology(object):
             # intermediate state does never have dummies
             com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod0, pert=pert1_info)
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2)
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         # FIXME: residue name will be both the same
         elif self.FE_sub_type == 'softcore3':
             com = self.ff.Complex(pdb_file, mol2_0)
+            com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0
             com._parm_overwrite = 'pmemd_decharge' + ow_add
 
             com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_0, 'mol2', self.frcmod0)
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2)
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
             com = self.ff.Complex(pdb_file, mol2_1)
+            com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'pmemd_recharge' + ow_add
 
             com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod1)
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2)
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
         elif self.FE_sub_type == 'dummy':
             com.prepare_top(gaff=self.gaff, pert=pert0_info)
             com.leap.add_mol(mol2_1, 'mol2', self.frcmod1, pert=pert1_info)
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2)
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
 
         if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':

@@ -292,13 +292,15 @@ def make_ligand(name, ff, opts):
                 ligand.amber_crd = model['crd.filename']
 
                 if 'box.dimensions' in model:
-                    ligand.box_dims = model['box.dimensions']
+                    ligand.box_dims = [float(b) for b in
+                                       model['box.dimensions'].strip('[]')\
+                                       .split(',')]
 
-                    if lig['morph.absolute'] and \
-                           options[SECT_DEF]['FE_type'] == 'Sire':
-                        logger.write('Creating input files for absolute '
-                                     'transformations with Sire')
-                        ligand.create_absolute_Sire()
+                if lig['morph.absolute'] and \
+                       options[SECT_DEF]['FE_type'] == 'Sire':
+                    logger.write('Creating input files for absolute '
+                                 'transformations with Sire')
+                    ligand.create_absolute_Sire()
 
             return ligand, load_cmds
 

@@ -242,13 +242,13 @@ class PertTopology(object):
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
-                      cmd1, cmd2):
+                      cmd1, cmd2, boxdims):
         """
         Create only topology file but not GRO coordinates.
         """
 
         self.topol.create_coords(curr_dir, dir_name, lig_morph, pdb_file,
-                                 system, cmd1, cmd2)
+                                 system, cmd1, cmd2, boxdims)
 
         if self.FE_sub_type == 'dummy':
             # FIXME: ugly kludge, assuming the file is one level up

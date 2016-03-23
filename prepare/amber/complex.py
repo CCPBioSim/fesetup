@@ -180,14 +180,13 @@ class Complex(Common):
 
 
     @report
-    def create_top(self, boxtype='', boxlength=10.0, boxfile=None,
-                   align=False, neutralize=False, addcmd='', addcmd2='',
+    def create_top(self, boxtype='', boxlength=10.0, align=False,
+                   neutralize=False, addcmd='', addcmd2='',
                    remove_first=False, conc = 0.0, dens = 1.0):
         """Generate an AMBER topology file via leap.
 
         :param boxtype: rectangular, octahedron or set (set dimensions explicitly)
         :param boxlength: side length of the box
-        :param boxfile: name of file containing box dimensions
         :param align: align solute along the principal axes
         :param neutralize: neutralise the system
         :param addcmd: inject additional leap commands
@@ -198,7 +197,6 @@ class Complex(Common):
         :type dens: float
         :type boxtype: string
         :type boxlength: float
-        :type boxfile: string
         :type align: bool
         :type neutralize: int
         :type addcmd: string
@@ -212,7 +210,7 @@ class Complex(Common):
         # FIXME: there can be problems with the ordering of commands, e.g.
         #        when tip4pew is used the frcmod files are only loaded after
         #        reading PDB and MOL2
-        leapin = self._amber_top_common(boxtype, boxlength, boxfile,
+        leapin = self._amber_top_common(boxtype, boxlength,
                                         neutralize, align=align,
                                         remove_first=remove_first,
                                         conc=conc, dens=dens)

@@ -283,7 +283,8 @@ class Morph(object):
     @report
     def create_coords(self, system, cmd1, cmd2, sys_rev = None):
         """
-        Wrapper for the actual topology creation code.
+        Wrapper for the actual topology creation code. Create coordinates
+        and topology for non-vacuum case.
 
         *Must* run after setup().
 
@@ -306,21 +307,15 @@ class Morph(object):
             raise errors.SetupError('create_coord(): system must be '
                                     'either Ligand or Complex')
 
-        dir_name = system.workdir
+        dir_name = system.workdir       # local work dirm relative path
 
         if not os.access(dir_name, os.F_OK):
             os.mkdir(dir_name)
 
         os.chdir(dir_name)
 
-        # FIXME: silly kludge to find top/crd because internal state not
-        # available anymore
-        top = os.path.join(system.dst, 'ionized.parm7')
-
-        if not os.path.exists(top):
-            top = os.path.join(system.dst, 'solvated.parm7')
-
-        crd = util.search_crd(system)
+        crd = os.path.join(system.dst, system.amber_crd)
+        top = os.path.join(system.dst, system.amber_top)
 
         if not crd:
             raise errors.SetupError('no suitable rst7 file found')
@@ -336,41 +331,31 @@ class Morph(object):
 
         lig, rest = util.split_system(mols)
 
-        # FIXME: another kludge, working only for ligand but not complex
+        boxdims = [float(system.box_dims[0]), float(system.box_dims[1]),
+                   float(system.box_dims[2])]
+
         if sys_rev:
-            top2 = os.path.join(sys_rev.dst, 'ionized.parm7')
+            boxdims_rev = [float(sys_rev.box_dims[0]),
+                           float(sys_rev.box_dims[1]),
+                           float(sys_rev.box_dims[2])]
 
-            if not os.path.exists(top2):
-                top2 = os.path.join(sys_rev.dst, 'solvated.parm7')
+            V_calc = lambda a, b: a * b
+            V = reduce(V_calc, boxdims)
+            V_rev = reduce(V_calc, boxdims_rev)
 
-            crd2 = util.search_crd(sys_rev)
+            if V_rev > V:
+                crd2 = os.path.join(system.dst, system.amber_crd)
+                top2 = os.path.join(system.dst, system.amber_top)
 
-            natoms = []
-            boxdims = []
-
-            for inpcrd in crd, crd2:
-                with open(inpcrd, 'rb') as inp:
-                    for ln, line in enumerate(inp):
-                        if ln == 1:
-                            natoms.append(line.split()[0])
-
-                        # FIXME: replace with read(), assumes box data is present
-                        dims = line
-
-                boxdims.append(dims)
-
-            if natoms[1] > natoms[0]:
                 try:
-                    mols2 = Sire.IO.Amber().readCrdTop(crd2, top2)[0]
+                    mols2 = Sire.IO.Amber().readCrdTop(crd, top)[0]
                 except UserWarning as error:
                     raise errors.SetupError('error opening %s/%s: %s' %
-                                            (crd2, top2, error) )
-
-                with open(const.BOX_DIMS, 'w') as boxfile:
-                    boxfile.write(boxdims[1])
+                                            (crd, top, error) )
 
                 rest = util.split_system(mols2)[1]
                 crd = crd2
+                boxdims = boxdims_rev
 
 
         if lig.nAtoms() != (len(self.atom_map) - len(self.dummy_idx) ):
@@ -458,8 +443,10 @@ class Morph(object):
                                   self.reverse_atom_map, self.connect_final,
                                   self.zz_atoms, self.dummy_idx)
 
+        boxdims.extend((90.0, 90.0, 90.0))
+
         self.topol.create_coords(curr_dir, dir_name, self.lig_morph,
-                                 REST_PDB_NAME, system, cmd1, cmd2)
+                                 REST_PDB_NAME, system, cmd1, cmd2, boxdims)
 
         os.chdir(curr_dir)
 

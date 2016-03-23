@@ -107,7 +107,7 @@ class PertTopology(object):
         else:
             lig0.prepare_top()
 
-        lig0.create_top(boxtype = '', addcmd = cmd1 + cmd2)
+        lig0.create_top(boxtype='', addcmd=cmd1 + cmd2)
 
         mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
                               const.MOL2_EXT)
@@ -129,7 +129,7 @@ class PertTopology(object):
         else:
             lig1.prepare_top()
 
-        lig1.create_top(boxtype = '', addcmd = cmd1 + cmd2)
+        lig1.create_top(boxtype='', addcmd=cmd1 + cmd2)
 
         self.lig0 = lig0
         self.lig1 = lig1
@@ -155,7 +155,7 @@ class PertTopology(object):
             lig._parm_overwrite = 'state_int'
 
             lig.prepare_top()
-            lig.create_top(boxtype = '', addcmd = cmd1 + cmd2 +
+            lig.create_top(boxtype='', addcmd=cmd1 + cmd2 +
                            'mods1 = loadAmberParams "%s"\n' % frcmod0)
 
         if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
@@ -180,7 +180,7 @@ class PertTopology(object):
             lig._parm_overwrite = 'state_int'
 
             lig.prepare_top(pert=pert1_info)
-            lig.create_top(boxtype = '')
+            lig.create_top(boxtype='')
 
             top0 = lig0._parm_overwrite + lig0.TOP_EXT
             int_name = lig._parm_overwrite + lig.TOP_EXT
@@ -193,7 +193,7 @@ class PertTopology(object):
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
-                      cmd1, cmd2):
+                      cmd1, cmd2, boxdims):
 
         if self.FE_sub_type[:8] == 'softcore':
             util.amber_input(self.atoms_initial, self.atoms_final,
@@ -222,6 +222,7 @@ class PertTopology(object):
         util.write_mol2(state0, mol2_0)
 
         com0 = self.ff.Complex(pdb_file, mol2_0)
+        com0.box_dims = boxdims
         com0.ligand_fmt = 'mol2'
         com0.frcmod = self.frcmod0
 
@@ -233,14 +234,14 @@ class PertTopology(object):
         else:
             com0.prepare_top(gaff=self.gaff)
 
-        com0.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                        addcmd = cmd1 + cmd2)
+        com0.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
                               const.MOL2_EXT)
         util.write_mol2(state1, mol2_1)
 
         com1 = self.ff.Complex(pdb_file, mol2_1)
+        com1.box_dims = boxdims
         com1.ligand_fmt = 'mol2'
         com1.frcmod = self.frcmod1
 
@@ -251,8 +252,7 @@ class PertTopology(object):
         else:
             com1.prepare_top(gaff=self.gaff)
 
-        com1.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                        addcmd = cmd1 + cmd2)
+        com1.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
@@ -264,11 +264,11 @@ class PertTopology(object):
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
             com = self.ff.Complex(pdb_file, mol2_int)
+            com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'state_int'
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS,
-                           addcmd = cmd1 + cmd2 +
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2 +
                            'mods1 = loadAmberParams "%s"\n' % self.frcmod0)
 
         if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
@@ -290,6 +290,7 @@ class PertTopology(object):
             util.write_mol2(int_mol, mol2_int, resname = const.LIGAND_NAME)
 
             com = self.ff.Complex(pdb_file, mol2_int)
+            com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'state_int'
@@ -299,7 +300,7 @@ class PertTopology(object):
             else:
                 com.prepare_top(gaff=self.gaff)
 
-            com.create_top(boxtype = 'set', boxfile = const.BOX_DIMS)
+            com.create_top(boxtype='set')
 
             top0 = com0._parm_overwrite + com0.TOP_EXT
             int_name = com._parm_overwrite + com.TOP_EXT

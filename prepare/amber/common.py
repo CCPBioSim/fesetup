@@ -86,62 +86,11 @@ def ssbonds(ss_file):
     return pairs
 
 
-# FIXME: only still here to support Morph class which would otherwise have
-#        no box information
-def read_box_file(box_file):
-    """
-    Read box dimensions from file.
-
-    :param box_file: filename with box dimensions
-    :type box_file: string
-
-    :returns: box dimensions
-    """
-
-    boxdata = None
-
-    with open(box_file, 'r') as box:
-        for line in box:
-            l = line.lstrip()
-
-            if l.startswith('#') or l == '':
-                continue
-
-            bb_len = line.split()
-
-            if len(bb_len) == 1:
-                try:
-                    boxdata = '%s' % float(bb_len[0])
-                except ValueError:
-                    raise errors.SetupError('boxfile %s contains '
-                                            'non-float data' % box_file)
-            elif len(bb_len) >= 3:
-                # tleap generates rst7 with origin in corner (but PDB
-                # has it in the centre???), setbox takes _buffer_
-                try:
-                    boxdata = '{ %s %s %s }' % (float(bb_len[0]) / 2.0,
-                                                float(bb_len[1]) / 2.0,
-                                                float(bb_len[2]) / 2.0)
-                except ValueError:
-                    raise errors.SetupError('boxfile %s contains '
-                                            'non-float data' % box_file)
-            else:
-                raise errors.SetupError('boxfile %s must contain either '
-                                        '1 or more than 3 floats' %
-                                        box_file)
-
-    return boxdata
-
-
-# FIXME: check very carefully the flow of method calls.  The current assumption
-# is that they are called in a particular order.  Think about work flow: what is
-# optional? do we have a well-defined order?  Make sure current work mol2 is the
-# right one!
-
 class Common(object):
     """
     Common methods for the setup protocol.  Used through subclasses for
-    ligand, protein an complex setup.
+    ligand, protein an complex setup.  Methods are expected to be called
+    in the right 'order' thus a second layer needs to take control of this.
     """
 
     PROT_MAP = {
@@ -269,8 +218,7 @@ class Common(object):
 
 
     def _amber_top_common(self, boxtype = '', boxlength = '10.0',
-                          boxfile = None, neutralize = 0,
-                          align=None, remove_first = False,
+                          neutralize = 0, align=None, remove_first = False,
                           conc = 0.0, dens = 1.0):
         """Common scripting commands for leap.  Internal function only.
 
@@ -278,8 +226,6 @@ class Common(object):
         :type boxtype: string
         :param boxlength: box length in Angstrom
         :type boxlength: float
-        :param boxfile: file name with box information
-        :type boxfile: string
         :param neutralize: overwrite files in the working directory from basedir
         :type neutralize: string
         :param align: align axes?
@@ -309,9 +255,6 @@ class Common(object):
         if align:
             leapin += 'alignAxes s\n'
 
-        if boxfile:
-            boxdata = read_box_file(boxfile)
-
         # bug #976: input may contain ions and water
         #leapin += self.solvent_load
 
@@ -327,11 +270,11 @@ class Common(object):
                 leapin += ('solvateBox s %s %s 0.75\n' %
                            (self.solvent_box, boxlength) )
             elif boxtype == 'set':      # assumes coords already centered
-                if boxdata:
-                    leapin += ('set default nocenter on\nsetBox s centers %s\n'
-                               % boxdata)
-                else:
-                    leapin += 'setBox s vdw\n'
+                leapin += ('set default nocenter on\nsetBox s centers {%s}\n'
+                           % ' '.join([str(float(b) / 2.0)
+                                       for b in self.box_dims[:3]]))
+            elif  boxtype == 'setvdw':
+                leapin += 'setBox s vdw\n'
             else:
                 raise errors.SetupError('Unknown box type: %s' % boxtype)
         else:
@@ -607,10 +550,6 @@ class Common(object):
         with open(filename, 'r') as rst:
             for line in rst:
                 self.box_dims = line
-
-        # FIXME: only used for Morph class
-        with open(const.BOX_DIMS, 'w') as box:
-            box.write(self.box_dims)
 
         self.box_dims = self.box_dims.split()
 

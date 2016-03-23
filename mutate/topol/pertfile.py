@@ -105,7 +105,7 @@ class PertTopology(object):
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
-                      cmd1, cmd2):
+                      cmd1, cmd2, boxdims):
         """
         """
 
@@ -117,12 +117,11 @@ class PertTopology(object):
         # these will have to be 'pasted' into the system and new crd/top be
         # prepared
         com = self.ff.Complex(pdb_file, mol2)
+        com.box_dims = boxdims
         com.frcmod = self.frcmod
-
         com.ligand_fmt = 'mol2'
         com.prepare_top(gaff=self.gaff)
-        com.create_top(boxtype = 'set',
-                       addcmd = cmd1 + cmd2)
+        com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         patch_element(com.amber_top, lig_morph, self.lig_initial,
                       self.lig_final, self.atom_map)

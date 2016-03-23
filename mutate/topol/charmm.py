@@ -128,14 +128,14 @@ class PertTopology(object):
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
-                      cmd1, cmd2):
+                      cmd1, cmd2, boxdims):
         """
         Create only topology file, not coordinates.
         """
 
         # FIXME: support FE_sub_type
         self.topol.create_coords(curr_dir, dir_name, lig_morph, pdb_file,
-                                 system, cmd1, cmd2)
+                                 system, cmd1, cmd2, boxdims)
 
         lig0 = self.topol.lig0._parm_overwrite
         lig1 = self.topol.lig1._parm_overwrite
