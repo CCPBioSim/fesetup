@@ -475,7 +475,7 @@ def make_ligand(name, ff, opts):
 
 def make_protein(name, ff, opts):
     """
-    Prepare proteins for simulation:
+    Prepare proteins for simulation.
     """
 
     logger.write('*** Working on %s ***\n' % name)
@@ -1027,7 +1027,11 @@ if __name__ == '__main__':
         if (pair[0], pair[1]) in morph_maps:
             isotope_map = morph_maps[pair[0], pair[1]]
 
-        with mutate.Morph(ligand1, ligand2, ff,
+        basedir = os.path.join(os.getcwd(), options[SECT_LIG]['basedir'])
+        wd1 = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, pair[0])
+        wd2 = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, pair[1])
+
+        with mutate.Morph(ligand1, ligand2, wd1, wd2, ff,
                           options[SECT_DEF]['FE_type'],
                           options[SECT_DEF]['softcore_type'],
                           options[SECT_DEF]['mcs.timeout'],
@@ -1037,15 +1041,16 @@ if __name__ == '__main__':
             print ('Morphing %s to %s...' % pair)
 
             if (pair[1], pair[0]) in morph_pairs:
-                rev = ligand2
+                rev = wd2
             else:
                 rev = None
 
             try:
-                morph.setup(cmd1, cmd2, isotope_map)
+                morph.setup(cmd1, cmd2, basedir, isotope_map)
 
                 if options[SECT_LIG]['box.type']:
-                    morph.create_coords(ligand1, cmd1, cmd2, rev)
+                    morph.create_coords(ligand1, 'solvated', wd1,
+                                        cmd1, cmd2, rev)
             except errors.SetupError as why:
                 morph_failed.append(morph.name)
                 print ('ERROR: %s failed: %s' % (morph.name, why))
@@ -1111,13 +1116,16 @@ if __name__ == '__main__':
         for complex in complexes.keys():
             name = complex.mol_name + '/' + morph.name
 
+            wd = os.path.join(os.getcwd(), const.COMPLEX_WORKDIR, complex.mol_name)
+
             # FIXME: Complex has no ligand component after restart
             if complex.ligand.mol_name == morph.initial_name:
                 print('Creating complex %s with ligand morph %s...' %
                       (complex.mol_name, morph.name) )
 
                 try:
-                    morph.create_coords(complex, complexes[complex], '')
+                    morph.create_coords(complex, 'complex', wd,
+                                        complexes[complex], '')
                 except errors.SetupError as why:
                     morph_failed.append(name)
                     print ('ERROR: complex %s with ligand morph %s failed: %s'

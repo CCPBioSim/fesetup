@@ -45,14 +45,18 @@ WD_TABLE = {'pertfile': 'sire'}
 class Morph(object):
     """The morphing class."""
 
-    def __init__(self, initial, final, forcefield, FE_type='pertfile',
-                 softcore_type='', mcs_timeout=60.0, mcs_sel='',
-                 gaff='gaff'):
+    def __init__(self, initial, final, workdir1, workdir2, forcefield,
+                 FE_type='pertfile', softcore_type='', mcs_timeout=60.0,
+                 mcs_sel='', gaff='gaff'):
         """
         :param initial: the initial state of the morph pair
         :type initial: either Ligand or Complex
         :param final: the final state of the morph pair
         :type final: either Ligand or Complex
+        :param workdir1: directory for initial state ligand
+        :type workdir1: string
+        :param workdir2: directory for final state ligand
+        :type workdir2: string
         :param forcefield: force field details
         :type forcefield: ForceField
         :param FE_type: the free energy type
@@ -83,10 +87,8 @@ class Morph(object):
 
         self.topdir = os.getcwd()
 
-        self.initial_dir = os.path.join(initial.topdir, initial.workdir,
-                                        initial.mol_name)
-        self.final_dir = os.path.join(final.topdir, final.workdir,
-                                      final.mol_name)
+        self.initial_dir = workdir1
+        self.final_dir = workdir2
         self.initial_name = initial.mol_name
         self.final_name = final.mol_name
 
@@ -157,7 +159,7 @@ class Morph(object):
 
 
     @report
-    def setup(self, cmd1, cmd2, isotope_map={}):
+    def setup(self, cmd1, cmd2, basedir, isotope_map={}):
         """
         Compute the atom mapping based on MCSS calculations.  Find dummy
         atoms. Set up parameters and connectivities for create_coord().  Create
@@ -210,7 +212,7 @@ class Morph(object):
 
         # user tagging mechanism as per feature request #1074
         if not isotope_map:
-            lig0_isomap_file = os.path.join(self.topdir, self.initial.basedir,
+            lig0_isomap_file = os.path.join(basedir,
                                             self.name + os.extsep + 'map')
 
             isotope_map = util.create_isotope_map(lig0_isomap_file)
@@ -281,7 +283,8 @@ class Morph(object):
 
 
     @report
-    def create_coords(self, system, cmd1, cmd2, sys_rev = None):
+    def create_coords(self, system, workdir, sys_base, cmd1, cmd2,
+                      sys_rev = None):
         """
         Wrapper for the actual topology creation code. Create coordinates
         and topology for non-vacuum case.
@@ -307,15 +310,15 @@ class Morph(object):
             raise errors.SetupError('create_coord(): system must be '
                                     'either Ligand or Complex')
 
-        dir_name = system.workdir       # local work dirm relative path
+        dir_name = workdir              # local work dir relative path
 
         if not os.access(dir_name, os.F_OK):
             os.mkdir(dir_name)
 
         os.chdir(dir_name)
 
-        crd = os.path.join(system.dst, system.amber_crd)
-        top = os.path.join(system.dst, system.amber_top)
+        crd = os.path.join(sys_base, system.amber_crd)
+        top = os.path.join(sys_base, system.amber_top)
 
         if not crd:
             raise errors.SetupError('no suitable rst7 file found')
@@ -344,8 +347,8 @@ class Morph(object):
             V_rev = reduce(V_calc, boxdims_rev)
 
             if V_rev > V:
-                crd2 = os.path.join(system.dst, system.amber_crd)
-                top2 = os.path.join(system.dst, system.amber_top)
+                crd2 = os.path.join(sys_rev, system.amber_crd)
+                top2 = os.path.join(sys_rev, system.amber_top)
 
                 try:
                     mols2 = Sire.IO.Amber().readCrdTop(crd, top)[0]

@@ -67,7 +67,7 @@ class PertTopology(object):
         self.frcmod = os.path.join(curr_dir, const.MORPH_NAME + '.frcmod')
 
         # FIXME: Ligand class needs some redesign!
-        lig = self.ff.Ligand(const.MORPH_NAME, '', start_file = mol2,
+        lig = self.ff.Ligand(const.MORPH_NAME, start_file = mol2,
                              start_fmt = 'mol2', frcmod = self.frcmod,
                              gaff=self.gaff)
 

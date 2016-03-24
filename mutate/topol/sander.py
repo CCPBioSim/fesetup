@@ -94,7 +94,7 @@ class PertTopology(object):
         frcmod0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                '0.frcmod')
 
-        lig0 = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+        lig0 = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
                               start_fmt='mol2', frcmod=frcmod0,
                               gaff=self.gaff)
 
@@ -116,7 +116,7 @@ class PertTopology(object):
         frcmod1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
                                '1.frcmod')
 
-        lig1 = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_1,
+        lig1 = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_1,
                               start_fmt='mol2', frcmod=frcmod1,
                               gaff=self.gaff)
 
@@ -148,7 +148,7 @@ class PertTopology(object):
                                     const.MOL2_EXT)
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_int,
+            lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_int,
                                  start_fmt='mol2', frcmod=frcmod1,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
@@ -173,7 +173,7 @@ class PertTopology(object):
                                     const.MOL2_EXT)
             util.write_mol2(int_mol, mol2_int, resname = const.LIGAND_NAME)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_int,
+            lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_int,
                                  start_fmt='mol2', frcmod=frcmod1,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)

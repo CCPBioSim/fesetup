@@ -99,7 +99,7 @@ class PertTopology(object):
                                '1.frcmod')
 
 
-        lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+        lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
                              start_fmt='mol2', frcmod=frcmod0,
                              gaff=self.gaff)
 
@@ -129,7 +129,7 @@ class PertTopology(object):
                                     const.MOL2_EXT)
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+            lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
                                  start_fmt='mol2', frcmod=frcmod0,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
@@ -145,7 +145,7 @@ class PertTopology(object):
             lig.leap.add_mol(mol2_int, 'mol2', frcmod1)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_int,
+            lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_int,
                                  start_fmt='mol2', frcmod=frcmod1,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
@@ -162,7 +162,7 @@ class PertTopology(object):
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
         # FIXME: residue name will be both the same
         elif self.FE_sub_type == 'softcore3':
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_0,
+            lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
                                  start_fmt='mol2', frcmod=frcmod0,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
@@ -172,7 +172,7 @@ class PertTopology(object):
             lig.leap.add_mol(mol2_0, 'mol2', frcmod0)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
-            lig = self.ff.Ligand(const.MORPH_NAME, '', start_file=mol2_1,
+            lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_1,
                                  start_fmt='mol2', frcmod=frcmod1,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
