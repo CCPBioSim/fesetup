@@ -113,6 +113,33 @@ def create_logger(filename):
     logger = Logger(filename)
 
 
+class DirManager(object):
+    """
+    Context manager for controlled entry and exit of directories.
+    """
+
+    def __init__(self, dst):
+        self.topdir = os.getcwd()
+        self.dst = os.path.join(self.topdir, dst)
+
+    def __enter__(self):
+        if not os.access(self.dst, os.F_OK):
+            logger.write('Creating directory %s' % self.dst)
+            os.makedirs(self.dst)
+
+        logger.write('Entering directory %s' % self.dst)
+        os.chdir(self.dst)
+
+        return None
+
+    # FIXME: check typ, value, traceback
+    def __exit__(self, typ, value, traceback):
+        logger.write('Entering directory %s\n' % self.topdir)
+        os.chdir(self.topdir)
+
+        return
+
+
 class CaptureOutput(object):
   """
   Context manager to capture stdout and stderr.  Both outputs are

@@ -257,9 +257,8 @@ class Ligand(Common):
          preminimize
 
 
-    def __init__(self, ligand_name, basedir, start_file = 'ligand.pdb',
-                 start_fmt = 'pdb', workdir = const.LIGAND_WORKDIR,
-                 frcmod = const.LIGAND_FRCMOD_FILE, overwrite = False,
+    def __init__(self, ligand_name, start_file='ligand.pdb', start_fmt='pdb',
+                 frcmod = const.LIGAND_FRCMOD_FILE,
                  gaff='gaff'):    # gaff only for compatibility with morph code
         """
         :param ligand_name: name of the ligand, will be used as directory name
@@ -278,7 +277,7 @@ class Ligand(Common):
         :type overwrite: bool
         """
 
-        super(Ligand, self).__init__(ligand_name, basedir, workdir, overwrite)
+        super(Ligand, self).__init__(ligand_name)
 
         self.mol_file = start_file
         self.mol_fmt = start_fmt
@@ -294,8 +293,6 @@ class Ligand(Common):
 
         # FIXME: we assume that we are working on the bound ligand!
         self.mol_atomtype = 'sybyl'
-
-        self.workdir = workdir
 
         self.leap_added = False
 

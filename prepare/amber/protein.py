@@ -40,8 +40,7 @@ class Protein(Common):
     """The protein setup class."""
 
 
-    def __init__(self, protein_name, basedir, start_file = 'protein.pdb',
-                 overwrite = False):
+    def __init__(self, protein_name, start_file='protein.pdb'):
         """
         :param protein_name: name of the protein, will be used as directory name
         :type protein_name: string
@@ -54,21 +53,14 @@ class Protein(Common):
         :raises: SetupError
         """
 
-        self.workdir = const.PROTEIN_WORKDIR
-
-        super(Protein, self).__init__(protein_name, basedir, self.workdir,
-                                      overwrite)
-
-        sfile = os.path.join(basedir, protein_name, start_file)
-
-        if not os.access(sfile, os.R_OK):
-            raise errors.SetupError('the protein start file %s does not exist '
-                                    % sfile)
+        super(Protein, self).__init__(protein_name)
 
         self.leap_added = False
 
         self.mol_file = start_file
         self.mol_fmt = 'pdb'
+
+        self.orig_file = start_file
 
 
     # import force field independent functionality (to avoid mixins)
@@ -83,7 +75,7 @@ class Protein(Common):
         :raises: SetupError
         """
 
-        mol_file = os.path.join(self.dst, self.mol_file)
+        mol_file = self.mol_file
 
         if not os.access(mol_file, os.R_OK):
             raise errors.SetupError('the protein start file %s does not exist '

@@ -44,26 +44,22 @@ class Complex(Common):
 
     from FESetup.prepare.ligutil import flex as lig_flex
 
-    def __init__(self, protein, ligand, overwrite = False):
+    def __init__(self, protein, ligand):
         """
         :param protein: the protein for complex composition
         :type protein: Protein or string
         :param ligand: the ligand for complex composition
         :type ligand: Ligand or string
-        :param overwrite: overwrite files in the working directory from basedir
-        :type overwrite: string
         :raises: SetupError
         """
 
-        self.workdir = const.COMPLEX_WORKDIR
         self.leap_added = False
 
         # FIXME: remove when ModelConfig is done
         #        this is still used for the Morph class
         if type(protein) == str and type(ligand) == str:
             super(Complex, self).__init__(protein + const.PROT_LIG_SEP +
-                                          ligand, '', self.workdir,
-                                          overwrite)
+                                          ligand)
 
             self.protein_file = protein
             self.ligand_file = ligand
@@ -76,61 +72,13 @@ class Complex(Common):
         assert type(protein) == Protein
         assert type(ligand) == Ligand
 
-        complex_name = protein.mol_name + const.PROT_LIG_SEP + ligand.mol_name
-        super(Complex, self).__init__(complex_name, '', self.workdir,
-                                      overwrite)
+        self.complex_name = protein.mol_name + const.PROT_LIG_SEP + \
+                            ligand.mol_name
 
-        # assume the original file to be the one from the original complex
+        super(Complex, self).__init__(self.complex_name)
+
         self.ligand_file = ligand.orig_file
-
-        try:
-            dst = os.path.join(ligand.topdir, self.workdir, complex_name)
-
-            if not os.access(dst, os.F_OK):
-                logger.write('Creating directory %s' % dst)
-                os.makedirs(dst)
-
-
-            # FIXME: clean up this mess, we obviously assume existence of
-            # certain files
-            logger.write('Copying the following files to %s' % dst)
-
-            protein_dir = os.path.join(protein.topdir, protein.workdir,
-                                       protein.mol_name)
-            ligand_dir = os.path.join(ligand.topdir, ligand.workdir,
-                                      ligand.mol_name)
-
-            PROTEIN_PDB_FILE = 'protein.pdb'
-
-            filedir = (
-                (protein.mol_file, protein_dir, PROTEIN_PDB_FILE),
-                (self.ligand_file, ligand_dir, ''),
-                (ligand.frcmod, ligand_dir, ''),
-                (const.LIGAND_AC_FILE, ligand_dir, ''),
-            )
-
-            for fname, direc, new_fname in filedir:
-                filename = os.path.join(direc, fname)
-
-                if not os.access(filename, os.R_OK):
-                    continue            # FIXME: e.g. frcmod may not exist
-                    #raise errors.SetupError('file %s cannot be read' % filename)
-
-                if new_fname:
-                    logger.write('  %s (as %s)' % (filename, new_fname) )
-                    shutil.copy(filename, os.path.join(dst, new_fname) )
-                else:
-                    logger.write('  %s' % filename)
-                    shutil.copy(filename, dst)
-
-        except OSError as why:
-            raise errors.SetupError(why)
-
-        if PROTEIN_PDB_FILE:
-            self.protein_file = PROTEIN_PDB_FILE
-        else:
-            self.protein_file = protein.mol_file
-
+        self.protein_file = protein.orig_file
         self.charge = protein.charge + ligand.charge
 
         if abs(self.charge) > const.TINY_CHARGE:
@@ -138,12 +86,7 @@ class Complex(Common):
 
         self.protein = protein
         self.ligand = ligand
-        self.complex_name = complex_name
         self.frcmod = self.ligand.frcmod
-
-        # FIXME: needed for __enter__ and __exit__ in class Common
-        self.dst = dst
-        self.topdir = ligand.topdir
 
 
     @report

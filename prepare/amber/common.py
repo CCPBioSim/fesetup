@@ -116,19 +116,14 @@ class Common(object):
         return object.__new__(cls)
 
 
-    def __init__(self, mol_name, basedir, workdir, overwrite):
+    def __init__(self, mol_name):
         """
         :param mol_name: (file) name of molecules
         :type mol_name: string
-        :param basedir: the base directory, i.e. location of initial data files
-        :type basedir: string
-        :param workdir: the working directory
-        :type workdir: string
-        :param overwrite: overwrite files in the working directory from basedir
-        :type overwrite: string
         :raises: SetupError
         """
 
+        self.mol_name = mol_name
         self.mol_file = ''
         self.mol_fmt = ''
 
@@ -148,73 +143,50 @@ class Common(object):
         self.amber_crd = ''             # only set in _amber_top_common
         self.amber_pdb = ''
 
+        self._parm_overwrite = None
+        self.mdengine = None
+
+        self.leap = Leap(self.force_fields, self.solvent_load)
+
         # set in __init__.py before this __init__(): do not set here or anywhere
         # else as they are meant to be constants for the whole class hierarchy!
         #self.ff_cmd, self.ff_addon, self.solvent, self.solvent_load 
         #self.solvent_box, self.MDEngine, self.parmchk_version, self.gaff
 
-        self.leap = Leap(self.force_fields, self.solvent_load)
 
-        self.mdengine = None
+    # FIXME: remove
+    @staticmethod
+    def copy_files(srcs, filenames=None, overwrite=False):
+        """
+        Copy files from basedir to the current directory.
 
-        self.mol_name = mol_name
-
-        self.topdir = os.getcwd()
-
-        self.dst = os.path.join(self.topdir, workdir, self.mol_name)
-
-        self._parm_overwrite = None
-
-        if not basedir:
-            return
-
-        self.basedir = basedir
-
-        logger.write('*** Working on %s ***\n' % self.mol_name)
-
-        src = os.path.join(basedir, self.mol_name)
+        :param src: the source directories to copy from
+        :type src: list of str
+        :param filenames: the filenames to be copied
+        :type filenames: list of str
+        :param overwrite: overwrite the files in the current dir?
+        :type overwrite: bool
+        """
 
         try:
-            # FXIME: catch exceptions due to failed file actions
-            if not os.access(self.dst, os.F_OK):
-                os.makedirs(self.dst)
+            for src in srcs:
+                logger.write('%sopying directory contents of %s to %s' %
+                             ('Overwrite mode: c' if overwrite else 'C', src,
+                              os.getcwd()))
 
-                logger.write('Copying directory contents of %s to %s' %
-                             (src, self.dst) )
+                if not filenames:
+                    filenames = os.listdir(src)
 
-                for filename in os.listdir(src):
-                    shutil.copy(os.path.join(src, filename), self.dst)
-            elif overwrite:
-                logger.write('Overwrite mode: copying directory contents of %s '
-                             'to %s' % (src, self.dst) )
+                for filename in filenames:
+                    if overwrite or not os.access(filename, os.F_OK):
+                        src_file = os.path.join(src, filename)
 
-                for filename in os.listdir(src):
-                    shutil.copy(os.path.join(src, filename), self.dst)
-
+                        # FIXME: only here to accomodate Complex
+                        if os.access(src_file, os.F_OK):
+                            shutil.copy(src_file, '.')
 
         except OSError as why:
             raise errors.SetupError(why)
-
-        self.model = None
-
-
-    # context manager used to keep track of directory changes
-    def __enter__(self):
-        '''Enter directory dst.'''
-        
-        logger.write('Entering %s' % self.dst)
-        os.chdir(self.dst)
-
-        return self
-
-
-    def __exit__(self, typ, value, traceback):
-        '''Leave directory dst and return to topdir.'''
-
-        logger.write('Entering %s\n' % self.topdir)
-        os.chdir(self.topdir)
-
-        return
 
 
     def _amber_top_common(self, boxtype = '', boxlength = '10.0',
@@ -226,8 +198,8 @@ class Common(object):
         :type boxtype: string
         :param boxlength: box length in Angstrom
         :type boxlength: float
-        :param neutralize: overwrite files in the working directory from basedir
-        :type neutralize: string
+        :param neutralize: 1=minimum number of ions, 2=use conc
+        :type neutralize: int
         :param align: align axes?
         :type align: bool
         :param remove_first: remove first molecule?

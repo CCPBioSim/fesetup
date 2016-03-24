@@ -48,7 +48,7 @@ import warnings
 from collections import OrderedDict, namedtuple
 
 import FESetup.prepare as prep
-from FESetup import const, errors, create_logger, logger
+from FESetup import const, errors, create_logger, logger, DirManager
 from FESetup.ui.iniparser import IniParser
 from FESetup.modelconf import ModelConfig
 
@@ -258,6 +258,8 @@ def make_ligand(name, ff, opts):
     :type opts: IniParser
     """
 
+    logger.write('*** Working on %s ***\n' % name)
+
     lig = opts[SECT_LIG]
 
     load_cmds = ''
@@ -268,7 +270,9 @@ def make_ligand(name, ff, opts):
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
-    if not options[SECT_DEF]['remake']:
+    workdir = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, name)
+
+    if not opts[SECT_DEF]['remake']:
         # FIXME: when we have a vacuum model only, do solvation etc.
         model_path =_search_for_model([sol_model_filename, vac_model_filename],
                                       const.LIGAND_WORKDIR)
@@ -279,17 +283,22 @@ def make_ligand(name, ff, opts):
             name = model['name']
 
             # FIXME: only extract when const.LIGAND_WORKDIR not present?
-            model.extract(direc = os.path.join(const.LIGAND_WORKDIR, name))
+            model.extract(direc = workdir)
+
+            ligand = ff.Ligand(name)
 
             # invoke context manager to preset directory for absolute file
             # creation below
-            with ff.Ligand(name, lig['basedir']) as ligand:
+            with DirManager(workdir):
                 logger.write('Found model %s, extracting data' % name)
 
                 ligand.charge = float(model['charge.total'])
                 ligand.gaff = model['forcefield']
                 ligand.amber_top = model['top.filename']
                 ligand.amber_crd = model['crd.filename']
+                ligand.orig_file = model['crd.original']
+                ligand.mol_fmt ='mol2'
+                ligand.frcmod = model['frcmod']
 
                 if 'box.dimensions' in model:
                     ligand.box_dims = [float(b) for b in
@@ -297,7 +306,7 @@ def make_ligand(name, ff, opts):
                                        .split(',')]
 
                 if lig['morph.absolute'] and \
-                       options[SECT_DEF]['FE_type'] == 'Sire':
+                       opts[SECT_DEF]['FE_type'] == 'Sire':
                     logger.write('Creating input files for absolute '
                                  'transformations with Sire')
                     ligand.create_absolute_Sire()
@@ -316,8 +325,17 @@ def make_ligand(name, ff, opts):
     else:
         fmt = lig['file.format']
 
-    with ff.Ligand(name, lig['basedir'], lig['file.name'], fmt,
-                   overwrite=opts[SECT_DEF]['overwrite']) as ligand:
+    ligand = ff.Ligand(name, lig['file.name'], fmt)
+    model['frcmod'] = ligand.frcmod
+    model.add_file(ligand.frcmod)
+
+    if os.path.isabs(lig['basedir']):
+        src = os.path.join(lig['basedir'], name)
+    else:
+        src = os.path.join(os.getcwd(), lig['basedir'], name)
+
+    with DirManager(workdir):
+        ligand.copy_files((src,), None, opts[SECT_DEF]['overwrite'])
 
         if not os.access(lig['file.name'], os.F_OK):
             raise errors.SetupError('start file %s does not exist in %s' %
@@ -330,7 +348,7 @@ def make_ligand(name, ff, opts):
 
             ligand.prepare('', lig['add_hydrogens'], lig['calc_charge'],
                            lig['correct_for_pH'], lig['pH'])
-        elif not os.access(os.path.join(ligand.dst, const.GAFF_MOL2_FILE),
+        elif not os.access(os.path.join(workdir, const.GAFF_MOL2_FILE),
                            os.F_OK):
             # IMPORTANT: do not allow OpenBabel to add Hs, it may mess up
             # everything
@@ -346,14 +364,17 @@ def make_ligand(name, ff, opts):
         ligand.prepare_top()
         ligand.create_top(boxtype = '', addcmd = load_cmds)
 
-        model['charge.total'] = ligand.charge
         model['charge.filename'] = const.LIGAND_AC_FILE
         model.add_file(const.LIGAND_AC_FILE)
+
+        model['charge.total'] = ligand.charge
         model['charge.filetype'] = 'ac'
         model['charge.method'] = 'AM1-BCC'
         model['forcefield'] = ligand.gaff
         model['molecule.type'] = 'ligand'
+
         model.add_file(ligand.mol_file)
+        model['crd.original'] = ligand.mol_file
 
         save_model(model, ligand, vac_model_filename, '..')
 
@@ -362,7 +383,7 @@ def make_ligand(name, ff, opts):
 
         nconf = lig['conf_search.numconf']
 
-        if lig['morph.absolute'] and options[SECT_DEF]['FE_type'] == 'Sire':
+        if lig['morph.absolute'] and opts[SECT_DEF]['FE_type'] == 'Sire':
             ligand.create_absolute_Sire()
 
         if nconf > 0:
@@ -457,6 +478,8 @@ def make_protein(name, ff, opts):
     Prepare proteins for simulation:
     """
 
+    logger.write('*** Working on %s ***\n' % name)
+
     prot = opts[SECT_PROT]
 
     load_cmds = ''
@@ -467,7 +490,9 @@ def make_protein(name, ff, opts):
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
-    if not options[SECT_DEF]['remake']:
+    workdir = os.path.join(os.getcwd(), const.PROTEIN_WORKDIR, name)
+
+    if not opts[SECT_DEF]['remake']:
         model_path = _search_for_model([sol_model_filename, vac_model_filename],
                                        const.PROTEIN_WORKDIR)
 
@@ -479,13 +504,14 @@ def make_protein(name, ff, opts):
             logger.write('Found model %s, extracting data' % name)
 
             # FIXME: only extract when const.PROTEIN_WORKDIR not present?
-            model.extract(direc = os.path.join(const.PROTEIN_WORKDIR, name))
+            model.extract(direc = workdir)
 
             protein = ff.Protein(name, prot['basedir'])
 
             protein.charge = float(model['charge.total'])
             protein.amber_top = model['top.filename']
             protein.amber_crd = model['crd.filename']
+            protein.orig_file = model['crd.original']
 
             if 'box.dimensions' in model:
                 protein.box_dims = model['box.dimensions']
@@ -499,8 +525,17 @@ def make_protein(name, ff, opts):
     if not prot['basedir']:
         raise dGprepError('[%s] "basedir" must be set' % SECT_PROT)
 
-    with ff.Protein(name, prot['basedir'], prot['file.name'],
-                    overwrite = opts[SECT_DEF]['overwrite']) as protein:
+    if os.path.isabs(prot['basedir']):
+        src = os.path.join(prot['basedir'], name)
+    else:
+        src = os.path.join(os.getcwd(), prot['basedir'], name)
+
+    protein = ff.Protein(name, prot['file.name'])
+    model['crd.original'] = protein.mol_file
+    model.add_file(protein.mol_file)
+
+    with DirManager(workdir):
+        protein.copy_files((src,), None, opts[SECT_DEF]['overwrite'])
 
         if prot['propka']:
             protein.protonate_propka(pH = prot['propka.pH'])
@@ -605,7 +640,9 @@ def make_complex(prot, lig, ff, opts, load_cmds):
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
-    if not options[SECT_DEF]['remake']:
+    workdir = os.path.join(os.getcwd(), const.COMPLEX_WORKDIR, name)
+ 
+    if not opts[SECT_DEF]['remake']:
         model_path = _search_for_model([sol_model_filename, vac_model_filename],
                                        const.COMPLEX_WORKDIR)
 
@@ -616,7 +653,7 @@ def make_complex(prot, lig, ff, opts, load_cmds):
             logger.write('Found model %s, extracting data' % name)
 
             # FIXME: only extract when const.COMPLEX_WORKDIR not present?
-            model.extract(direc = os.path.join(const.COMPLEX_WORKDIR, name))
+            model.extract(direc = workdir)
 
             complex = ff.Complex(prot, lig)
 
@@ -632,10 +669,16 @@ def make_complex(prot, lig, ff, opts, load_cmds):
     print('Making complex from %s and %s...' % (prot.mol_name, lig.mol_name))
 
     model = ModelConfig(name)
+    complex = ff.Complex(prot, lig)
 
-    with ff.Complex(prot, lig,
-                    overwrite = opts[SECT_DEF]['overwrite']) as complex:
+    lig_src = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, lig.mol_name)
+    prot_src = os.path.join(os.getcwd(), const.PROTEIN_WORKDIR, prot.mol_name)
 
+    with DirManager(workdir):
+        complex.copy_files((lig_src, prot_src),
+                           (ligand.orig_file, ligand.frcmod, protein.orig_file,
+                            const.LIGAND_AC_FILE), opts[SECT_DEF]['overwrite'])
+        
         complex.ligand_fmt = lig.mol_fmt
         complex.prepare_top()
         complex.create_top(boxtype = '', addcmd = load_cmds)
@@ -1049,8 +1092,8 @@ if __name__ == '__main__':
 
                 try:
                     complex, cmds = make_complex(protein,
-                                                 ligands[lig_name].ref, ff,
-                                                 options, cmds)
+                                                 ligands[lig_name].ref,
+                                                 ff, options, cmds)
 
                     # NOTE: no real need here to limit the list of complexes
                     #       as it is checked again below
