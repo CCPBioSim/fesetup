@@ -228,7 +228,7 @@ else:
                    ringMatchesRingOnly = True, completeRingsOnly = True,
                    threshold = None)
 
-def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
+def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
     """
     Maximum common substructure search via RDKit/fmcs.
 
@@ -276,18 +276,22 @@ def mcss(mol2str_1, mol2str_2, maxtime = 60, isotope_map = None, selec = ''):
 
             logger.write('Mapping atom index %i to %i' % (idx1, idx2) )
 
-            if idx1 > max_idx1 or idx2 > max_idx2 or idx1 < 0 or idx2 < 0:
-                logger.write('Error: indices out of bounds (%i, %i)' %
-                             (max_idx1, max_idx2) )
-                raise errors.SetupError('Mapping indices out of bounds (%i, %i)'
-                                        % (max_idx1, max_idx2) )
+            if idx2 < 1:
+                atom1 = mol1.GetAtomWithIdx(idx1-1)
+                atom1.SetIsotope(-1 * idx2 + icnt)
+            else:
+                if idx1 > max_idx1 or idx2 > max_idx2 or idx1 < 0 or idx2 < 0:
+                    logger.write('Error: indices out of bounds (%i, %i)' %
+                                 (max_idx1, max_idx2) )
+                    raise errors.SetupError('Mapping indices out of bounds '
+                                            '(%i, %i)' % (max_idx1, max_idx2) )
 
-            # FIXME: guard against non-existing indices
-            atom1 = mol1.GetAtomWithIdx(idx1-1)
-            atom1.SetIsotope(icnt)
+                # FIXME: guard against non-existing indices
+                atom1 = mol1.GetAtomWithIdx(idx1-1)
+                atom1.SetIsotope(icnt)
 
-            atom2 = mol2.GetAtomWithIdx(idx2-1)
-            atom2.SetIsotope(icnt)
+                atom2 = mol2.GetAtomWithIdx(idx2-1)
+                atom2.SetIsotope(icnt)
     else:
         if _fmcs_imp == 'c++':
             _params.update(atomCompare = AtomCompare.CompareAny)

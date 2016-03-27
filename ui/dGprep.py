@@ -968,8 +968,12 @@ if __name__ == '__main__':
                 p1[0] = p1[0].strip()
 
                 for idx in p1[1:]:
-                    if (idx):
-                        a, b = idx.split('=')
+                    if idx:
+                        if idx.startswith('!'):
+                            a = idx[1:]
+                            b = -1
+                        else:
+                            a, b = idx.split('=')
 
                         try:
                             temp_map[int(a)] = int(b)
