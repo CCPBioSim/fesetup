@@ -1041,7 +1041,7 @@ if __name__ == '__main__':
             print ('Morphing %s to %s...' % pair)
 
             if (pair[1], pair[0]) in morph_pairs:
-                rev = wd2
+                rev = ligand2
             else:
                 rev = None
 
@@ -1050,7 +1050,7 @@ if __name__ == '__main__':
 
                 if options[SECT_LIG]['box.type']:
                     morph.create_coords(ligand1, 'solvated', wd1,
-                                        cmd1, cmd2, rev)
+                                        cmd1, cmd2, rev, wd2)
             except errors.SetupError as why:
                 morph_failed.append(morph.name)
                 print ('ERROR: %s failed: %s' % (morph.name, why))

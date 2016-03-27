@@ -284,7 +284,7 @@ class Morph(object):
 
     @report
     def create_coords(self, system, workdir, sys_base, cmd1, cmd2,
-                      sys_rev = None):
+                      sys_rev=None, sys_rev_path=None):
         """
         Wrapper for the actual topology creation code. Create coordinates
         and topology for non-vacuum case.
@@ -294,12 +294,20 @@ class Morph(object):
         :param system: must be either Ligand (solvated) or Complex (solvated).
            The ligand coordinates are computed while the coordinates of the rest
            of the system are taken from the unperturbed solvated system.
+        :param workdir: the name of the work directory
+        :param sys_base: the name of the base directory
         :param cmd1: additional leap commands
         :param cmd2: additional leap commands
+        :param sys_rev: refernce system to determine larger box size, only
+           Ligand at the moment passed in from dGrep.py
+        :param sys_rev_path: path to refernce system
         :type system: either Ligand or Complex
-        :type cmd1: string
-        :type cmd2: string
-        :type sys_rev: only Ligand at the moment passed in from dGrep.py
+        :type workdir: str
+        :type sys_base: str
+        :type cmd1: str
+        :type cmd2: str
+        :type sys_rev: str
+        :type sys_rev_path: str
         """
 
         os.chdir(self.dst)        # FIXME: kludge to allow non-context use
@@ -347,8 +355,8 @@ class Morph(object):
             V_rev = reduce(V_calc, boxdims_rev)
 
             if V_rev > V:
-                crd2 = os.path.join(sys_rev, system.amber_crd)
-                top2 = os.path.join(sys_rev, system.amber_top)
+                crd2 = os.path.join(sys_rev_path, system.amber_crd)
+                top2 = os.path.join(sys_rev_path, system.amber_top)
 
                 try:
                     mols2 = Sire.IO.Amber().readCrdTop(crd, top)[0]
