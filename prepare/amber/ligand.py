@@ -585,7 +585,7 @@ class Ligand(Common):
         utils.run_amber(parmchk, params)
 
     @report
-    def prepare_top(self, gaff='gaff', pert=None):
+    def prepare_top(self, gaff='gaff', pert=None, add_frcmods=[]):
         """
         Prepare for parmtop creation i.e. add molecules to Leap structure.
         This needs to be run before create_top() to ensure that the molecule
@@ -613,9 +613,15 @@ class Ligand(Common):
 
         self.mol_file = mol_file
 
+        frcmods = [self.frcmod]
+
+        if add_frcmods:
+            frcmods.extend(add_frcmods)
+
+
         if not self.leap_added:
             self.leap.add_force_field(self.gaff)
-            self.leap.add_mol(mol_file, self.mol_fmt, self.frcmod, pert=pert)
+            self.leap.add_mol(mol_file, self.mol_fmt, frcmods, pert=pert)
 
             self.leap_added = True
 

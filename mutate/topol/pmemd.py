@@ -112,7 +112,7 @@ class PertTopology(object):
 
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
             lig.prepare_top()
-            lig.leap.add_mol(mol2_1, 'mol2', frcmod1)
+            lig.leap.add_mol(mol2_1, 'mol2', [frcmod1])
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
@@ -142,7 +142,7 @@ class PertTopology(object):
 
             lig.prepare_top(pert=pert0_info)
             # intermediate state does never have dummies
-            lig.leap.add_mol(mol2_int, 'mol2', frcmod1)
+            lig.leap.add_mol(mol2_int, 'mol2', [frcmod1])
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
             lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_int,
@@ -158,7 +158,7 @@ class PertTopology(object):
 
             # intermediate state does never have dummies
             lig.prepare_top()
-            lig.leap.add_mol(mol2_1, 'mol2', frcmod0, pert=pert1_info)
+            lig.leap.add_mol(mol2_1, 'mol2', [frcmod0], pert=pert1_info)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
         # FIXME: residue name will be both the same
         elif self.FE_sub_type == 'softcore3':
@@ -169,7 +169,7 @@ class PertTopology(object):
             lig._parm_overwrite = 'pmemd_decharge' + ow_add
 
             lig.prepare_top()
-            lig.leap.add_mol(mol2_0, 'mol2', frcmod0)
+            lig.leap.add_mol(mol2_0, 'mol2', [frcmod0])
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
             lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_1,
@@ -179,11 +179,11 @@ class PertTopology(object):
             lig._parm_overwrite = 'pmemd_recharge' + ow_add
 
             lig.prepare_top()
-            lig.leap.add_mol(mol2_1, 'mol2', frcmod1)
+            lig.leap.add_mol(mol2_1, 'mol2', [frcmod1])
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
         elif self.FE_sub_type == 'dummy':
             lig.prepare_top(pert=pert0_info)
-            lig.leap.add_mol(mol2_1, 'mol2', frcmod1, pert=pert1_info)
+            lig.leap.add_mol(mol2_1, 'mol2', [frcmod1], pert=pert1_info)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         self.frcmod0 = frcmod0
@@ -236,7 +236,7 @@ class PertTopology(object):
 
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
             com.prepare_top(gaff=self.gaff)
-            com.leap.add_mol(mol2_1, 'mol2', self.frcmod1)
+            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1])
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
@@ -266,7 +266,7 @@ class PertTopology(object):
 
             com.prepare_top(gaff=self.gaff, pert=pert0_info)
             # intermediate state does never have dummies
-            com.leap.add_mol(mol2_int, 'mol2', self.frcmod1)
+            com.leap.add_mol(mol2_int, 'mol2', [self.frcmod1])
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
             com = self.ff.Complex(pdb_file, mol2_int)
@@ -282,7 +282,7 @@ class PertTopology(object):
 
             # intermediate state does never have dummies
             com.prepare_top(gaff=self.gaff)
-            com.leap.add_mol(mol2_1, 'mol2', self.frcmod0, pert=pert1_info)
+            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod0], pert=pert1_info)
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         # FIXME: residue name will be both the same
@@ -294,7 +294,7 @@ class PertTopology(object):
             com._parm_overwrite = 'pmemd_decharge' + ow_add
 
             com.prepare_top(gaff=self.gaff)
-            com.leap.add_mol(mol2_0, 'mol2', self.frcmod0)
+            com.leap.add_mol(mol2_0, 'mol2', [self.frcmod0])
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
             com = self.ff.Complex(pdb_file, mol2_1)
@@ -304,11 +304,11 @@ class PertTopology(object):
             com._parm_overwrite = 'pmemd_recharge' + ow_add
 
             com.prepare_top(gaff=self.gaff)
-            com.leap.add_mol(mol2_1, 'mol2', self.frcmod1)
+            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1])
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
         elif self.FE_sub_type == 'dummy':
             com.prepare_top(gaff=self.gaff, pert=pert0_info)
-            com.leap.add_mol(mol2_1, 'mol2', self.frcmod1, pert=pert1_info)
+            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1], pert=pert1_info)
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
 

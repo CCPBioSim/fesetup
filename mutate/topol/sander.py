@@ -154,14 +154,13 @@ class PertTopology(object):
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
             lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_int,
-                                 start_fmt='mol2', frcmod=frcmod1,
+                                 start_fmt='mol2', frcmod=frcmod0,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'state_int'
 
-            lig.prepare_top()
-            lig.create_top(boxtype='', addcmd=cmd1 + cmd2 +
-                           'mods1 = loadAmberParams "%s"\n' % frcmod0)
+            lig.prepare_top(add_frcmods=[frcmod1])
+            lig.create_top(boxtype='', addcmd=cmd1 + cmd2)
 
         if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             top0 = lig0._parm_overwrite + lig0.TOP_EXT
@@ -278,8 +277,8 @@ class PertTopology(object):
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'state_int'
-            com.create_top(boxtype='set', addcmd=cmd1 + cmd2 +
-                           'mods1 = loadAmberParams "%s"\n' % self.frcmod0)
+            com.prepare_top(add_frcmods=[self.frcmod0])
+            com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             top0 = com0._parm_overwrite + com0.TOP_EXT

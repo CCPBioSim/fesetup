@@ -90,7 +90,7 @@ class Complex(Common):
 
 
     @report
-    def prepare_top(self, gaff='gaff', pert=None):
+    def prepare_top(self, gaff='gaff', pert=None, add_frcmods=[]):
         """
         Prepare for parmtop creation i.e. add molecules to Leap structure.
         This needs to be run before create_top() to ensure that the molecule
@@ -116,10 +116,14 @@ class Complex(Common):
                                         'only mol2 and pdb)' % self.ligand_fmt)
 
 
+        frcmods = [self.frcmod]
+
+        if add_frcmods:
+            frcmods.extend(add_frcmods)
+
         if not self.leap_added:
             self.leap.add_force_field(gaff)
-            self.leap.add_mol(mol_file, self.ligand_fmt, self.frcmod,
-                              pert=pert)
+            self.leap.add_mol(mol_file, self.ligand_fmt, frcmods, pert=pert)
 
 
     @report
