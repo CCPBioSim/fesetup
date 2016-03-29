@@ -204,7 +204,7 @@ class DataDict(dict):
 
     def check_data(self, hashv, hash_type):
         """
-        Check checksum of data against the hash value.
+        Check hash of data against the hash value.
 
         :param hashv: the hash to be checked against
         :type hashv: string
@@ -219,7 +219,7 @@ class DataDict(dict):
         hash_val.update(self.data)
 
         if hashv != hash_val.hexdigest():
-            raise DataDictError('data corruption: checksum doesn\'t match')
+            raise DataDictError('data corruption: hash doesn\'t match')
 
 
     def list(self, compression_type='*'):
@@ -279,11 +279,11 @@ if __name__ == '__main__':
     opts['time'] = time.ctime()
 
     # ModelConfig does not have any default entries!
-    opts['data.checksum_type'] = 'sha1'
+    opts['data.hash_type'] = 'sha1'
     opts['data.compression_type'] = 'bz2'
-    opts['data.checksum'] = \
+    opts['data.hash'] = \
         opts.add_files(sys.argv[1:],
-        opts['data.checksum_type'], opts['data.compression_type'])
+        opts['data.hash_type'], opts['data.compression_type'])
 
     del opts['nonsense']
 
@@ -295,7 +295,7 @@ if __name__ == '__main__':
 
     new_opts.read('test.model')
 
-    new_opts.check_data(new_opts['data.checksum'], new_opts['data.checksum_type'])
+    new_opts.check_data(new_opts['data.hash'], new_opts['data.hash_type'])
     new_opts.list()
     #new_opts.extract(direc = '/tmp')
 

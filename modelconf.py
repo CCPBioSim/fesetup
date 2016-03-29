@@ -48,8 +48,8 @@ class ModelConfig(DataDict):
         'crd.filetype': None,
         'top.filename': None,
         'top.filetype': None,
-        'data.checksum': None ,
-        'data.checksum_type': 'sha1',
+        'data.hash': None ,
+        'data.hash_type': 'sha1',
         'data.compression_type': 'bz2',
         'is.valid': None,
         'timestamp': None
@@ -96,10 +96,9 @@ class ModelConfig(DataDict):
         """
 
         if self.files:
-            self['data.checksum'] = \
-                                  self.add_files(self.files,
-                                                 self['data.checksum_type'],
-                                                 self['data.compression_type'])
+            self['data.hash'] = self.add_files(self.files,
+                                               self['data.hash_type'],
+                                               self['data.compression_type'])
         self['timestamp'] = time.ctime()
 
         self.check_keys()

@@ -182,7 +182,7 @@ def read_model(filename):
     model.read(filename)
 
     try:
-        model.check_data(model['data.checksum'], model['data.checksum_type'])
+        model.check_data(model['data.hash'], model['data.hash_type'])
 
         if not model['is.valid']:
             # FIXME: change exception type
