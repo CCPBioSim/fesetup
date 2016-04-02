@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler
+#  Copyright (C) 2012-2014,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -25,7 +25,12 @@ Utility functions for the amber package.
 __revision__ = "$Id$"
 
 
-import sys, os, re, shlex, string
+import sys
+import os
+import re
+import shlex
+import string
+import glob
 import subprocess as subp
 
 from FESetup import const, errors, logger
@@ -38,6 +43,7 @@ def self_check():
     AMBERHOME
 
     :returns: error message or None for OK
+    :rtype: str
     """
 
     if 'AMBERHOME' in os.environ:
@@ -243,23 +249,57 @@ def run_namd(program, prefix, postfix, params, std_out):
     return None
 
 
+GROMACS5_EXE_NAMES = ['gmx', 'gmx_d', 'gmx_mpi', 'gmx_mpi_d']
+
+def gromacs_self_check():
+    """
+    Check which Gromacs version is in GMXHOME.
+
+    :returns: 5 or 4 for Gromacs major version, None if not found
+    :rtype: int
+    """
+
+    if not 'GMXHOME' in os.environ:
+        return None
+
+    for exe_name in GROMACS5_EXE_NAMES:
+        full_path = os.path.join(os.environ['GMXHOME'], 'bin', exe_name)
+
+        if os.access(full_path, os.X_OK):
+            return 5
+
+    # assume we have no version older than 4.x
+    if glob.glob(os.path.join(os.environ['GMXHOME'], 'bin', 'mdrun*')):
+        return 4
+
+    return None
+
+
 def run_gromacs(program, prefix, postfix, params):
     """
     Simple wrapper to execute the external GROMACS program through subprocess.
 
     :param program: executable name
-    :type program: string
+    :type program: str
     :param params: paramters to the AMBER program
-    :type params: string
+    :type params: str
     :raises: SetupError
+    :returns: stdout and stderr of subprocess
+    :rtype: str, str
     """
 
-    exe = os.path.join(os.environ['GMXHOME'], 'bin', program)
+    prstr = program.split()
+    exe = os.path.join(os.environ['GMXHOME'], 'bin', prstr[0])
 
     if not os.access(exe, os.X_OK):
         sys.exit('Cannot run %s' % exe)
 
-    cmdline = ' '.join( (prefix, exe, postfix, params) ) 
+    if prstr[1:]:
+        exe2 = prstr[1]
+    else:
+        exe2 = ''
+
+    cmdline = ' '.join( (prefix, exe, exe2, postfix, params) ) 
     cmd = shlex.split(cmdline)
 
     logger.write('Executing command:\n%s\n' % cmdline)

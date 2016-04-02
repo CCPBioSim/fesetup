@@ -38,6 +38,9 @@ class MDEngine(mdebase.MDEBase):
     Gromacs MD engine.
     """
 
+    gmxdump = ''
+    grompp = ''
+
     def __init__(self, amber_top, amber_crd, sander_crd, sander_rst,
                  amber_pdb, box_dims = None, solvent = None, mdprog = 'mdrun',
                  mdpref = '', mdpost = ''):
@@ -53,6 +56,18 @@ class MDEngine(mdebase.MDEBase):
 
         self.prev = ''
         self.prefix = ''
+
+        version = utils.gromacs_self_check()
+
+        # FIXME: what if suffixes?
+        if version == 5:
+            self.__class__.grompp = 'gmx grompp'
+            self.__class__.gmxdump = 'gmx dump'
+        elif version == 4:
+            self.__class__.grompp = 'grompp'
+            self.__class__.gmxdump = 'gmxdump'
+        else:
+            raise errors.SetupError('No executables found in GMXHOME')
 
 
     def update_files(self, amber_top, amber_crd, sander_crd, sander_rst,
@@ -228,7 +243,7 @@ class MDEngine(mdebase.MDEBase):
         if mask:
              self._make_restraints(mask, restr_force)
 
-        out, err = utils.run_gromacs('grompp', '', '', params)
+        out, err = utils.run_gromacs(self.__class__.grompp, '', '', params)
 
         if out == 1:
             logger.write(err)
@@ -236,7 +251,8 @@ class MDEngine(mdebase.MDEBase):
 
         params = '-deffnm %s' % prefix
 
-        out, err = utils.run_gromacs(self.mdprog, self.mdpref, self.mdpost, params)
+        out, err = utils.run_gromacs(self.mdprog, self.mdpref, self.mdpost,
+                                     params)
 
         if out == 1:
             logger.write(err)
@@ -294,7 +310,7 @@ class MDEngine(mdebase.MDEBase):
         """
 
         params = '-f %s' % (self.prev + os.extsep + 'trr')
-        out, err = utils.run_gromacs('gmxdump', '', '', params)
+        out, err = utils.run_gromacs(self.__class__.gmxdump, '', '', params)
 
         if out == 1:
             logger.write(err)
@@ -387,7 +403,7 @@ PROTOCOLS = dict(
     # Gromacs appears to be sensitive to this and minimisation should be run first
     MIN_STD = '''; minimization
 {0}
-integrator            = cg
+integrator            = steep
 nsteps                = {1}
 nstcgsteep            = {2}
 nstlog                = {3}
