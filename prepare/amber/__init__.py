@@ -36,11 +36,13 @@ from FESetup.prepare.amber.protein import *
 from FESetup.prepare.amber.complex import *
 
 
-AMBER_FF_TYPES = frozenset( ('ff14SB', 'ff14ipq', 'ff12SB', 'ff10', 'ff99SB',
+AMBER_FF_TYPES = frozenset( ('protein.ff14SB',
+                             'ff14SB', 'ff14ipq', 'ff12SB', 'ff10', 'ff99SB',
                              'ff99SBildn', 'ff99SBnmr', 'ff03.r1') )
 AMBER_SOLVENT_TYPES = {
-    'tip3p' : ['loadAmberParams frcmod.ionsjc_tip3p\n'
-               'loadAmberParams frcmod.ionslrcm_%s_tip3p\n',
+    'tip3p' : ['source leaprc.water.tip3p\n'
+               'loadAmberParams frcmod.ionsjc_tip3p\n'
+               'loadAmberParams frcmod.ions234lm_%s_tip3p\n',
                'TIP3PBOX'],
     'tip4pew' : ['loadAmberParams frcmod.tip4pew\n'
                  'WAT = T4E\n'

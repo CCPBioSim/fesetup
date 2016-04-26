@@ -259,6 +259,7 @@ PROTOCOLS = dict(
    maxcyc = {0}, ncyc = {1},
    ntpr = {2}, ntwe = {2},
    dx0 = 1.0D-7,
+   ntxo = 1,  ! 2 is default in AMBER16 for NetCDF file
    ntc = 2, noshakemask = '!:WAT,HOH,T3P,T4P,T4E',
    {3}
  /
@@ -270,6 +271,7 @@ PROTOCOLS = dict(
    maxcyc = {0}, ncyc = {1},
    ntpr = {2}, ntwe = {2},
    dx0 = 1.0D-7,
+   ntxo = 1,  ! 2 is default in AMBER16 for NetCDF file
    {3}
  /
 ''',
@@ -282,6 +284,7 @@ PROTOCOLS = dict(
    ntb = 2,
    ntc = 2, ntf = 2,
    ioutfm = 1, iwrap = {4},
+   ntxo = 1,  ! 2 is default in AMBER16 for NetCDF file
    ntwe = {1}, ntwx = {1}, ntpr = {2},
    {3}
  /
@@ -294,6 +297,7 @@ PROTOCOLS = dict(
    ntb = 1,
    ntc = 2, ntf = 2,
    ioutfm = 1, iwrap = {4},
+   ntxo = 1,  ! 2 is default in AMBER16 for NetCDF file
    ntwe = {1}, ntwx = {1}, ntpr = {2},
    {3}
  /
@@ -308,6 +312,7 @@ PROTOCOLS = dict(
    ntb = 1, pres0 = {6},
    ntc = 2, ntf = 2,
    ioutfm = 1, iwrap = {4},
+   ntxo = 1,  ! 2 is default in AMBER16 for NetCDF file
    ntwe = {1}, ntwx = {1}, ntpr = {2},
    {3}
  /
@@ -329,6 +334,7 @@ PROTOCOLS = dict(
    ntb = 1,
    ntc = 2, ntf = 2,
    ioutfm = 1, iwrap = {4},
+   ntxo = 1,  ! 2 is default in AMBER16 for NetCDF file
    ntwe = {1}, ntwx = {1}, ntpr = {2},
    {3}
  /
@@ -344,6 +350,7 @@ PROTOCOLS = dict(
    ntc = 2, ntf = 2,
    ioutfm = 1, iwrap = {4},
    ntwe = {1}, ntwx = {1}, ntpr = {2},
+   ntxo = 1,  ! 2 is default in AMBER16 for NetCDF file
    {3}
  /
 '''
