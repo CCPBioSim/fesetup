@@ -181,7 +181,7 @@ class Common(object):
                     if overwrite or not os.access(filename, os.F_OK):
                         src_file = os.path.join(src, filename)
 
-                        # FIXME: only here to accomodate Complex
+                        # FIXME: only here to accommodate Complex
                         if os.access(src_file, os.F_OK):
                             shutil.copy(src_file, '.')
 

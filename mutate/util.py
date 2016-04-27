@@ -1583,7 +1583,7 @@ def amber_softcore(lig_morph, lig_final, atom_map):
     idels = []
     fdels = []
 
-    for iinfo, finfo in atom_map.items():
+    for iinfo, finfo in atom_map.iteritems():
         istr = iinfo.name.value()
         fstr = finfo.name.value()
         iidx = iinfo.index

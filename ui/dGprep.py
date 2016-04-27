@@ -677,7 +677,8 @@ def make_complex(prot, lig, ff, opts, load_cmds):
     with DirManager(workdir):
         complex.copy_files((lig_src, prot_src),
                            (ligand.orig_file, ligand.frcmod, protein.orig_file,
-                            const.LIGAND_AC_FILE), opts[SECT_DEF]['overwrite'])
+                            const.LIGAND_AC_FILE, const.SSBOND_FILE),
+                           opts[SECT_DEF]['overwrite'])
         
         complex.ligand_fmt = lig.mol_fmt
         complex.prepare_top()
