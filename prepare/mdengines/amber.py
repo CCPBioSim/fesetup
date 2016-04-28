@@ -58,8 +58,8 @@ class MDEngine(mdebase.MDEBase):
     # FIXME: files are specific to AMBER but needed for conversion for
     #        other MD packages
     def __init__(self, amber_top, amber_crd, sander_crd, sander_rst,
-                 amber_pdb, box_dims = None, solvent = None, mdprog = 'sander',
-                 mdpref = '', mdpost = ''):
+                 amber_pdb, box_dims=None, solvent=None, mdprog='sander',
+                 mdpref='', mdpost=''):
 
         super(MDEngine, self).__init__()
 
@@ -70,7 +70,8 @@ class MDEngine(mdebase.MDEBase):
         self.mdprog = utils.check_amber(mdprog)
         self.mdpref = mdpref
 
-        #self.cpptraj = utils.check_amber('cpptraj')
+        self.amber_prog = ''
+        self._self_check(mdprog)
 
 
     def update_files(self, amber_top, amber_crd, sander_crd, sander_rst,
@@ -89,8 +90,8 @@ class MDEngine(mdebase.MDEBase):
             self.md_periodic = ' ntb = 0, igb = 2, cut = 16.0, nrespa = 2\n'
 
 
-    def minimize(self, namelist = '%ALL', nsteps = 100, ncyc = 10,
-                 restr_str = '', restr_force = 5.0):
+    def minimize(self, namelist='%ALL', nsteps=100, ncyc=10, restr_str='',
+                 restr_force=5.0):
         """
         Use the AMBER/sander module to minimize a system.
 
@@ -134,9 +135,8 @@ class MDEngine(mdebase.MDEBase):
         self._run_mdprog(mdebase.MIN_PREFIX, namelist, mask, False)
 
 
-    def md(self, namelist = '', nsteps = 1000, T = 300.0, p = 1.0,
-           restr_str = '', restr_force = 5.0, nrel = 1, wrap = True,
-           dt = 0.002):
+    def md(self, namelist='', nsteps=1000, T=300.0, p=1.0,
+           restr_str='', restr_force=5.0, nrel=1, wrap=True, dt=0.002):
         """
         Use the sander module from AMBER to run molecular dynamics on a system.
 
@@ -235,7 +235,7 @@ class MDEngine(mdebase.MDEBase):
             else:
                 flags += ' -ref %s' % self.amber_crd
 
-        err = utils.run_amber(self.mdpref + ' ' + self.mdprog,
+        err = utils.run_amber(self.mdpref + ' ' + self.amber_prog,
                               flags.format(prefix, self.amber_top,
                                            self.sander_crd, self.sander_rst) )
 
@@ -250,6 +250,24 @@ class MDEngine(mdebase.MDEBase):
 
     def to_rst7(self):
         pass
+
+
+    def _self_check(self, mdprog):
+        """
+        Check NAMD installation.
+
+        :param mdprog: the namd executable provided to the class
+        :type mdprog: str
+        """
+
+        if not 'AMBERHOME' in os.environ:
+            raise errors.SetupError('AMBERHOME not set')
+
+        self.amber_prog = os.path.join(os.environ['AMBERHOME'], 'bin', mdprog)
+
+        if not os.access(self.amber_prog, os.X_OK):
+            raise errors.SetupError('AMBERHOME does not have a %s binary' %
+                                    mdprog)
 
 
 PROTOCOLS = dict(
