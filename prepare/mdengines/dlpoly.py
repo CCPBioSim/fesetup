@@ -1,4 +1,4 @@
-#  Copyright (C) 2014  Hannes H Loeffler
+#  Copyright (C) 2014,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ class MDEngine(mdebase.MDEBase):
 
         self.dlpoly_prog = ''
         self._self_check(mdprog)
+
 
     def update_files(self, amber_top, amber_crd, sander_crd, sander_rst,
                      amber_pdb):
@@ -191,7 +192,7 @@ class MDEngine(mdebase.MDEBase):
         :returns: box dimensions
         """
 
-        config_file = REVCON_FILENAME + os.extsep + '%05i' % (self.run_no - 1)
+        config_file = CONFIG_FILENAME
         line_no = 0
         box_dims = []
 
@@ -243,7 +244,6 @@ class MDEngine(mdebase.MDEBase):
         with open(CONTROL_FILENAME, 'w') as mdin:
             mdin.writelines(config)
 
-        # FIXME: check for error code/messages?
         retc, out, err = utils.run_exe(' '.join((self.mdpref, self.dlpoly_prog,
                                                  self.mdpost)))
 
@@ -293,8 +293,8 @@ class MDEngine(mdebase.MDEBase):
         :raises: SetupError
         """
 
-        config_file = CONFIG_FILENAME + os.extsep + '%05i' % (self.run_no - 1)
-        self.prev = config_file
+        config_file = CONFIG_FILENAME
+        self.prev = config_file + os.extsep + '%05i' % (self.run_no - 1)
 
         line_no = 0
         natoms = 0
@@ -345,7 +345,7 @@ class MDEngine(mdebase.MDEBase):
                         coords.extend( (float(x), float(y), float(z) ) )
                     except ValueError:
                         raise errors.SetupError('invalid coords in file %s, '
-                                                'line %s' % (revcon, line_no) )
+                                                'line %s' % (crdvel, line_no) )
                     line_no += 1
 
                 if levcfg >= 1:
@@ -354,7 +354,7 @@ class MDEngine(mdebase.MDEBase):
                         vels.extend( (float(x), float(y), float(z) ) )
                     except ValueError:
                         raise errors.SetupError('invalid vels in file %s, '
-                                                'line %s' % (revcon, line_no) )
+                                                'line %s' % (crdvel, line_no) )
                     line_no += 1
 
                 if levcfg >= 2:
@@ -377,30 +377,11 @@ class MDEngine(mdebase.MDEBase):
         self.sander_crd = self._write_rst7(natoms, la, lb, lc, coords, vels,
                                            True)
 
-
-    def _self_check(self, mdprog):
-        """
-        Check NAMD installation.
-
-        :param mdprog: the namd executable provided to the class
-        :type mdprog: str
-        """
-
-        if not 'NAMDHOME' in os.environ:
-            raise errors.SetupError('NAMDHOME not set')
-
-        self.namd_prog = os.path.join(os.environ['NAMDHOME'], mdprog)
-
-        if not os.access(self.namd_prog, os.X_OK):
-            raise errors.SetupError('NAMDHOME does not have a %s binary' %
-                                    mdprog)
-                  
-
     def _self_check(self, mdprog):
         """
         Check DL_POLY installation.
 
-        :param mdprog: the namd executable provided to the class
+        :param mdprog: the dl_poly executable provided to the class
         :type mdprog: str
         """
 

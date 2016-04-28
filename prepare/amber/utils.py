@@ -133,7 +133,7 @@ def run_amber(program, params):
     return False
 
 
-def run_leap(top, crd, program = 'tleap', script = ''):
+def run_leap(top, crd, program='tleap', script=''):
     """
     Simple wrapper to execute the AMBER leap program.
 
@@ -178,42 +178,6 @@ def run_leap(top, crd, program = 'tleap', script = ''):
                 )
 
     return out
-
-
-def run_ambpdb(params, infile, outfile):
-    """
-    Simple wrapper to execute the AMBER ambpdb module.
-
-    :param params: input parameters to ambpdb
-    :type param: string
-    :param infile: input file name
-    :type infile: string
-    :param outfile: output file name
-    :type outfile: string
-    :raises: SetupError
-    """
-
-
-    program = check_amber('ambpdb')
-    cmd = [program]
-    cmd.extend(shlex.split(params))
-
-    logger.write('Executing command: ambpdb %s < %s > %s\n' %
-                 (params, infile, outfile) )
-
-    with open(infile, 'r') as inp:
-        with open(outfile, 'w') as out:
-            proc = subp.Popen(cmd, stdin = inp, stdout = out,
-                              stderr = subp.PIPE)
-            err =  proc.communicate()[1]
-
-    text = _cleanup_string(err)
-
-    if text:
-        logger.write('  stderr {\n    %s\n  }\n' % text)
-
-    if proc.returncode:
-        raise errors.SetupError('%s failed' % program)
 
 
 def run_exe(cmdline):

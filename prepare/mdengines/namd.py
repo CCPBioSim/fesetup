@@ -1,4 +1,4 @@
-#  Copyright (C) 2014  Hannes H Loeffler
+#  Copyright (C) 2014,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -75,7 +75,7 @@ def namd_velcoor(filename):
     return natoms, coords
 
 
-
+# FIXME: write individual steps into TCL script and run only once
 class MDEngine(mdebase.MDEBase):
     """
     NAM MD engine.
