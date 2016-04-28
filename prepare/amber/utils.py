@@ -249,32 +249,6 @@ def run_namd(program, prefix, postfix, params, std_out):
     return None
 
 
-GROMACS5_EXE_NAMES = ['gmx', 'gmx_d', 'gmx_mpi', 'gmx_mpi_d']
-
-def gromacs_self_check():
-    """
-    Check which Gromacs version is in GMXHOME.
-
-    :returns: 5 or 4 for Gromacs major version, None if not found
-    :rtype: int
-    """
-
-    if not 'GMXHOME' in os.environ:
-        return None
-
-    for exe_name in GROMACS5_EXE_NAMES:
-        full_path = os.path.join(os.environ['GMXHOME'], 'bin', exe_name)
-
-        if os.access(full_path, os.X_OK):
-            return 5
-
-    # assume we have no version older than 4.x
-    if glob.glob(os.path.join(os.environ['GMXHOME'], 'bin', 'mdrun*')):
-        return 4
-
-    return None
-
-
 def run_gromacs(program, prefix, postfix, params):
     """
     Simple wrapper to execute the external GROMACS program through subprocess.
@@ -333,6 +307,25 @@ def run_dlpoly(program, prefix, postfix):
     logger.write('Executing command:\n%s\n' % cmdline)
 
     proc = subp.Popen(cmd, stdout = subp.PIPE, stderr = subp.PIPE)
+    out, err =  proc.communicate()
+
+    if proc.returncode:
+        return 1, err
+
+    return out, err
+
+
+def run_exe(cmdline):
+    """
+    Simple wrapper to execute the external programs through subprocess.
+
+    :param cmdline: complete command line as given on a shell prompt
+    :type cmdline: str
+    """
+
+    logger.write('Executing command:\n%s\n' % cmdline)
+
+    proc = subp.Popen(shlex.split(cmdline), stdout=subp.PIPE, stderr=subp.PIPE)
     out, err =  proc.communicate()
 
     if proc.returncode:

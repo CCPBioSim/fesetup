@@ -32,42 +32,53 @@ from FESetup import const, errors, logger
 from FESetup.prepare.amber import gromacs, utils
 
 
+# assume standard GROMACS file name conventions
+GROMACS5_EXE_NAMES = ['gmx_d', 'gmx', 'gmx_mpi_d', 'gmx_mpi']
+GROMACS_SUFFIXES = ['_d', '', '_mpi_d', '_mpi']
+
+
+def _check_exe(bindir, exe_name):
+    full_path = os.path.join(bindir, exe_name)
+
+    for suffix in GROMACS_SUFFIXES:
+        if os.access(full_path, os.X_OK):
+            return full_path
+
+    return None
+
+def _get_suffix(name, suffix):
+    for i, char in enumerate(name):
+        if char == suffix:
+            return name[i:]
+
+    return ''
+
 
 class MDEngine(mdebase.MDEBase):
     """
     Gromacs MD engine.
     """
 
-    gmxdump = ''
-    grompp = ''
-
     def __init__(self, amber_top, amber_crd, sander_crd, sander_rst,
-                 amber_pdb, box_dims = None, solvent = None, mdprog = 'mdrun',
-                 mdpref = '', mdpost = ''):
+                 amber_pdb, box_dims=None, solvent=None, mdprog='mdrun',
+                 mdpref='', mdpost=''):
 
         super(MDEngine, self).__init__()
 
         self.update_files(amber_top, amber_crd, sander_crd, sander_rst,
                           amber_pdb)
 
-        self.mdprog = mdprog
         self.mdpref = mdpref
         self.mdpost = mdpost
 
         self.prev = ''
         self.prefix = ''
 
-        version = utils.gromacs_self_check()
+        self.mdrun = ''
+        self.grompp = ''
+        self.gmxdump = ''
 
-        # FIXME: what if suffixes?
-        if version == 5:
-            self.__class__.grompp = 'gmx grompp'
-            self.__class__.gmxdump = 'gmx dump'
-        elif version == 4:
-            self.__class__.grompp = 'grompp'
-            self.__class__.gmxdump = 'gmxdump'
-        else:
-            raise errors.SetupError('No executables found in GMXHOME')
+        self._self_check(mdprog)
 
 
     def update_files(self, amber_top, amber_crd, sander_crd, sander_rst,
@@ -92,8 +103,8 @@ class MDEngine(mdebase.MDEBase):
         self.gtop = gtop
 
 
-    def minimize(self, config = '%STD', nsteps = 100, ncyc = 100,
-                 mask = '', restr_force = 5.0):
+    def minimize(self, config='%STD', nsteps=100, ncyc=100, mask='',
+                 restr_force=5.0):
         """
         Minimize a system.
 
@@ -138,8 +149,8 @@ class MDEngine(mdebase.MDEBase):
         self.prefix = prefix
 
 
-    def md(self, config = '', nsteps = 1000, T = 300.0, p = 1.0,
-           mask = '', restr_force = 5.0, nrel = 1, wrap = True, dt = 0.002):
+    def md(self, config='', nsteps=1000, T=300.0, p=1.0, mask='',
+           restr_force=5.0, nrel=1, wrap=True, dt=0.002):
         """
         Run molecular dynamics on a system.
 
@@ -243,7 +254,7 @@ class MDEngine(mdebase.MDEBase):
         if mask:
              self._make_restraints(mask, restr_force)
 
-        out, err = utils.run_gromacs(self.__class__.grompp, '', '', params)
+        out, err = utils.run_exe(' '.join((self.grompp, params)))
 
         if out == 1:
             logger.write(err)
@@ -251,8 +262,8 @@ class MDEngine(mdebase.MDEBase):
 
         params = '-deffnm %s' % prefix
 
-        out, err = utils.run_gromacs(self.mdprog, self.mdpref, self.mdpost,
-                                     params)
+        out, err = utils.run_exe(' '.join((self.mdpref, self.mdrun,
+                                           self.mdpost, params)))
 
         if out == 1:
             logger.write(err)
@@ -310,7 +321,7 @@ class MDEngine(mdebase.MDEBase):
         """
 
         params = '-f %s' % (self.prev + os.extsep + 'trr')
-        out, err = utils.run_gromacs(self.__class__.gmxdump, '', '', params)
+        out, err = utils.run_exe(' '.join((self.gmxdump, params)))
 
         if out == 1:
             logger.write(err)
@@ -370,6 +381,87 @@ class MDEngine(mdebase.MDEBase):
         self.sander_crd = self._write_rst7(natoms, xx, yy, zz, coords, vels,
                                            False)
 
+    def _self_check(self, mdprog):
+        """
+        Check which Gromacs version is in GMXHOME and determine what
+        executables to use.
+
+        :param mdprog: the mdrun executable provided to the class
+        :type mdprog: str
+        :returns: 5 or 4 for Gromacs major version, None if not found
+        :rtype: int
+        """
+
+        if not 'GMXHOME' in os.environ:
+            raise errors.SetupError('GMXHOME not set')
+
+        bindir = os.path.join(os.environ['GMXHOME'], 'bin')
+
+        if not os.path.isdir(bindir):
+            raise errors.SetupError('GMXHOME does not have a bin directory')
+
+        version = 0
+        suffixes = []
+
+        for exe_name in GROMACS5_EXE_NAMES:
+            full_path = os.path.join(bindir, exe_name)
+
+            if os.access(full_path, os.X_OK):
+                version = 5
+                suffixes.append(_get_suffix(exe_name, '_'))
+
+        if version == 5:
+            prefix = mdprog.split()[0]
+
+            if prefix[:3] != 'gmx':
+                suffix = _get_suffix(mdprog, '_')
+
+                # FIXME: proper exception...
+                if suffix not in GROMACS_SUFFIXES:
+                    raise errors.SetupError('only the following GROMACS '
+                                            'suffixes are supported: ' +
+                                            ', '.join(GROMACS_SUFFIXES))
+
+                if suffix in suffixes:
+                    prefix = 'gmx' + suffix
+                else:
+                    raise errors.SetupError('gmx%s does not exist in GMXHOME' %
+                                            suffix)
+
+                self.mdrun = os.path.join(bindir, prefix, 'mdrun')
+
+            full_path = os.path.join(bindir, prefix)
+
+            self.mdrun = ' '.join((full_path, 'mdrun'))
+            self.grompp = ' '.join((full_path, 'grompp'))
+            self.gmxdump = ' '.join((full_path, 'dump'))
+
+            return 
+        else:
+            suffix = _get_suffix(mdprog, '_')
+
+            if suffix not in GROMACS_SUFFIXES:
+                raise errors.SetupError('only the following GROMACS '
+                                        'suffixes are supported: ' +
+                                        ', '.join(GROMACS_SUFFIXES))
+
+            # FIXME: check if suffixed version actually exists
+            #        if not use the executables that are found
+            self.grompp = _check_exe(bindir, 'grompp' + suffix)
+            self.gmxdump = _check_exe(bindir, 'gmxdump' + suffix)
+
+            full_path = os.path.join(bindir, mdprog)
+
+            # special case of user supplied GROMACS4 mdrun_suffix
+            if os.access(full_path, os.X_OK):
+                self.mdrun = full_path
+
+            if self.grompp and self.mdrun and self.gmxdump:
+                return
+
+        raise errors.SetupError('GMXHOME does not have any useful executables')
+
+
 
 NB_PARAMS = '''\
 cutoff-scheme        = Verlet
@@ -400,7 +492,9 @@ lincs_order          = 4
 lincs_warnangle      = 30'''
 
 PROTOCOLS = dict(
-    # Gromacs appears to be sensitive to this and minimisation should be run first
+    # Gromacs appears to be sensitive to this and minimisation should be run
+    # first, it also looks like this should be done through the
+    # double precision executable
     MIN_STD = '''; minimization
 {0}
 integrator            = steep

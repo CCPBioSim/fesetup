@@ -267,6 +267,8 @@ def make_ligand(name, ff, opts):
     if opts[SECT_DEF]['user_params']:
         load_cmds = _param_glob(PARAM_CMDS)
 
+    # FIXME: check if only vac model is available and trigger making
+    #        of solvent model in that case
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
 
