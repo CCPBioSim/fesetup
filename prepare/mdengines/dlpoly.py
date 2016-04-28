@@ -61,12 +61,13 @@ class MDEngine(mdebase.MDEBase):
         self.update_files(amber_top, amber_crd, sander_crd, sander_rst,
                           amber_pdb)
 
-        self.mdprog = mdprog
         self.mdpref = mdpref
         self.mdpost = mdpost
 
         self.prev = ''
 
+        self.dlpoly_prog = ''
+        self._self_check(mdprog)
 
     def update_files(self, amber_top, amber_crd, sander_crd, sander_rst,
                      amber_pdb):
@@ -243,7 +244,13 @@ class MDEngine(mdebase.MDEBase):
             mdin.writelines(config)
 
         # FIXME: check for error code/messages?
-        utils.run_dlpoly(self.mdprog, self.mdpref, self.mdpost)
+        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.dlpoly_prog,
+                                                 self.mdpost)))
+
+        if retc:
+            logger.write(err)
+            raise errors.SetupError('%s has failed (see logfile)' %
+                                    self.dlpoly_prog)
 
         for file in MOVE_LIST:
             try:
@@ -370,7 +377,42 @@ class MDEngine(mdebase.MDEBase):
         self.sander_crd = self._write_rst7(natoms, la, lb, lc, coords, vels,
                                            True)
 
-                
+
+    def _self_check(self, mdprog):
+        """
+        Check NAMD installation.
+
+        :param mdprog: the namd executable provided to the class
+        :type mdprog: str
+        """
+
+        if not 'NAMDHOME' in os.environ:
+            raise errors.SetupError('NAMDHOME not set')
+
+        self.namd_prog = os.path.join(os.environ['NAMDHOME'], mdprog)
+
+        if not os.access(self.namd_prog, os.X_OK):
+            raise errors.SetupError('NAMDHOME does not have a %s binary' %
+                                    mdprog)
+                  
+
+    def _self_check(self, mdprog):
+        """
+        Check DL_POLY installation.
+
+        :param mdprog: the namd executable provided to the class
+        :type mdprog: str
+        """
+
+        if not 'DLPOLYHOME' in os.environ:
+            raise errors.SetupError('DLPOLYHOME not set')
+
+        self.dlpoly_prog = os.path.join(os.environ['DLPOLYHOME'], 'execute',
+                                        mdprog)
+
+        if not os.access(self.dlpoly_prog, os.X_OK):
+            raise errors.SetupError('DLPOLYHOME does not have a %s binary' %
+                                    mdprog)
 
 
 PROTOCOLS = dict(

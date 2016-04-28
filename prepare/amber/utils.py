@@ -216,34 +216,6 @@ def run_ambpdb(params, infile, outfile):
         raise errors.SetupError('%s failed' % program)
 
 
-def run_dlpoly(program, prefix, postfix):
-    """
-    Simple wrapper to execute the external DL_POLY program through subprocess.
-
-    :param program: executable name
-    :type program: string
-    :raises: SetupError
-    """
-
-    exe = os.path.join(os.environ['DLPOLYHOME'], 'execute', program)
-
-    if not os.access(exe, os.X_OK):
-        sys.exit('Cannot run %s' % exe)
-
-    cmdline = ' '.join( (prefix, exe, postfix) ) 
-    cmd = shlex.split(cmdline)
-
-    logger.write('Executing command:\n%s\n' % cmdline)
-
-    proc = subp.Popen(cmd, stdout = subp.PIPE, stderr = subp.PIPE)
-    out, err =  proc.communicate()
-
-    if proc.returncode:
-        return 1, err
-
-    return out, err
-
-
 def run_exe(cmdline):
     """
     Simple wrapper to execute the external programs through subprocess.

@@ -93,7 +93,6 @@ class MDEngine(mdebase.MDEBase):
         self.update_files(amber_top, amber_crd, sander_crd, sander_rst,
                           amber_pdb, box_dims, solvent)
 
-        self.mdprog = mdprog
         self.mdpref = mdpref
         self.mdpost = mdpost
 

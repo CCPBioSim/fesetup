@@ -67,7 +67,6 @@ class MDEngine(mdebase.MDEBase):
         self.update_files(amber_top, amber_crd, sander_crd, sander_rst,
                           amber_pdb)
 
-        self.mdprog = utils.check_amber(mdprog)
         self.mdpref = mdpref
 
         self.amber_prog = ''
