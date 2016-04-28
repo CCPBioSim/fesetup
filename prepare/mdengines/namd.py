@@ -84,8 +84,8 @@ class MDEngine(mdebase.MDEBase):
     # FIXME: files are specific to AMBER but needed for conversion for
     #        other MD packages
     def __init__(self, amber_top, amber_crd, sander_crd, sander_rst,
-                 amber_pdb, box_dims = [0.0, 0.0, 0.0], solvent = 'tip3',
-                 mdprog = 'namd2', mdpref = '', mdpost = ''):
+                 amber_pdb, box_dims=[0.0, 0.0, 0.0], solvent='tip3',
+                 mdprog='namd2', mdpref='', mdpost=''):
 
         super(MDEngine, self).__init__()
 
@@ -99,6 +99,9 @@ class MDEngine(mdebase.MDEBase):
 
         self.prev = ''
         self.prefix = ''
+
+        self.namd_prog = ''
+        self._self_check(mdprog)
 
 
     def update_files(self, amber_top, amber_crd, sander_crd, sander_rst,
@@ -119,8 +122,8 @@ class MDEngine(mdebase.MDEBase):
         self.xx, self.yy, self.zz = box_dims[0:3]
 
 
-    def minimize(self, config = '%STD', nsteps = 100, ncyc = 10,
-                 mask = '', restr_force = 5.0):
+    def minimize(self, config='%STD', nsteps=100, ncyc=10, mask='',
+                 restr_force=5.0):
         """
         Minimize a system.
 
@@ -174,8 +177,8 @@ class MDEngine(mdebase.MDEBase):
         self.prefix = prefix
 
 
-    def md(self, config = '%STD', nsteps = 1000, T = 300.0, p = 1.0,
-           mask = '', restr_force = 5.0, nrel = 1, wrap = True, dt = 0.002):
+    def md(self, config='%STD', nsteps=1000, T=300.0, p=1.0, mask='',
+           restr_force=5.0, nrel=1, wrap=True, dt=0.002):
         """
         Run molecular dynamics on a system.
 
@@ -305,12 +308,16 @@ class MDEngine(mdebase.MDEBase):
         with open(config_filename, 'w') as mdin:
             mdin.writelines(config)
 
-        err = utils.run_namd(self.mdprog, self.mdpref, self.mdpost,
-                             config_filename, filename + 'out')
+        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.namd_prog,
+                                                 self.mdpost, config_filename)))
 
-        if err:
+        with open(filename + 'out', 'w') as outfile:
+            outfile.writelines(out)
+
+        if retc:
             logger.write(err)
-            raise errors.SetupError('namd has failed (see logfile)')
+            raise errors.SetupError('%s has failed (see logfile)' %
+                                    self.namd_prog)
 
         self.run_no += 1
         self.prev = prefix
@@ -342,6 +349,25 @@ class MDEngine(mdebase.MDEBase):
 
                     opdb.write(tmp)
 
+
+    def _self_check(self, mdprog):
+        """
+        Check NAMD installation.
+
+        :param mdprog: the namd executable provided to the class
+        :type mdprog: str
+        """
+
+        if not 'NAMDHOME' in os.environ:
+            raise errors.SetupError('NAMDHOME not set')
+
+        self.namd_prog = os.path.join(os.environ['NAMDHOME'], mdprog)
+
+        if not os.access(self.namd_prog, os.X_OK):
+            raise errors.SetupError('NAMDHOME does not have a %s binary' %
+                                    mdprog)
+        
+        
 
 PROTOCOLS = dict(
     # NAMD also appears to need prior minimisation, possibly because of tight

@@ -254,20 +254,22 @@ class MDEngine(mdebase.MDEBase):
         if mask:
              self._make_restraints(mask, restr_force)
 
-        out, err = utils.run_exe(' '.join((self.grompp, params)))
+        retc, out, err = utils.run_exe(' '.join((self.grompp, params)))
 
-        if out == 1:
+        if retc:
             logger.write(err)
-            raise errors.SetupError('grompp has failed')
+            raise errors.SetupError('%s has failed (see logfile)' %
+                                    self.grompp)
 
         params = '-deffnm %s' % prefix
 
-        out, err = utils.run_exe(' '.join((self.mdpref, self.mdrun,
-                                           self.mdpost, params)))
+        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.mdrun,
+                                                 self.mdpost, params)))
 
-        if out == 1:
+        if retc:
             logger.write(err)
-            raise errors.SetupError('Gromacs MD program has failed')
+            raise errors.SetupError('%s has failed (see logfile) has failed' %
+                                    self.mdrun)
 
         self.run_no += 1
         self.prev = prefix
@@ -321,11 +323,12 @@ class MDEngine(mdebase.MDEBase):
         """
 
         params = '-f %s' % (self.prev + os.extsep + 'trr')
-        out, err = utils.run_exe(' '.join((self.gmxdump, params)))
+        retc, out, err = utils.run_exe(' '.join((self.gmxdump, params)))
 
-        if out == 1:
+        if retc:
             logger.write(err)
-            raise errors.SetupError('Gromacs gmxdump has failed')
+            raise errors.SetupError('%s has failed (see logfile) has failed' %
+                                    self.gmxdump)
 
         lidx = out.rfind('frame ')
         box = []
@@ -388,8 +391,6 @@ class MDEngine(mdebase.MDEBase):
 
         :param mdprog: the mdrun executable provided to the class
         :type mdprog: str
-        :returns: 5 or 4 for Gromacs major version, None if not found
-        :rtype: int
         """
 
         if not 'GMXHOME' in os.environ:

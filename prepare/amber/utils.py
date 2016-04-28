@@ -216,77 +216,6 @@ def run_ambpdb(params, infile, outfile):
         raise errors.SetupError('%s failed' % program)
 
 
-def run_namd(program, prefix, postfix, params, std_out):
-    """
-    Simple wrapper to execute the external NAMD program through subprocess.
-
-    :param program: executable name
-    :type program: string
-    :param std_out: file name for captured NAMD output from stdout
-    :type std_out: string
-    :raises: SetupError
-    """
-
-    exe = os.path.join(os.environ['NAMDHOME'], program)
-
-    if not os.access(exe, os.X_OK):
-        sys.exit('Cannot run %s' % exe)
-
-    cmdline = ' '.join( (prefix, exe, postfix, params) ) 
-    cmd = shlex.split(cmdline)
-
-    logger.write('Executing command:\n%s\n' % cmdline)
-
-    proc = subp.Popen(cmd, stdout = subp.PIPE, stderr = subp.PIPE)
-    out, err =  proc.communicate()
-
-    with open(std_out, 'w') as text:
-        text.writelines(out)
-
-    if proc.returncode:
-        return err
-
-    return None
-
-
-def run_gromacs(program, prefix, postfix, params):
-    """
-    Simple wrapper to execute the external GROMACS program through subprocess.
-
-    :param program: executable name
-    :type program: str
-    :param params: paramters to the AMBER program
-    :type params: str
-    :raises: SetupError
-    :returns: stdout and stderr of subprocess
-    :rtype: str, str
-    """
-
-    prstr = program.split()
-    exe = os.path.join(os.environ['GMXHOME'], 'bin', prstr[0])
-
-    if not os.access(exe, os.X_OK):
-        sys.exit('Cannot run %s' % exe)
-
-    if prstr[1:]:
-        exe2 = prstr[1]
-    else:
-        exe2 = ''
-
-    cmdline = ' '.join( (prefix, exe, exe2, postfix, params) ) 
-    cmd = shlex.split(cmdline)
-
-    logger.write('Executing command:\n%s\n' % cmdline)
-
-    proc = subp.Popen(cmd, stdout = subp.PIPE, stderr = subp.PIPE)
-    out, err =  proc.communicate()
-
-    if proc.returncode:
-        return 1, err
-
-    return out, err
-
-
 def run_dlpoly(program, prefix, postfix):
     """
     Simple wrapper to execute the external DL_POLY program through subprocess.
@@ -328,7 +257,4 @@ def run_exe(cmdline):
     proc = subp.Popen(shlex.split(cmdline), stdout=subp.PIPE, stderr=subp.PIPE)
     out, err =  proc.communicate()
 
-    if proc.returncode:
-        return 1, err
-
-    return out, err
+    return proc.returncode, out, err
