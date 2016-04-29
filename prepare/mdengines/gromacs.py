@@ -25,7 +25,9 @@ __revision__ = "$Id$"
 
 
 
-import os, re
+import os
+import glob
+import re
 
 import mdebase
 from FESetup import const, errors, logger
@@ -39,6 +41,9 @@ GROMACS_SUFFIXES = ['_d', '', '_mpi_d', '_mpi']
 
 def _check_exe(bindir, exe_name):
     full_path = os.path.join(bindir, exe_name)
+
+    if os.access(full_path, os.X_OK):
+        return full_path
 
     for suffix in GROMACS_SUFFIXES:
         if os.access(full_path, os.X_OK):
@@ -74,7 +79,7 @@ class MDEngine(mdebase.MDEBase):
         self.prev = ''
         self.prefix = ''
 
-        self.mdrun = ''
+        self.mdprog = ''
         self.grompp = ''
         self.gmxdump = ''
 
@@ -263,13 +268,13 @@ class MDEngine(mdebase.MDEBase):
 
         params = '-deffnm %s' % prefix
 
-        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.mdrun,
+        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.mdprog,
                                                  self.mdpost, params)))
 
         if retc:
             logger.write(err)
             raise errors.SetupError('%s has failed (see logfile) has failed' %
-                                    self.mdrun)
+                                    self.mdprog)
 
         self.run_no += 1
         self.prev = prefix
@@ -429,11 +434,11 @@ class MDEngine(mdebase.MDEBase):
                     raise errors.SetupError('gmx%s does not exist in GMXHOME' %
                                             suffix)
 
-                self.mdrun = os.path.join(bindir, prefix, 'mdrun')
+                self.mdprog = os.path.join(bindir, prefix, 'mdrun')
 
             full_path = os.path.join(bindir, prefix)
 
-            self.mdrun = ' '.join((full_path, 'mdrun'))
+            self.mdprog = ' '.join((full_path, 'mdrun'))
             self.grompp = ' '.join((full_path, 'grompp'))
             self.gmxdump = ' '.join((full_path, 'dump'))
 
@@ -455,9 +460,9 @@ class MDEngine(mdebase.MDEBase):
 
             # special case of user supplied GROMACS4 mdrun_suffix
             if os.access(full_path, os.X_OK):
-                self.mdrun = full_path
+                self.mdprog = full_path
 
-            if self.grompp and self.mdrun and self.gmxdump:
+            if self.grompp and self.mdprog and self.gmxdump:
                 return
 
         raise errors.SetupError('GMXHOME does not have any useful executables')

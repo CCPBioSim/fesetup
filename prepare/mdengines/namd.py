@@ -99,7 +99,7 @@ class MDEngine(mdebase.MDEBase):
         self.prev = ''
         self.prefix = ''
 
-        self.namd_prog = ''
+        self.mdprog = ''
         self._self_check(mdprog)
 
 
@@ -307,8 +307,9 @@ class MDEngine(mdebase.MDEBase):
         with open(config_filename, 'w') as mdin:
             mdin.writelines(config)
 
-        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.namd_prog,
-                                                 self.mdpost, config_filename)))
+        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.mdprog,
+                                                 self.mdpost,
+                                                 config_filename)))
 
         with open(filename + 'out', 'w') as outfile:
             outfile.writelines(out)
@@ -316,7 +317,7 @@ class MDEngine(mdebase.MDEBase):
         if retc:
             logger.write(err)
             raise errors.SetupError('%s has failed (see logfile)' %
-                                    self.namd_prog)
+                                    self.mdprog)
 
         self.run_no += 1
         self.prev = prefix
@@ -360,9 +361,9 @@ class MDEngine(mdebase.MDEBase):
         if not 'NAMDHOME' in os.environ:
             raise errors.SetupError('NAMDHOME not set')
 
-        self.namd_prog = os.path.join(os.environ['NAMDHOME'], mdprog)
+        self.mdprog = os.path.join(os.environ['NAMDHOME'], mdprog)
 
-        if not os.access(self.namd_prog, os.X_OK):
+        if not os.access(self.mdprog, os.X_OK):
             raise errors.SetupError('NAMDHOME does not have a %s binary' %
                                     mdprog)
         

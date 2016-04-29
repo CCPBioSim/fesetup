@@ -66,7 +66,7 @@ class MDEngine(mdebase.MDEBase):
 
         self.prev = ''
 
-        self.dlpoly_prog = ''
+        self.mdprog = ''
         self._self_check(mdprog)
 
 
@@ -244,17 +244,17 @@ class MDEngine(mdebase.MDEBase):
         with open(CONTROL_FILENAME, 'w') as mdin:
             mdin.writelines(config)
 
-        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.dlpoly_prog,
+        retc, out, err = utils.run_exe(' '.join((self.mdpref, self.mdprog,
                                                  self.mdpost)))
 
         if retc:
             logger.write(err)
             raise errors.SetupError('%s has failed (see logfile)' %
-                                    self.dlpoly_prog)
+                                    self.mdprog)
 
-        for file in MOVE_LIST:
+        for mfile in MOVE_LIST:
             try:
-                shutil.move(file, file + os.extsep + suffix)
+                shutil.move(mfile, mfile + os.extsep + suffix)
             except IOError:             # some files may not be created
                 continue
 
@@ -293,6 +293,7 @@ class MDEngine(mdebase.MDEBase):
         :raises: SetupError
         """
 
+        # CONFIG is actually the most recent REVCON, see _run_mdprog()
         config_file = CONFIG_FILENAME
         self.prev = config_file + os.extsep + '%05i' % (self.run_no - 1)
 
@@ -388,10 +389,10 @@ class MDEngine(mdebase.MDEBase):
         if not 'DLPOLYHOME' in os.environ:
             raise errors.SetupError('DLPOLYHOME not set')
 
-        self.dlpoly_prog = os.path.join(os.environ['DLPOLYHOME'], 'execute',
-                                        mdprog)
+        self.mdprog = os.path.join(os.environ['DLPOLYHOME'], 'execute',
+                                   mdprog)
 
-        if not os.access(self.dlpoly_prog, os.X_OK):
+        if not os.access(self.mdprog, os.X_OK):
             raise errors.SetupError('DLPOLYHOME does not have a %s binary' %
                                     mdprog)
 

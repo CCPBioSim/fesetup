@@ -69,7 +69,7 @@ class MDEngine(mdebase.MDEBase):
 
         self.mdpref = mdpref
 
-        self.amber_prog = ''
+        self.mdprog = ''
         self._self_check(mdprog)
 
 
@@ -234,7 +234,7 @@ class MDEngine(mdebase.MDEBase):
             else:
                 flags += ' -ref %s' % self.amber_crd
 
-        err = utils.run_amber(self.mdpref + ' ' + self.amber_prog,
+        err = utils.run_amber(self.mdpref + ' ' + self.mdprog,
                               flags.format(prefix, self.amber_top,
                                            self.sander_crd, self.sander_rst) )
 
@@ -262,9 +262,9 @@ class MDEngine(mdebase.MDEBase):
         if not 'AMBERHOME' in os.environ:
             raise errors.SetupError('AMBERHOME not set')
 
-        self.amber_prog = os.path.join(os.environ['AMBERHOME'], 'bin', mdprog)
+        self.mdprog = os.path.join(os.environ['AMBERHOME'], 'bin', mdprog)
 
-        if not os.access(self.amber_prog, os.X_OK):
+        if not os.access(self.mdprog, os.X_OK):
             raise errors.SetupError('AMBERHOME does not have a %s binary' %
                                     mdprog)
 
