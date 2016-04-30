@@ -364,7 +364,8 @@ def make_ligand(name, ff, opts):
             ligand.mol_fmt = 'mol2'
 
         ligand.prepare_top()
-        ligand.create_top(boxtype = '', addcmd = load_cmds)
+        ligand.create_top(boxtype='', addcmd=load_cmds,
+                          write_dlf=lig['write_dlf'])
 
         model['charge.filename'] = const.LIGAND_AC_FILE
         model.add_file(const.LIGAND_AC_FILE)
@@ -842,7 +843,8 @@ defaults[SECT_LIG] = {
     'add_hydrogens': (False, ('bool', ) ),
     'correct_for_pH': (False, ('bool', ) ),
     'pH': (7.4, (float, ) ),
-    'skip_param': (False, ('bool', ) )
+    'skip_param': (False, ('bool', ) ),
+    'write_dlf': (False, ('bool', ) )
     }
 
 defaults[SECT_PROT] = {

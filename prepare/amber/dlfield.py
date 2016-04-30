@@ -129,183 +129,183 @@ def dlf_write(mol, postfix = '', pdb_name = const.LIGAND_NAME):
                        (con[0], ' '.join('%s' % s for s in con[1:][0]) ) )
 
 
+    improper_params = {}
+
     try:
         mol.property('improper')
     except UserWarning:
-        raise errors.SetupError("molecule doesn't have impropers")
+        pass
+    else:
+        improper_names = []
+        improper_params = {}
 
-    improper_names = []
-    improper_params = {}
+        for dihedral in params.getAllImpropers():
+            at0 = dihedral.atom0()
+            at1 = dihedral.atom1()
+            at2 = dihedral.atom2()
+            at3 = dihedral.atom3()
 
-    for dihedral in params.getAllImpropers():
-        at0 = dihedral.atom0()
-        at1 = dihedral.atom1()
-        at2 = dihedral.atom2()
-        at3 = dihedral.atom3()
+            at0s = mol.select(at0)
+            at1s = mol.select(at1)
+            at2s = mol.select(at2)
+            at3s = mol.select(at3)
 
-        at0s = mol.select(at0)
-        at1s = mol.select(at1)
-        at2s = mol.select(at2)
-        at3s = mol.select(at3)
+            at0_name = at0s.name().value()
+            at1_name = at1s.name().value()
+            at2_name = at2s.name().value()
+            at3_name = at3s.name().value()
 
-        at0_name = at0s.name().value()
-        at1_name = at1s.name().value()
-        at2_name = at2s.name().value()
-        at3_name = at3s.name().value()
+            at0_type = str(at0s.property('ambertype') ) + postfix
+            at1_type = str(at1s.property('ambertype') ) + postfix
+            at2_type = str(at2s.property('ambertype') ) + postfix
+            at3_type = str(at3s.property('ambertype') ) + postfix
 
-        at0_type = str(at0s.property('ambertype') ) + postfix
-        at1_type = str(at1s.property('ambertype') ) + postfix
-        at2_type = str(at2s.property('ambertype') ) + postfix
-        at3_type = str(at3s.property('ambertype') ) + postfix
+            pk, pn, phase = params.getParams(dihedral)
+            improper_names.append( (at0_name, at1_name, at2_name, at3_name) )
+            improper_params[at0_type, at1_type, at2_type, at3_type] = pk, phase, pn
 
-        pk, pn, phase = params.getParams(dihedral)
-        improper_names.append( (at0_name, at1_name, at2_name, at3_name) )
-        improper_params[at0_type, at1_type, at2_type, at3_type] = pk, phase, pn
-
-    for name in improper_names:
-        udff.write('IMPROPER %s %s %s %s\n' % name)
+        for name in improper_names:
+            udff.write('IMPROPER %s %s %s %s\n' % name)
 
     udff.write('END MOLECULE\n\n')
-
 
     try:
         mol.property('bond')
     except UserWarning:
-        raise errors.SetupError("molecule doesn't have bonds")
+        pass
+    else:
+        bond_info = {}
 
-    bond_info = {}
+        for bond in params.getAllBonds():   # Sire.Mol.BondID
+            at0 = bond.atom0()              # Sire.Mol.AtomIdx!
+            at1 = bond.atom1()
 
-    for bond in params.getAllBonds():   # Sire.Mol.BondID
-        at0 = bond.atom0()              # Sire.Mol.AtomIdx!
-        at1 = bond.atom1()
+            at0_type = str(mol.select(at0).property('ambertype') ) + postfix
+            at1_type = str(mol.select(at1).property('ambertype') ) + postfix
 
-        at0_type = str(mol.select(at0).property('ambertype') ) + postfix
-        at1_type = str(mol.select(at1).property('ambertype') ) + postfix
+            k, r0 = params.getParams(bond)
+            bond_info[at0_type, at1_type] = k, r0
 
-        k, r0 = params.getParams(bond)
-        bond_info[at0_type, at1_type] = k, r0
+        udff.write('BOND\n')
+        visited = set()
 
-    udff.write('BOND\n')
-    visited = set()
+        for b in bond_info.keys():
+            visited.add(b)
 
-    for b in bond_info.keys():
-        visited.add(b)
+            if b[1] == b[0] or (b[1], b[0]) not in visited:
+                udff.write('%s %s %.2f %.3f\n' %
+                           (b[0], b[1], bond_info[b][0], bond_info[b][1]) )
 
-        if b[1] == b[0] or (b[1], b[0]) not in visited:
-            udff.write('%s %s %.2f %.3f !\n' %
-                       (b[0], b[1], bond_info[b][0], bond_info[b][1]) )
-
-    udff.write('END BOND\n\n')
-
+        udff.write('END BOND\n\n')
 
     try:
         mol.property('angle')
     except UserWarning:
-        raise errors.SetupError("molecule doesn't have angles")
+        pass
+    else:
+        angle_info = {}
 
-    angle_info = {}
+        for angle in params.getAllAngles():  # Sire.Mol.AngleID
+            at0 = angle.atom0()  # Sire.Mol.AtomIdx!
+            at1 = angle.atom1()
+            at2 = angle.atom2()
 
-    for angle in params.getAllAngles():  # Sire.Mol.AngleID
-        at0 = angle.atom0()  # Sire.Mol.AtomIdx!
-        at1 = angle.atom1()
-        at2 = angle.atom2()
+            at0_type = str(mol.select(at0).property('ambertype') ) + postfix
+            at1_type = str(mol.select(at1).property('ambertype') ) + postfix
+            at2_type = str(mol.select(at2).property('ambertype') ) + postfix
 
-        at0_type = str(mol.select(at0).property('ambertype') ) + postfix
-        at1_type = str(mol.select(at1).property('ambertype') ) + postfix
-        at2_type = str(mol.select(at2).property('ambertype') ) + postfix
+            k, theta0 = params.getParams(angle)
+            angle_info[at0_type, at1_type, at2_type] = k, theta0 * const.RAD2DEG
 
-        k, theta0 = params.getParams(angle)
-        angle_info[at0_type, at1_type, at2_type] = k, theta0 * const.RAD2DEG
+        udff.write('ANGLE\n')
+        visited = set()
 
-    udff.write('ANGLE\n')
-    visited = set()
+        for a in angle_info.keys():
+            visited.add(a)
 
-    for a in angle_info.keys():
-        visited.add(a)
+            if a[0] == a[2] or (a[2], a[1], a[0]) not in visited:
+                udff.write('%s %s %s %.2f %.3f\n' %
+                           (a[0], a[1], a[2], angle_info[a][0], angle_info[a][1]) )
 
-        if a[0] == a[2] or (a[2], a[1], a[0]) not in visited:
-            udff.write('%s %s %s %.2f %.3f !\n' %
-                       (a[0], a[1], a[2], angle_info[a][0], angle_info[a][1]) )
-
-    udff.write('END ANGLE\n\n')
-
+        udff.write('END ANGLE\n\n')
 
     try:
         mol.property('dihedral')
     except UserWarning:
-        raise errors.SetupError("molecule doesn't have dihedrals")
+        pass
+    else:
+        propers = {}
+        intrascale = mol.property('intrascale')
 
-    propers = {}
-    intrascale = mol.property('intrascale')
+        for dihedral in params.getAllDihedrals():  # Sire.Mol.DihedralID
+            at0 = dihedral.atom0()  # Sire.Mol.AtomIdx!
+            at1 = dihedral.atom1()
+            at2 = dihedral.atom2()
+            at3 = dihedral.atom3()
 
-    for dihedral in params.getAllDihedrals():  # Sire.Mol.DihedralID
-        at0 = dihedral.atom0()  # Sire.Mol.AtomIdx!
-        at1 = dihedral.atom1()
-        at2 = dihedral.atom2()
-        at3 = dihedral.atom3()
+            at0_type = str(mol.select(at0).property('ambertype') ) + postfix
+            at1_type = str(mol.select(at1).property('ambertype') ) + postfix
+            at2_type = str(mol.select(at2).property('ambertype') ) + postfix
+            at3_type = str(mol.select(at3).property('ambertype') ) + postfix
 
-        at0_type = str(mol.select(at0).property('ambertype') ) + postfix
-        at1_type = str(mol.select(at1).property('ambertype') ) + postfix
-        at2_type = str(mol.select(at2).property('ambertype') ) + postfix
-        at3_type = str(mol.select(at3).property('ambertype') ) + postfix
+            at0idx = at0.value() + 1
+            at3idx = at3.value() + 1
 
-        at0idx = at0.value() + 1
-        at3idx = at3.value() + 1
+            p = params.getParams(dihedral)
+            x = []
 
-        p = params.getParams(dihedral)
-        x = []
+            n = 3
+            for i in range(0, len(p), n):       # pk, np, phase
+                x.append(p[i:i+n])
 
-        n = 3
-        for i in range(0, len(p), n):       # pk, np, phase
-            x.append(p[i:i+n])
+            # sorting should not be necessary
+            #x.sort(key = lambda c: c[1], reverse = True)
 
-        # sorting should not be necessary
-        #x.sort(key = lambda c: c[1], reverse = True)
+            sf = intrascale.get(at0, at3)
+            scee = sf.coulomb()
+            scnb = sf.lj()
 
-        sf = intrascale.get(at0, at3)
-        scee = sf.coulomb()
-        scnb = sf.lj()
+            propers[at0_type, at1_type, at2_type, at3_type] = x, scee, scnb
 
-        propers[at0_type, at1_type, at2_type, at3_type] = x, scee, scnb
+        # work around for DL_FIELD which doesn't like empty DIHEDRAL
+        if propers:
+            udff.write('DIHEDRAL\n')
 
-    # work around for DL_FIELD which doesn't like empty DIHEDRAL
-    if propers:
-        udff.write('DIHEDRAL\n')
+            for a, t in propers.iteritems():
+                npar = len(t[0])
+                cnt = 0
 
-        for a, t in propers.iteritems():
-            npar = len(t[0])
-            cnt = 0
+                for dih in t[0]:
+                    cnt += 1
 
-            for dih in t[0]:
-                cnt += 1
+                    if cnt < npar:
+                        np = -dih[1]
+                    else:
+                        np = dih[1]
 
-                if cnt < npar:
-                    np = -dih[1]
-                else:
-                    np = dih[1]
+                    # IDIFV has no relevance in the topology file
+                    udff.write('%s %s %s %s 1 '
+                               '%.4f %.3f %i %.6f %.2f\n' %
+                               (a[0], a[1], a[2], a[3],
+                                dih[0], dih[2] * const.RAD2DEG, np, t[1], t[2]) )
 
-                # IDIFV has no relevance in the topology file
-                udff.write('%s %s %s %s 1 '
-                           '%.4f %.3f %i %.6f %.2f !\n' %
-                           (a[0], a[1], a[2], a[3],
-                            dih[0], dih[2] * const.RAD2DEG, np, t[1], t[2]) )
+            udff.write('END DIHEDRAL\n\n')
 
-        udff.write('END DIHEDRAL\n\n')
+    if improper_params:
+        udff.write('IMPROPER\n')
 
-    udff.write('IMPROPER\n')
-
-    for t, p in improper_params.iteritems():
-        udff.write('%s %s %s %s %.3f %.3f %i !\n' %
-                        (t[0], t[1], t[2], t[3],
-                         p[0], p[1] * const.RAD2DEG, p[2]) )
+        for t, p in improper_params.iteritems():
+            udff.write('%s %s %s %s %.3f %.3f %i\n' %
+                            (t[0], t[1], t[2], t[3],
+                             p[0], p[1] * const.RAD2DEG, p[2]) )
 
 
-    udff.write('END IMPROPER\n\n')
+        udff.write('END IMPROPER\n\n')
 
     udff.write('VDW\n')
 
     for t in amber_types:
-        udff.write('%s %.4f %.4f !\n' %
+        udff.write('%s %.4f %.4f\n' %
                        (t, amber_types[t][2], amber_types[t][3]) )
 
     udff.write('END VDW\n\n')

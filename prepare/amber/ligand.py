@@ -629,28 +629,30 @@ class Ligand(Common):
     @report
     def create_top(self, boxtype='', boxlength='10.0', align=False,
                    neutralize=0, addcmd='', addcmd2='', remove_first=False,
-                   conc=0.0, dens=1.0):
+                   conc=0.0, dens=1.0, write_dlf=False):
         """
         Generate an AMBER topology file via leap. Leap requires atom names in
         GAFF format to match against GAFF force field database.  Finally
         generated MOL2 file is in GAFF format.
 
         :param boxtype: rectangular, octahedron or set (set dimensions explicitly)
+        :type boxtype: string
         :param boxlength: side length of the box
+        :type boxlength: float
         :param align: align solute along the principal axes
+        :type align: bool
         :param neutralize: neutralise the system
+        :type neutralize: int
         :param addcmd: inject additional leap commands
+        :type addcmd: string
         :param remove_first: remove first unit/residue
+        :type remove_first: bool
         :param conc: ion concentration
         :type conc: float
         :param dens: expected target density
         :type dens: float
-        :type boxtype: string
-        :type boxlength: float
-        :type align: bool
-        :type neutralize: int
-        :type addcmd: string
-        :type remove_first: bool
+        :param write_dlf: write udff and pdb files for DL_FIELD?
+        :type write_dlf: bool
         """
 
         # we allow the user to have their own leap input file which is used
@@ -694,7 +696,9 @@ class Ligand(Common):
                                         'found %i' % nmols)
 
             lig = mols.molNums()[0]
-            dlfield.dlf_write(mols.at(lig).molecule(), '_AG')
+
+            if write_dlf:
+                dlfield.dlf_write(mols.at(lig).molecule(), '_AG')
 
 
     @report
