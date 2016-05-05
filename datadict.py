@@ -20,6 +20,8 @@
 r"""
 The DataDict class to store and retrieve a dictionary plus associated
 data files.
+
+Note: this holds the data package in memory so may need to be revised later.
 """
 
 __revision__ = "$Id$"
@@ -33,16 +35,37 @@ import hashlib
 
 
 
+def strip_eol_comment(s, comment_chars='#;', space_chars=' \t'):
+    """
+    Strip end-of-line comments which are a comment character preceded by a
+    space character.
+
+    :param comment_chars: all recognized comment characters
+    :type comment_chars: str
+    :param space_chars: all recognized white-space character
+    :type space_chars: str
+    """
+
+    if len(s) < 3:
+        return s
+
+    for pos in range(1, len(s)):
+        if s[pos] in comment_chars and s[pos-1] in space_chars:
+            return s[:pos-1]
+
+    return s
+
+
 class DataDictError(Exception):
     pass
 
 
 class DataDict(dict):
     """
-    Simple class for a standard dictionary plus an added data part.
+    Simple class for a standard dictionary plus an added data package
 
     Arbitrary key-value pairs can be created just like with the built-in
-    dict.  The data part consisting of an arbitrary set of file is a mandatory
+    dict.  The data part consisting of an arbitrary set of files is a mandatory
     part of the class.  This set of file is internally handled via a tar
     (pax) archive and compressed (bz2 or gz).  A hash is calculated for
     the data and a manifest added to the archive.  The manifest contains the
@@ -52,7 +75,7 @@ class DataDict(dict):
     The class can be written to a file as a mixture of ASCII key-value pairs
     and the binary data archive.  The format is each key=value pair on a line
     by itself followed by the END_TAG.  The data part is then written to the
-    final 'line'.
+    final (logical) line.
     """
 
 
@@ -64,9 +87,6 @@ class DataDict(dict):
         super(DataDict, self).__init__(*args, **kwargs)
 
         self.data = None
-
-
-    # maybe also overwrite __str__?
 
 
     def write(self, filename):
@@ -90,7 +110,7 @@ class DataDict(dict):
 
     def read(self, filename):
         """
-        Read a datadict file.
+        Read a datadict file.  Strips all comments.
 
         :param filename: the file name to be read from
         :type filename: string
@@ -108,34 +128,17 @@ class DataDict(dict):
                 lineno += 1
                 line = line.strip()
 
-                if line == '' or line[0] == '#':
+                if not line or line[0] == '#':
                     continue
 
-                equal_found = False
-                key = []
-                val = []
-
-                for pos, char in enumerate(line):
-                    if char == '=':
-                        equal_found = True
-                        continue
-
-                    # comments will be lost
-                    if char == ' ':
-                        if line[pos+1] == '#':
-                            break
-
-                    if equal_found:
-                        val.append(char)
-                    else:
-                        key.append(char)
-
-                if not equal_found:
+                try:
+                    key, val = line.split('=', 1)
+                except ValueError:
                     raise DataDictError('input line %i does not contain a '
-                                        'key/value pair' % lineno)
+                                        'key = value pair' % lineno)
 
-                key = ''.join(key).strip()
-                val = ''.join(val).strip()
+                key = key.strip()
+                val = strip_eol_comment(val).strip()
 
                 self[key] = val
 
@@ -148,7 +151,6 @@ class DataDict(dict):
         self.data = data
 
 
-    # NOTE: merge with write()?
     def add_files(self, files, hash_type='sha1', compression_type='bz2'):
         """
         Add a list of files to an internal tar(pax) archive.  A manifest is
@@ -233,9 +235,9 @@ class DataDict(dict):
         if not self.data:
             raise DataDictError('no data files')
 
-        with tarfile.open(mode = 'r:%s' % compression_type,
-                          format = tarfile.PAX_FORMAT,
-                          fileobj = cStringIO.StringIO(self.data) ) as tar:
+        with tarfile.open(mode='r:%s' % compression_type,
+                          format=tarfile.PAX_FORMAT,
+                          fileobj=cStringIO.StringIO(self.data) ) as tar:
             tar.list()
 
 
@@ -252,11 +254,16 @@ class DataDict(dict):
         if not self.data:
             raise DataDictError('no data files')
 
-        # FIXME: add hash check for data archive, each file?
-        with tarfile.open(mode = 'r:%s' % compression_type,
-                          format = tarfile.PAX_FORMAT,
-                          fileobj = cStringIO.StringIO(self.data) ) as tar:
+        with tarfile.open(mode='r:%s' % compression_type,
+                          format=tarfile.PAX_FORMAT,
+                          fileobj=cStringIO.StringIO(self.data) ) as tar:
             tar.extractall(direc)
+
+
+    def __str__(self):
+        return '\n'.join('{} = {}'.format(key, value)
+                         for key, value in self.iteritems()) \
+                         + '\n(data package size: {})'.format(len(self.data))
 
 
 
@@ -300,3 +307,4 @@ if __name__ == '__main__':
     #new_opts.extract(direc = '/tmp')
 
     new_opts.write('test2.model')
+    print new_opts
