@@ -267,17 +267,16 @@ def make_ligand(name, ff, opts):
     if opts[SECT_DEF]['user_params']:
         load_cmds = _param_glob(PARAM_CMDS)
 
-    # FIXME: check if only vac model is available and trigger making
-    #        of solvent model in that case
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
+    from_scratch = True
 
     workdir = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, name)
 
     if not opts[SECT_DEF]['remake']:
-        # FIXME: when we have a vacuum model only, do solvation etc.
-        model_path =_search_for_model([sol_model_filename, vac_model_filename],
-                                      const.LIGAND_WORKDIR)
+        model_path = \
+                   _search_for_model([sol_model_filename, vac_model_filename],
+                                     const.LIGAND_WORKDIR)
 
         # FIXME: check for KeyError
         if model_path:
@@ -313,11 +312,15 @@ def make_ligand(name, ff, opts):
                                  'transformations with Sire')
                     ligand.create_absolute_Sire()
 
-            return ligand, load_cmds
+            if os.path.basename(model_path) == vac_model_filename:
+                from_scratch = False
+            else:
+                return ligand, load_cmds
 
     print('Making ligand %s...' % name)
 
-    model = ModelConfig(name)
+    if from_scratch:
+        model = ModelConfig(name)
 
     if not lig['basedir']:
         raise dGprepError('[%s] "basedir" must be set' % SECTLIG)
@@ -337,67 +340,68 @@ def make_ligand(name, ff, opts):
         src = os.path.join(os.getcwd(), lig['basedir'], name)
 
     with DirManager(workdir):
-        ligand.copy_files((src,), None, opts[SECT_DEF]['overwrite'])
+        if from_scratch:
+            ligand.copy_files((src,), None, opts[SECT_DEF]['overwrite'])
 
-        if not os.access(lig['file.name'], os.F_OK):
-            raise errors.SetupError('start file %s does not exist in %s' %
-                                    (lig['file.name'], os.getcwd() ) )
+            if not os.access(lig['file.name'], os.F_OK):
+                raise errors.SetupError('start file %s does not exist in %s' %
+                                        (lig['file.name'], os.getcwd() ) )
 
-        if lig['skip_param']:
-            if fmt != 'pdb' and fmt != 'mol2':
-                raise dGprepError('When parameterisation is skipped, the input '
-                                  'format must be PDB or MOL2')
+            if lig['skip_param']:
+                if fmt != 'pdb' and fmt != 'mol2':
+                    raise dGprepError('When parameterisation is skipped, the input '
+                                      'format must be PDB or MOL2')
 
-            ligand.prepare('', lig['add_hydrogens'], lig['calc_charge'],
-                           lig['correct_for_pH'], lig['pH'])
-        elif not os.access(os.path.join(workdir, const.GAFF_MOL2_FILE),
-                           os.F_OK):
-            # IMPORTANT: do not allow OpenBabel to add Hs, it may mess up
-            # everything
-            ligand.prepare('mol2', lig['add_hydrogens'], lig['calc_charge'],
-                           lig['correct_for_pH'], lig['pH'])
-            ligand.param(lig['gb_charges'])
-        else: # FIXME: ugly
-            ligand.prepare('', lig['add_hydrogens'], lig['calc_charge'],
-                           lig['correct_for_pH'], lig['pH'])
-            ligand.mol_file = const.GAFF_MOL2_FILE
-            ligand.mol_fmt = 'mol2'
+                ligand.prepare('', lig['add_hydrogens'], lig['calc_charge'],
+                               lig['correct_for_pH'], lig['pH'])
+            elif not os.access(os.path.join(workdir, const.GAFF_MOL2_FILE),
+                               os.F_OK):
+                # IMPORTANT: do not allow OpenBabel to add Hs, it may mess up
+                # everything
+                ligand.prepare('mol2', lig['add_hydrogens'], lig['calc_charge'],
+                               lig['correct_for_pH'], lig['pH'])
+                ligand.param(lig['gb_charges'])
+            else: # FIXME: ugly
+                ligand.prepare('', lig['add_hydrogens'], lig['calc_charge'],
+                               lig['correct_for_pH'], lig['pH'])
+                ligand.mol_file = const.GAFF_MOL2_FILE
+                ligand.mol_fmt = 'mol2'
 
-        ligand.prepare_top()
-        ligand.create_top(boxtype='', addcmd=load_cmds,
-                          write_dlf=lig['write_dlf'])
+            ligand.prepare_top()
+            ligand.create_top(boxtype='', addcmd=load_cmds,
+                              write_dlf=lig['write_dlf'])
 
-        model['charge.filename'] = const.LIGAND_AC_FILE
-        model.add_file(const.LIGAND_AC_FILE)
+            model['charge.filename'] = const.LIGAND_AC_FILE
+            model.add_file(const.LIGAND_AC_FILE)
 
-        model['charge.total'] = ligand.charge
-        model['charge.filetype'] = 'ac'
-        model['charge.method'] = 'AM1-BCC'
-        model['forcefield'] = ligand.gaff
-        model['molecule.type'] = 'ligand'
+            model['charge.total'] = ligand.charge
+            model['charge.filetype'] = 'ac'
+            model['charge.method'] = 'AM1-BCC'
+            model['forcefield'] = ligand.gaff
+            model['molecule.type'] = 'ligand'
 
-        model.add_file(ligand.mol_file)
-        model['crd.original'] = ligand.mol_file
+            model.add_file(ligand.mol_file)
+            model['crd.original'] = ligand.mol_file
 
-        save_model(model, ligand, vac_model_filename, '..')
+            save_model(model, ligand, vac_model_filename, '..')
 
-        if opts[SECT_DEF]['MC_prep']:
-            ligand.flex()
+            if opts[SECT_DEF]['MC_prep']:
+                ligand.flex()
 
-        nconf = lig['conf_search.numconf']
+            nconf = lig['conf_search.numconf']
 
-        if lig['morph.absolute'] and opts[SECT_DEF]['FE_type'] == 'Sire':
-            ligand.create_absolute_Sire()
+            if lig['morph.absolute'] and opts[SECT_DEF]['FE_type'] == 'Sire':
+                ligand.create_absolute_Sire()
 
-        if nconf > 0:
-            ligand.conf_search(numconf = nconf,
-                               geomsteps = lig['conf_search.geomsteps'],
-                               steep_steps = lig['conf_search.steep_steps'],
-                               steep_econv = lig['conf_search.steep_econv'],
-                               conj_steps = lig['conf_search.conj_steps'],
-                               conj_econv = lig['conf_search.conj_econv'],
-                               ffield = lig['conf_search.ffield'])
-            ligand.align()
+            if nconf > 0:
+                ligand.conf_search(numconf = nconf,
+                                   geomsteps = lig['conf_search.geomsteps'],
+                                   steep_steps = lig['conf_search.steep_steps'],
+                                   steep_econv = lig['conf_search.steep_econv'],
+                                   conj_steps = lig['conf_search.conj_steps'],
+                                   conj_econv = lig['conf_search.conj_econv'],
+                                   ffield = lig['conf_search.ffield'])
+                ligand.align()
 
         # FIXME: also check for boxlength and neutralize
         if lig['box.type']:
@@ -492,6 +496,7 @@ def make_protein(name, ff, opts):
 
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
+    from_scratch = True
 
     workdir = os.path.join(os.getcwd(), const.PROTEIN_WORKDIR, name)
 
@@ -519,11 +524,15 @@ def make_protein(name, ff, opts):
             if 'box.dimensions' in model:
                 protein.box_dims = model['box.dimensions']
 
-            return protein, load_cmds
+            if os.path.basename(model_path) == vac_model_filename:
+                from_scratch = False
+            else:
+                return protein, load_cmds
 
     print('Making biomolecule %s...' % name)
 
-    model = ModelConfig(name)
+    if from_scratch:
+        model = ModelConfig(name)
 
     if not prot['basedir']:
         raise dGprepError('[%s] "basedir" must be set' % SECT_PROT)
@@ -538,20 +547,21 @@ def make_protein(name, ff, opts):
     model.add_file(protein.mol_file)
 
     with DirManager(workdir):
-        protein.copy_files((src,), None, opts[SECT_DEF]['overwrite'])
+        if from_scratch:
+            protein.copy_files((src,), None, opts[SECT_DEF]['overwrite'])
 
-        if prot['propka']:
-            protein.protonate_propka(pH = prot['propka.pH'])
+            if prot['propka']:
+                protein.protonate_propka(pH = prot['propka.pH'])
 
-        protein.get_charge()    # must be done explicitly
-        protein.prepare_top()
-        protein.create_top(boxtype = '')
+            protein.get_charge()    # must be done explicitly
+            protein.prepare_top()
+            protein.create_top(boxtype = '')
 
-        model['charge.total'] = protein.charge
-        model['forcefield'] = 'AMBER'    # FIXME
-        model['molecule.type'] = 'biomolecule'
+            model['charge.total'] = protein.charge
+            model['forcefield'] = 'AMBER'    # FIXME
+            model['molecule.type'] = 'biomolecule'
 
-        save_model(model, protein, vac_model_filename, '..')
+            save_model(model, protein, vac_model_filename, '..')
 
         # FIXME: also check for boxlength and neutralize
         if prot['box.type']:
@@ -642,6 +652,7 @@ def make_complex(prot, lig, ff, opts, load_cmds):
     name = prot.mol_name + const.PROT_LIG_SEP + lig.mol_name
     vac_model_filename = name + const.MODEL_EXT
     sol_model_filename = 'solv_' + name + const.MODEL_EXT
+    from_scratch = True
 
     workdir = os.path.join(os.getcwd(), const.COMPLEX_WORKDIR, name)
  
@@ -667,32 +678,38 @@ def make_complex(prot, lig, ff, opts, load_cmds):
             if 'box.dimensions' in model:
                 complex.box_dims = model['box.dimensions']
 
-            return complex, load_cmds
+            if os.path.basename(model_path) == vac_model_filename:
+                from_scratch = False
+            else:
+                return complex, load_cmds
 
     print('Making complex from %s and %s...' % (prot.mol_name, lig.mol_name))
 
-    model = ModelConfig(name)
+    if from_scratch:
+        model = ModelConfig(name)
+
     complex = ff.Complex(prot, lig)
 
     lig_src = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, lig.mol_name)
     prot_src = os.path.join(os.getcwd(), const.PROTEIN_WORKDIR, prot.mol_name)
 
     with DirManager(workdir):
-        complex.copy_files((lig_src, prot_src),
-                           (ligand.orig_file, ligand.frcmod, protein.orig_file,
-                            const.LIGAND_AC_FILE, const.SSBOND_FILE),
-                           opts[SECT_DEF]['overwrite'])
-        
-        complex.ligand_fmt = lig.mol_fmt
-        complex.prepare_top()
-        complex.create_top(boxtype = '', addcmd = load_cmds)
+        if from_scratch:
+            complex.copy_files((lig_src, prot_src),
+                               (ligand.orig_file, ligand.frcmod, protein.orig_file,
+                                const.LIGAND_AC_FILE, const.SSBOND_FILE),
+                               opts[SECT_DEF]['overwrite'])
 
-        model['name'] = complex.complex_name
-        model['charge.total'] = complex.charge
-        model['forcefield'] = 'AMBER'   # FIXME
-        model['molecule.type'] = 'complex'  # FIXME
+            complex.ligand_fmt = lig.mol_fmt
+            complex.prepare_top()
+            complex.create_top(boxtype = '', addcmd = load_cmds)
 
-        save_model(model, complex, vac_model_filename, '..')
+            model['name'] = complex.complex_name
+            model['charge.total'] = complex.charge
+            model['forcefield'] = 'AMBER'   # FIXME
+            model['molecule.type'] = 'complex'  # FIXME
+
+            save_model(model, complex, vac_model_filename, '..')
 
         # FIXME: also check for boxlength and neutralize
         if com['box.type']:
