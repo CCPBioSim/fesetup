@@ -94,11 +94,11 @@ def _lambda_paths(dummies0, dummies1):
 
 class PertTopology(object):
 
-    def __init__(self, FE_sub_type, sc_type, ff, con_morph, atoms_initial,
+    def __init__(self, FE_sub_type, separate, ff, con_morph, atoms_initial,
                  atoms_final, lig_initial, lig_final, atom_map,
                  reverse_atom_map, zz_atoms, gaff):
 
-        self.sc_type = sc_type
+        self.separate = separate
         self.ff = ff
         self.gaff = gaff
         self.con_morph = con_morph
@@ -126,7 +126,7 @@ class PertTopology(object):
         else:
             self.FE_sub_type = 'dummy'
 
-        topol = sander.PertTopology(self.FE_sub_type, self.sc_type, self.ff,
+        topol = sander.PertTopology(self.FE_sub_type, self.separate, self.ff,
                                     self.con_morph, self.atoms_initial,
                                     self.atoms_final, self.lig_initial,
                                     self.lig_final, self.atom_map,

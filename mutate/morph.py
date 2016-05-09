@@ -28,7 +28,10 @@ __revision__ = "$Id$"
 
 
 
-import sys, os, re, shutil
+import sys
+import os
+import re
+import shutil
 
 from FESetup import const, errors, logger, report
 from . import util
@@ -46,7 +49,7 @@ class Morph(object):
     """The morphing class."""
 
     def __init__(self, initial, final, workdir1, workdir2, forcefield,
-                 FE_type='pertfile', softcore_type='', mcs_timeout=60.0,
+                 FE_type='pertfile', separate=True, mcs_timeout=60.0,
                  mcs_sel='', gaff='gaff'):
         """
         :param initial: the initial state of the morph pair
@@ -61,8 +64,8 @@ class Morph(object):
         :type forcefield: ForceField
         :param FE_type: the free energy type
         :type FE_type: str
-        :param softcore_type: the softcore type
-        :type softcore_type: str
+        :param separate: separate vdw from Coulomb lambda
+        :type separate: bool
         :raises: SetupError
         """
 
@@ -83,7 +86,7 @@ class Morph(object):
         else:
             self.FE_sub_type = ''
 
-        self.sc_type = softcore_type
+        self.separate = separate
 
         self.topdir = os.getcwd()
 
@@ -98,6 +101,9 @@ class Morph(object):
             type_dir = WD_TABLE[self.FE_type]
         except KeyError:
             type_dir = FE_type.replace('/', '-')
+
+        # FIXME: kludge
+        type_dir = re.sub('\d$', '', type_dir) 
 
         self.dst = os.path.join(self.topdir, const.MORPH_WORKDIR, type_dir,
                                 self.name)
@@ -261,7 +267,7 @@ class Morph(object):
             sys.exit('Error: %s\nFailed to properly initialize %s' %
                      (detail, topol) )
 
-        topol = topol.PertTopology(self.FE_sub_type, self.sc_type,
+        topol = topol.PertTopology(self.FE_sub_type, self.separate,
                                    self.ff, con_morph, atoms_initial,
                                    atoms_final, lig_initial, lig_final,
                                    self.atom_map, self.reverse_atom_map,

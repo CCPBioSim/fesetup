@@ -307,7 +307,7 @@ def make_ligand(name, ff, opts):
                                        .split(',')]
 
                 if lig['morph.absolute'] and \
-                       opts[SECT_DEF]['FE_type'] == 'Sire':
+                       opts[SECT_DEF]['AFE.type'] == 'Sire':
                     logger.write('Creating input files for absolute '
                                  'transformations with Sire')
                     ligand.create_absolute_Sire()
@@ -390,7 +390,7 @@ def make_ligand(name, ff, opts):
 
             nconf = lig['conf_search.numconf']
 
-            if lig['morph.absolute'] and opts[SECT_DEF]['FE_type'] == 'Sire':
+            if lig['morph.absolute'] and opts[SECT_DEF]['AFE.type'] == 'Sire':
                 ligand.create_absolute_Sire()
 
             if nconf > 0:
@@ -826,8 +826,10 @@ defaults[SECT_DEF] = {
     'mdengine.prefix': ('', None),
     'mdengine.postfix': ('', None),
     'parmchk_version': (2, (int, ) ),
-    'FE_type': ('Sire', None),
-    'softcore_type': ('', None),
+    'FE_type': ('', None),
+    'AFE.type': ('Sire', None),
+    'AFE.separate_vdw_elec': (True, ('bool', ) ),
+    'softcore_type': ('ignored', None),
     'remake': (False, ('bool', ) ),
     'mcs.timeout': (60, (int, ) ),      # int because of FMCS/C++
     'mcs.match_by': ('', None),
@@ -951,6 +953,10 @@ if __name__ == '__main__':
 
     logger.write('Force field and MD engine:\n%s\n' % ff)
 
+    # backward compatibility
+    if options[SECT_DEF]['FE_type']:
+        options[SECT_DEF]['AFE.type'] = options[SECT_DEF]['FE_type']
+
 
     # FIXME: We keep all molecule objects in memory.  For 2000 morph pairs
     #        this may mean more than 1 GB on a 64 bit machine.
@@ -1025,9 +1031,9 @@ if __name__ == '__main__':
     ### ligand morphs
 
     if morph_pairs:
-        print('Morphs will be generated for %s' % options[SECT_DEF]['FE_type'])
+        print('Morphs will be generated for %s' % options[SECT_DEF]['AFE.type'])
         logger.write('Morphs will be generated for %s\n' %
-                     options[SECT_DEF]['FE_type'])
+                     options[SECT_DEF]['AFE.type'])
 
     morphs = []
     morph_failed = []
@@ -1058,8 +1064,8 @@ if __name__ == '__main__':
         wd2 = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, pair[1])
 
         with mutate.Morph(ligand1, ligand2, wd1, wd2, ff,
-                          options[SECT_DEF]['FE_type'],
-                          options[SECT_DEF]['softcore_type'],
+                          options[SECT_DEF]['AFE.type'],
+                          options[SECT_DEF]['AFE.separate_vdw_elec'],
                           options[SECT_DEF]['mcs.timeout'],
                           options[SECT_DEF]['mcs.match_by'],
                           options[SECT_DEF]['gaff']) as morph:

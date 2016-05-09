@@ -46,7 +46,7 @@ TR_TABLE = {'pert': 'dummy', 'pert2': 'dummy2'}
 
 class PertTopology(object):
 
-    def __init__(self, FE_sub_type, sc_type, ff, con_morph, atoms_initial,
+    def __init__(self, FE_sub_type, separate, ff, con_morph, atoms_initial,
                  atoms_final, lig_initial, lig_final, atom_map,
                  reverse_atom_map, zz_atoms, gaff):
 
@@ -54,7 +54,7 @@ class PertTopology(object):
             raise errors.SetupError('Morph code only supports the '
                                     'CHARMM/PERT module')
 
-        self.sc_type = sc_type
+        self.separate = separate
         self.ff = ff
         self.gaff = gaff
         self.con_morph = con_morph
@@ -87,7 +87,7 @@ class PertTopology(object):
             self.ftypes.append(final_type)
 
   
-        topol = sander.PertTopology(TR_TABLE[self.stype], self.sc_type, self.ff,
+        topol = sander.PertTopology(TR_TABLE[self.stype], self.separate, self.ff,
                                     self.con_morph, self.atoms_initial,
                                     self.atoms_final, self.lig_initial,
                                     self.lig_final, self.atom_map,

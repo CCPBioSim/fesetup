@@ -36,12 +36,11 @@ import amber
 
 class PertTopology(object):
 
-    def __init__(self, FE_sub_type, sc_type, ff, con_morph, atoms_initial,
+    def __init__(self, FE_sub_type, separate, ff, con_morph, atoms_initial,
                  atoms_final, lig_initial, lig_final, atom_map,
                  reverse_atom_map, zz_atoms, gaff):
 
-        self.FE_sub_type = FE_sub_type
-        self.sc_type = sc_type
+        self.separate = separate
         self.ff = ff
         self.gaff = gaff
         self.con_morph = con_morph
@@ -56,8 +55,32 @@ class PertTopology(object):
         self.frcmod0 = None
         self.frcmod1 = None
 
-        self.initial_dummies = not all([a.atom for a in atom_map.keys()])
-        self.final_dummies = not all([a.atom for a in atom_map.values()])
+        self.dummies0 = not all([a.atom for a in atom_map.keys()])
+        self.dummies1 = not all([a.atom for a in atom_map.values()])
+
+        want_softcore = FE_sub_type[:8] == 'softcore'
+        self.FE_sub_type = ''
+
+        # overwrite user choice, also for backward compatibility
+        if self.separate and self.dummies0 and self.dummies1:
+            if want_softcore:
+                self.FE_sub_type = 'softcore3'
+            else:                       # FIXME: not implementeed yet!
+                self.FE_sub_type = 'dummy3'
+        elif self.separate and (self.dummies0 or self.dummies1):
+            if want_softcore:
+                self.FE_sub_type = 'softcore2'
+            else:
+                self.FE_sub_type = 'dummy2'
+        else:
+            if want_softcore:
+                self.FE_sub_type = 'softcore'
+            else:
+                self.FE_sub_type = 'dummy'
+
+            if self.separate:
+                logger.write('Warning: linear transformation, not separated '
+                             'into vdw and electrostatic step\n')
 
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
@@ -65,12 +88,11 @@ class PertTopology(object):
         patch_parms = []
 
         if self.FE_sub_type[:8] == 'softcore':
-            util.amber_input(self.atoms_initial, self.atoms_final,
-                             self.atom_map, self.sc_type, self.FE_sub_type,
-                             True)
+            amber.write_mdin(self.atoms_initial, self.atoms_final,
+                             self.atom_map, self.FE_sub_type, True)
 
-            state0, state1 = util.amber_softcore(lig_morph, self.lig_final,
-                                                 self.atom_map)
+            state0, state1 = amber.make_softcores(lig_morph, self.lig_final,
+                                                  self.atom_map)
 
             pert0_info, pert1_info = None, None
             ow_add = '_sc'
@@ -135,7 +157,7 @@ class PertTopology(object):
             lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'pmemd_sc_2step_1'
 
-            if self.initial_dummies:
+            if self.dummies0:
                 patch_parms.append( (lig._parm_overwrite,
                                      ':%s' % const.LIGAND0_NAME,
                                      ':%s' % const.INT_NAME) )
@@ -151,7 +173,7 @@ class PertTopology(object):
             lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'pmemd_sc_2step_2'
 
-            if self.final_dummies:
+            if self.dummies1:
                 patch_parms.append( (lig._parm_overwrite,
                                      ':%s' % const.INT_NAME, 
                                      ':%s' % const.LIGAND1_NAME) )
@@ -200,13 +222,12 @@ class PertTopology(object):
         patch_parms = []
 
         if self.FE_sub_type[:8] == 'softcore':
-            util.amber_input(self.atoms_initial, self.atoms_final,
-                             self.atom_map, self.sc_type, self.FE_sub_type,
-                             False)
+            amber.write_mdin(self.atoms_initial, self.atoms_final,
+                             self.atom_map, self.FE_sub_type, False)
 
             state0, state1 = \
-                    util.amber_softcore(lig_morph, self.lig_final,
-                                        self.atom_map)
+                    amber.make_softcores(lig_morph, self.lig_final,
+                                         self.atom_map)
 
             pert0_info, pert1_info = None, None
             ow_add = '_sc'
@@ -259,7 +280,7 @@ class PertTopology(object):
             com.frcmod = self.frcmod0
             com._parm_overwrite = 'pmemd_sc_2step_1'
 
-            if self.initial_dummies:
+            if self.dummies0:
                 patch_parms.append( (com._parm_overwrite,
                                      ':%s' % const.LIGAND0_NAME, 
                                      ':%s' % const.INT_NAME) )
@@ -275,7 +296,7 @@ class PertTopology(object):
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'pmemd_sc_2step_2'
 
-            if self.final_dummies:
+            if self.dummies1:
                 patch_parms.append( (com._parm_overwrite,
                                      ':%s' % const.INT_NAME,
                                      ':%s' % const.LIGAND1_NAME) )
