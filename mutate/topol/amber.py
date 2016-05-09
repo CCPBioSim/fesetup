@@ -203,8 +203,7 @@ PMEMD_SC_ONESTEP = 'onestep.in'
 PMEMD_SC_DECHARGE = 'decharge.in'
 PMEMD_SC_VDW = 'vdw.in'
 PMEMD_SC_RECHARGE = 'recharge.in'
-PMEMD_SC_TWOSTEP_1 = '2step_1.in'
-PMEMD_SC_TWOSTEP_2 = '2step_2.in'
+PMEMD_SC_CHARGE = 'charge.in'
 SANDER_SC0 = 'state0.in'
 SANDER_SC1 = 'state1.in'
 
@@ -215,8 +214,10 @@ scmask2='{scmask2}',"""
 
 SANDER_TEMPLATE = "scmask='{scmask}',"
 
-COMMON_TEMPLATE = '''TI/FEP, NpT (please adjust namelist to your needs!)
+COMMON_TEMPLATE = '''TI/FEP, NpT, {title}
  &cntrl
+ ! please adjust namelist parameters to your needs!
+
  ! parameters for general MD
  imin = 0, nstlim = 500000, irest = %%R1%%, ntx = %%R2%%, dt = {dt},
  ntt = 3, temp0 = 298.0, gamma_ln = 2.0, ig = -1,
@@ -308,10 +309,12 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
         with open(PMEMD_SC_ONESTEP, 'w') as stfile:
             stfile.write(
                 tmpl.format(
+                    title='%s' % '1-step transformation' if ifsc == 1 else
+                    'linear transformation only',
                     dt=dt, ntb=ntb, press=press, wrap=wrap,
                     timask1=':1', timask2=':2',
-                    noshakemask=':1,2', crgmask='', ifsc=ifsc,
-                    scmask1=mask_str0, scmask2=mask_str1))
+                    noshakemask=':1,2', crgmask='',
+                    ifsc=ifsc, scmask1=mask_str0, scmask2=mask_str1))
 
     elif style == 'softcore2':          # pmemd14 3-step
         idummies = False
@@ -343,23 +346,33 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
         if fdummies:
             ifsc1, ifsc2 = 0, 1
             m0, m1, m2, m3 = '', '', mask_str0, mask_str1
+            step1_filename = PMEMD_SC_CHARGE
+            step2_filename = PMEMD_SC_VDW
+            title1 = 'charge transformation'
+            title2 = 'vdW+bonded transformation'
         else:
             ifsc1, ifsc2 = 1, 0
             m0, m1, m2, m3 =  mask_str0, mask_str1, '', ''
+            step1_filename = PMEMD_SC_VDW
+            step2_filename = PMEMD_SC_CHARGE
+            title1 = 'vdW+bonded transformation'
+            title2 = 'charge transformation'
 
         tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
 
-        with open(PMEMD_SC_TWOSTEP_1, 'w') as stfile:
+        with open(step1_filename, 'w') as stfile:
             stfile.write(
                 tmpl.format(
+                    title=title1,
                     dt=dt, ntb=ntb, press=press, wrap=wrap,
                     timask1=':1', timask2=':2',
                     noshakemask=':1,2', crgmask='',
                     ifsc=ifsc1, scmask1=m0, scmask2=m1))
 
-        with open(PMEMD_SC_TWOSTEP_2, 'w') as stfile:
+        with open(step2_filename, 'w') as stfile:
             stfile.write(
                 tmpl.format(
+                    title=title2,
                     dt=dt, ntb=ntb, press=press, wrap=wrap,
                     timask1=':1', timask2=':2',
                     noshakemask=':1,2', crgmask='',
@@ -377,9 +390,11 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
 
         tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
 
+        # FIXME: partial de/recharging with scmask for crgmask?
         with open(PMEMD_SC_DECHARGE, 'w') as stfile:
             stfile.write(
                 tmpl.format(
+                    title='decharge transformation',
                     dt=dt, ntb=ntb, press=press, wrap=wrap,
                     timask1=':1', timask2=':2',
                     crgmask=':2', noshakemask=':1,2',
@@ -388,6 +403,7 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
         with open(PMEMD_SC_VDW, 'w') as stfile:
             stfile.write(
                 tmpl.format(
+                    title='vdW+bonded transformation',
                     dt=dt, ntb=ntb, press=press, wrap=wrap,
                     timask1=':1', timask2=':2',
                     crgmask=':1,2', noshakemask=':1,2',
@@ -396,6 +412,7 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
         with open(PMEMD_SC_RECHARGE, 'w') as stfile:
             stfile.write(
                 tmpl.format(
+                    title='recharge transformation',
                     dt=dt, ntb=ntb, press=press, wrap=wrap,
                     timask1=':1', timask2=':2',
                     crgmask=':1', noshakemask=':1,2',
