@@ -91,8 +91,8 @@ class PertTopology(object):
             amber.write_mdin(self.atoms_initial, self.atoms_final,
                              self.atom_map, self.FE_sub_type, True)
 
-            state0, state1 = amber.make_softcores(lig_morph, self.lig_final,
-                                                  self.atom_map)
+            state0, state1 = amber.softcore(lig_morph, self.lig_final,
+                                            self.atom_map)
 
             pert0_info, pert1_info = None, None
             ow_add = '_sc'
@@ -226,8 +226,8 @@ class PertTopology(object):
                              self.atom_map, self.FE_sub_type, False)
 
             state0, state1 = \
-                    amber.make_softcores(lig_morph, self.lig_final,
-                                         self.atom_map)
+                    amber.softcore(lig_morph, self.lig_final,
+                                   self.atom_map)
 
             pert0_info, pert1_info = None, None
             ow_add = '_sc'

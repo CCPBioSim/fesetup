@@ -18,7 +18,8 @@
 #  that should have come with this distribution.
 
 r"""
-Common AMBER support.
+AMBER support functions for alchemical free energy simulations with either
+pmemd or sander.
 """
 
 
@@ -120,7 +121,7 @@ def dummy(lig_morph, con_morph, lig_final, atom_map):
     return state1, pert0_info, pert1_info
 
 
-def make_softcores(lig_morph, lig_final, atom_map):
+def softcore(lig_morph, lig_final, atom_map):
     """
     Support for AMBER/softcore which deals with rearranging atoms in the
     final state to correspond to the initial state and deletes dummies.  The
@@ -214,22 +215,23 @@ scmask2='{scmask2}',"""
 
 SANDER_TEMPLATE = "scmask='{scmask}',"
 
-COMMON_TEMPLATE = '''TI, NpT
+COMMON_TEMPLATE = '''TI/FEP, NpT (please adjust namelist to your needs!)
  &cntrl
+ ! parameters for general MD
  imin = 0, nstlim = 500000, irest = %%R1%%, ntx = %%R2%%, dt = {dt},
  ntt = 3, temp0 = 298.0, gamma_ln = 2.0, ig = -1,
  ntb = {ntb},
  {press},
- ntwe = 10000, ntwx = 10000, ntpr = 10000, ntwr = 50000, ntave = 50000,
- ioutfm = 1, iwrap = 1, ntxo = 2,
+ ntwe = 10000, ntwx = 10000, ntpr = 500, ntwr = 50000, ntave = 50000,
+ ioutfm = 1, iwrap = {wrap}, ntxo = 2,
 
+ ! parameters for alchemical free energy simulation
  ntc = 2, ntf = 1,
  noshakemask = '{noshakemask}',
 
  icfe = 1, ifsc = {ifsc}, clambda = %%L%%, scalpha = 0.5, scbeta = 12.0,
- logdvdl = 1,
- ifmbar = 1, bar_intervall = 5000, bar_l_min = 0.0, bar_l_max = 1.0,
- bar_l_incr = 0.1,
+ ifmbar = 1, bar_intervall = 500, bar_l_min = 0.0, bar_l_max = 1.0,
+ bar_l_incr = 0.1,   ! ntpr = bar_intervall for alchemical analysis tool
 
  %s
  crgmask = '{crgmask}',
@@ -239,9 +241,9 @@ COMMON_TEMPLATE = '''TI, NpT
 '''
 
 #FIXME: one vs two topology files
-def write_mdin(atoms_initial, atoms_final, atom_map, style = '', vac = True):
+def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
     """
-    Create input files with proper masks for AMBER TI/softcore.
+    Create mdin input file(s) with proper masks.
 
     :param atoms_initial: set of initial atoms
     :type atoms_initial: Sire.Mol.Selector_Atom
@@ -283,12 +285,14 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style = '', vac = True):
     if vac:
         ntb = 0
         press = 'ntp = 0, cut = 9999.0'
+        wrap = 0
     else:
         ntb = 2
         press = 'ntp = 1, barostat = 1, pres0 = 1.01325, taup = 2.0'
+        wrap = 1
 
-    # FIXME: support for dummy/linear scaling approach
-    #        put templates in separate string/dict
+    # FIXME: expand for sander, write group file
+    #        expand for dummy = add @DU= to scmask
     if style == 'softcore':             # pmemd14
         mask_str0 = ','.join(mask0)
         mask_str1 = ','.join(mask1)
@@ -300,19 +304,16 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style = '', vac = True):
             mask_str1 = ':%s@' % const.LIGAND1_NAME + mask_str1
 
         tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
-        tmpl = tmpl.format(dt = dt, ntb = ntb, press = press,
-                           noshakemask = ':%s,%s' %
-                           (const.LIGAND0_NAME, const.LIGAND1_NAME),
-                           crgmask = '', ifsc = ifsc,
-                           timask1 = ':%s' % const.LIGAND0_NAME,
-                           timask2 = ':%s' % const.LIGAND1_NAME,
-                           scmask1 = mask_str0, scmask2 = mask_str1)
 
         with open(PMEMD_SC_ONESTEP, 'w') as stfile:
-            stfile.write(tmpl)
+            stfile.write(
+                tmpl.format(
+                    dt=dt, ntb=ntb, press=press, wrap=wrap,
+                    timask1=':1', timask2=':2',
+                    noshakemask=':1,2', crgmask='', ifsc=ifsc,
+                    scmask1=mask_str0, scmask2=mask_str1))
 
     elif style == 'softcore2':          # pmemd14 3-step
-        # FIXME: also for sander!
         idummies = False
         fdummies = False
 
@@ -347,22 +348,22 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style = '', vac = True):
             m0, m1, m2, m3 =  mask_str0, mask_str1, '', ''
 
         tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
-        tmpl1 = tmpl.format(dt = dt, ntb = ntb, press = press,
-                            noshakemask = ':1,2',
-                            crgmask = '', ifsc = ifsc1,
-                            timask1 = ':1', timask2 = ':2',
-                            scmask1 = m0, scmask2 = m1)
-        tmpl2 = tmpl.format(dt = dt, ntb = ntb, press = press,
-                            noshakemask = ':1,2',
-                            crgmask = '', ifsc = ifsc2,
-                            timask1 = ':1' , timask2 = ':2',
-                            scmask1 = m2, scmask2 = m3)
 
         with open(PMEMD_SC_TWOSTEP_1, 'w') as stfile:
-            stfile.write(tmpl1)
+            stfile.write(
+                tmpl.format(
+                    dt=dt, ntb=ntb, press=press, wrap=wrap,
+                    timask1=':1', timask2=':2',
+                    noshakemask=':1,2', crgmask='',
+                    ifsc=ifsc1, scmask1=m0, scmask2=m1))
 
         with open(PMEMD_SC_TWOSTEP_2, 'w') as stfile:
-            stfile.write(tmpl2)
+            stfile.write(
+                tmpl.format(
+                    dt=dt, ntb=ntb, press=press, wrap=wrap,
+                    timask1=':1', timask2=':2',
+                    noshakemask=':1,2', crgmask='',
+                    ifsc=ifsc2, scmask1=m2, scmask2=m3))
 
     elif style == 'softcore3':          # pmemd14 3-step
         mask_str0 = ','.join(mask0)
@@ -374,44 +375,34 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style = '', vac = True):
         if mask_str1:
             mask_str1 = ':%s@' % const.LIGAND1_NAME + mask_str1
 
-        # FIXME: a bit kludgy -> subclass Formatter
         tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
-        tmpl = tmpl.format(dt = dt, ntb = ntb, press = press,
-                           timask1 = ':%s' % const.LIGAND0_NAME,
-                           timask2 = ':%s' % const.LIGAND1_NAME,
-                           ifsc = '{ifsc}',
-                           crgmask = '{crgmask}',
-                           noshakemask = '{noshakemask}',
-                           scmask1 = '{scmask1}',
-                           scmask2 = '{scmask2}')
-
 
         with open(PMEMD_SC_DECHARGE, 'w') as stfile:
-            stfile.write(tmpl.format(ifsc = 0,
-                                     crgmask = ':%s' % const.LIGAND1_NAME,
-                                     noshakemask = ':%s' % const.LIGAND0_NAME,
-                                     scmask1 = '', scmask2 = '') )
+            stfile.write(
+                tmpl.format(
+                    dt=dt, ntb=ntb, press=press, wrap=wrap,
+                    timask1=':1', timask2=':2',
+                    crgmask=':2', noshakemask=':1,2',
+                    ifsc=0, scmask1='', scmask2=''))
 
         with open(PMEMD_SC_VDW, 'w') as stfile:
-            stfile.write(tmpl.format(ifsc = ifsc,
-                                     crgmask = ':%s,%s' %
-                                     (const.LIGAND0_NAME, const.LIGAND1_NAME),
-                                     noshakemask = ':%s,%s' %
-                                     (const.LIGAND0_NAME, const.LIGAND1_NAME),
-                                     scmask1 = mask_str0, scmask2 = mask_str1) )
+            stfile.write(
+                tmpl.format(
+                    dt=dt, ntb=ntb, press=press, wrap=wrap,
+                    timask1=':1', timask2=':2',
+                    crgmask=':1,2', noshakemask=':1,2',
+                    ifsc=ifsc, scmask1=mask_str0, scmask2=mask_str1) )
 
         with open(PMEMD_SC_RECHARGE, 'w') as stfile:
-            stfile.write(tmpl.format(ifsc = 0,
-                                     crgmask = ':%s' % const.LIGAND0_NAME,
-                                     noshakemask = ':%s' % const.LIGAND1_NAME,
-                                     scmask1 = '', scmask2 = '') )
+            stfile.write(
+                tmpl.format(
+                    dt=dt, ntb=ntb, press=press, wrap=wrap,
+                    timask1=':1', timask2=':2',
+                    crgmask=':1', noshakemask=':1,2',
+                    ifsc=0, scmask1='', scmask2=''))
 
     elif style == 'sander':             # sander/softcore
         tmpl = COMMON_TEMPLATE % SANDER_TEMPLATE
-        tmpl = tmpl.format(dt = dt, ntb = ntb, press = press,
-                           noshakemask = ':%s' % const.LIGAND_NAME,
-                           crgmask = '', ifsc = ifsc,
-                           scmask = '{scmask}')
 
         for filen, mask in ( (SANDER_SC0, mask0),
                              (SANDER_SC1, mask1) ):
@@ -423,6 +414,12 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style = '', vac = True):
             # iwrap avoids imaging issues and ioutfm and ntxo create binary
             # coordinates to curb overflow issues
             with open(filen, 'w') as stfile:
-                stfile.write(tmpl.format(scmask = mask_str) )
+                stfile.write(
+                    tmpl.format(
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        timask1=':1',timask2=':2',
+                        noshakemask=':%s' % const.LIGAND_NAME,
+                        crgmask='', ifsc=ifsc,
+                        scmask = mask_str))
     else:
         raise errors.SetupError('Unknown FE type: %s' % style)
