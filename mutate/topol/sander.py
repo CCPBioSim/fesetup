@@ -39,7 +39,7 @@ class PertTopology(object):
                  atoms_final, lig_initial, lig_final, atom_map,
                  reverse_atom_map, zz_atoms, gaff):
 
-        self.FE_sub_type = FE_sub_type
+        self.separate = separate
         self.ff = ff
         self.gaff = gaff
         self.con_morph = con_morph
@@ -62,6 +62,37 @@ class PertTopology(object):
         self.inpcrd1 = None             # for GROMACS
         self.frcmod0 = None
         self.frcmod1 = None
+
+        self.dummies0 = not all([a.atom for a in atom_map.keys()])
+        self.dummies1 = not all([a.atom for a in atom_map.values()])
+
+        # special case: setup for Gromacs or CHARMM
+        if FE_sub_type[0] == '_':
+            self.FE_sub_type = FE_sub_type[1:]
+        else:
+            want_softcore = FE_sub_type[:8] == 'softcore'
+            self.FE_sub_type = ''
+
+            # overwrite user choice, also for backward compatibility
+            if self.separate and self.dummies0 and self.dummies1:
+                if want_softcore:
+                    self.FE_sub_type = 'softcore3'
+                else:                       # FIXME: not implementeed yet!
+                    self.FE_sub_type = 'dummy3'
+            elif self.separate and (self.dummies0 or self.dummies1):
+                if want_softcore:
+                    self.FE_sub_type = 'softcore2'
+                else:
+                    self.FE_sub_type = 'dummy2'
+            else:
+                if want_softcore:
+                    self.FE_sub_type = 'softcore'
+                else:
+                    self.FE_sub_type = 'dummy'
+
+                if self.separate:
+                    logger.write('Warning: linear transformation, not separated '
+                                 'into vdw and electrostatic step\n')
 
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):

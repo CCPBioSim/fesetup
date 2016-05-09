@@ -53,7 +53,7 @@ PERT1_ATP = 'pert1.atp'
 PERT2_ATP = 'pert2.atp'
 
 
-def _lambda_paths(dummies0, dummies1):
+def _lambda_paths(dummies0, dummies1, separate=True):
     '''
     Compute lambda paths depending on what state the dummy atoms are in.
     Works for appearing or disappearing atoms only.
@@ -62,13 +62,18 @@ def _lambda_paths(dummies0, dummies1):
     :type initial: either Ligand or Complex
     :param final: the final state of the morph pair
     :type final: either Ligand or Complex
+    :param separate: separate vdW from elecstrostatic lambda
+    :type separate: bool
     '''
 
+    fepl = '0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0'
+    vdwl = '0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0'
+    masl = '0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0'
+
     if not dummies0 and not dummies1:
-        fepl = '0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0'
-        vdwl = '0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0'
-        masl = '0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0'
         seps = 'linear transformation only'
+    elif not separate:
+        seps = 'one-step protocol'
     elif dummies0:
         fepl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.4 '
                 '0.6 0.8 1.0')
@@ -86,7 +91,7 @@ def _lambda_paths(dummies0, dummies1):
                 '0.0 0.0 0.0')
         seps = 'disappearing atoms: q_off before vdW'
     else:
-        raise errors.SetupError('BUG: gromacs morph tolopgy - unexpected'
+        raise errors.SetupError('BUG: gromacs morph tolopgy - unexpected '
                                 'dummies in "dummy" protocol')
 
     return fepl, vdwl, masl, seps
@@ -121,13 +126,13 @@ class PertTopology(object):
         Create TOP and link to GRO.
         """
 
-        if self.dummies0 and self.dummies1:
+        if self.separate and self.dummies0 and self.dummies1:
             self.FE_sub_type = 'dummy3'
         else:
             self.FE_sub_type = 'dummy'
 
-        topol = sander.PertTopology(self.FE_sub_type, self.separate, self.ff,
-                                    self.con_morph, self.atoms_initial,
+        topol = sander.PertTopology('_' + self.FE_sub_type, self.separate,
+                                    self.ff, self.con_morph, self.atoms_initial,
                                     self.atoms_final, self.lig_initial,
                                     self.lig_final, self.atom_map,
                                     self.reverse_atom_map, self.zz_atoms,
@@ -165,7 +170,8 @@ class PertTopology(object):
                                            ligname=const.LIGAND_NAME))
 
             fepl, vdwl, masl, seps = _lambda_paths(self.dummies0,
-                                                   self.dummies1)
+                                                   self.dummies1,
+                                                   self.separate)
 
             with open(VAC_MDP_FILE, 'w') as mdp:
                 mdp.write(
@@ -278,7 +284,8 @@ class PertTopology(object):
             top.writeGro(MORPH_GRO)
 
             fepl, vdwl, masl, seps = _lambda_paths(self.dummies0,
-                                                   self.dummies1)
+                                                   self.dummies1,
+                                                   self.separate)
             with open(SOL_MDP_FILE, 'w') as mdp:
                 mdp.write(
                     (SOL_MDP % (COMMON_MDP_TMPL,

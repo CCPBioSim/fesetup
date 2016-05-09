@@ -87,8 +87,8 @@ class PertTopology(object):
             self.ftypes.append(final_type)
 
   
-        topol = sander.PertTopology(TR_TABLE[self.stype], self.separate, self.ff,
-                                    self.con_morph, self.atoms_initial,
+        topol = sander.PertTopology('_' + TR_TABLE[self.stype], self.separate,
+                                    self.ff, self.con_morph, self.atoms_initial,
                                     self.atoms_final, self.lig_initial,
                                     self.lig_final, self.atom_map,
                                     self.reverse_atom_map, self.zz_atoms,
