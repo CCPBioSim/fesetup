@@ -18,7 +18,7 @@
 #  that should have come with this distribution.
 
 r"""
-Create perturbed topologies for pmemd14.
+Create perturbed topologies for pmemd14 and later.
 """
 
 
@@ -88,36 +88,31 @@ class PertTopology(object):
         patch_parms = []
 
         if self.FE_sub_type[:8] == 'softcore':
-             state0, state1 = amber.softcore(lig_morph, self.lig_final,
+            state0, state1 = amber.softcore(lig_morph, self.lig_final,
                                             self.atom_map)
-
             pert0_info, pert1_info = None, None
-            ow_add = '_sc'
         elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             state0 = lig_morph
             state1, pert0_info, pert1_info = \
                     amber.dummy(lig_morph, self.con_morph,
                                 self.lig_final, self.atom_map)
-            ow_add = '_dummy'
         else:
             raise NotImplementedError
 
         amber.write_mdin(self.atoms_initial, self.atoms_final,
                          self.atom_map, 'pmemd', self.FE_sub_type, True)
 
-        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
+        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + '0' +
                               const.MOL2_EXT)
         util.write_mol2(state0, mol2_0, resname = const.LIGAND0_NAME)
 
-        frcmod0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
-                               '0.frcmod')
+        frcmod0 = os.path.join(curr_dir, const.MORPH_NAME + '0.frcmod')
 
-        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
+        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + '1' +
                               const.MOL2_EXT)
         util.write_mol2(state1, mol2_1, resname = const.LIGAND1_NAME)
 
-        frcmod1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
-                               '1.frcmod')
+        frcmod1 = os.path.join(curr_dir, const.MORPH_NAME + '1.frcmod')
 
 
         lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
@@ -129,7 +124,11 @@ class PertTopology(object):
         lig._parmchk(mol2_0, 'mol2', frcmod0)
         lig._parmchk(mol2_1, 'mol2', frcmod1)
 
-        lig._parm_overwrite = 'pmemd' + ow_add
+        if self.FE_sub_type == 'softcore':
+            lig._parm_overwrite = 'onestep'
+
+        if self.FE_sub_type == 'softcore3':
+            lig._parm_overwrite = 'vdw'
 
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
             lig.prepare_top()
@@ -154,7 +153,11 @@ class PertTopology(object):
                                  start_fmt='mol2', frcmod=frcmod0,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
-            lig._parm_overwrite = 'pmemd_sc_2step_1'
+
+            if self.dummies0:
+                lig._parm_overwrite = 'vdw'
+            else:
+                lig._parm_overwrite = 'charge'
 
             if self.dummies0:
                 patch_parms.append( (lig._parm_overwrite,
@@ -170,7 +173,11 @@ class PertTopology(object):
                                  start_fmt='mol2', frcmod=frcmod1,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
-            lig._parm_overwrite = 'pmemd_sc_2step_2'
+
+            if self.dummies1:
+                lig._parm_overwrite = 'vdw'
+            else:
+                lig._parm_overwrite = 'charge'
 
             if self.dummies1:
                 patch_parms.append( (lig._parm_overwrite,
@@ -187,7 +194,7 @@ class PertTopology(object):
                                  start_fmt='mol2', frcmod=frcmod0,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
-            lig._parm_overwrite = 'pmemd_decharge' + ow_add
+            lig._parm_overwrite = 'decharge'
 
             lig.prepare_top()
             lig.leap.add_mol(mol2_0, 'mol2', [frcmod0])
@@ -197,7 +204,7 @@ class PertTopology(object):
                                  start_fmt='mol2', frcmod=frcmod1,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
-            lig._parm_overwrite = 'pmemd_recharge' + ow_add
+            lig._parm_overwrite = 'recharge'
 
             lig.prepare_top()
             lig.leap.add_mol(mol2_1, 'mol2', [frcmod1])
@@ -224,27 +231,23 @@ class PertTopology(object):
             state0, state1 = \
                     amber.softcore(lig_morph, self.lig_final,
                                    self.atom_map)
-
             pert0_info, pert1_info = None, None
-            ow_add = '_sc'
         elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
             state0 = lig_morph
             state1, pert0_info, pert1_info = \
                     amber.dummy(lig_morph, self.con_morph,
                                 self.lig_final, self.atom_map)
-
-            ow_add = '_dummy'
         else:
             raise NotImplementedError
 
         amber.write_mdin(self.atoms_initial, self.atoms_final,
                          self.atom_map, 'pmemd', self.FE_sub_type, False)
 
-        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
+        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + '0' +
                               const.MOL2_EXT)
         util.write_mol2(state0, mol2_0, resname = const.LIGAND0_NAME)
 
-        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
+        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + '1' +
                               const.MOL2_EXT)
         util.write_mol2(state1, mol2_1, resname = const.LIGAND1_NAME)
 
@@ -252,7 +255,12 @@ class PertTopology(object):
         com.box_dims = boxdims
         com.ligand_fmt = 'mol2'
         com.frcmod = self.frcmod0
-        com._parm_overwrite = 'pmemd' + ow_add
+
+        if self.FE_sub_type == 'softcore':
+            com._parm_overwrite = 'onestep'
+
+        if self.FE_sub_type == 'softcore3':
+            com._parm_overwrite = 'vdw'
 
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
             com.prepare_top(gaff=self.gaff)
@@ -277,12 +285,14 @@ class PertTopology(object):
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0
-            com._parm_overwrite = 'pmemd_sc_2step_1'
 
             if self.dummies0:
+                com._parm_overwrite = 'vdw'
                 patch_parms.append( (com._parm_overwrite,
                                      ':%s' % const.LIGAND0_NAME, 
                                      ':%s' % const.INT_NAME) )
+            else:
+                com._parm_overwrite = 'charge'
 
             com.prepare_top(gaff=self.gaff, pert=pert0_info)
             # intermediate state does never have dummies
@@ -293,12 +303,14 @@ class PertTopology(object):
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
-            com._parm_overwrite = 'pmemd_sc_2step_2'
 
             if self.dummies1:
+                com._parm_overwrite = 'vdw'
                 patch_parms.append( (com._parm_overwrite,
                                      ':%s' % const.INT_NAME,
                                      ':%s' % const.LIGAND1_NAME) )
+            else:
+                com._parm_overwrite = 'charge'
 
             # intermediate state does never have dummies
             com.prepare_top(gaff=self.gaff)
@@ -311,7 +323,7 @@ class PertTopology(object):
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0
-            com._parm_overwrite = 'pmemd_decharge' + ow_add
+            com._parm_overwrite = 'decharge'
 
             com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_0, 'mol2', [self.frcmod0])
@@ -321,7 +333,7 @@ class PertTopology(object):
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
-            com._parm_overwrite = 'pmemd_recharge' + ow_add
+            com._parm_overwrite = 'recharge'
 
             com.prepare_top(gaff=self.gaff)
             com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1])

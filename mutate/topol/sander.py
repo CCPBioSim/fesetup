@@ -66,9 +66,12 @@ class PertTopology(object):
         self.dummies0 = not all([a.atom for a in atom_map.keys()])
         self.dummies1 = not all([a.atom for a in atom_map.values()])
 
+        self.mdin = True
+
         # special case: setup for Gromacs or CHARMM
         if FE_sub_type[0] == '_':
             self.FE_sub_type = FE_sub_type[1:]
+            self.mdin = False
         else:
             want_softcore = FE_sub_type[:8] == 'softcore'
             self.FE_sub_type = ''
@@ -114,8 +117,9 @@ class PertTopology(object):
         else:
             raise NotImplementedError
 
-        amber.write_mdin(self.atoms_initial, self.atoms_final,
-                         self.atom_map, 'sander', self.FE_sub_type, True)
+        if self.mdin:
+            amber.write_mdin(self.atoms_initial, self.atoms_final,
+                             self.atom_map, 'sander', self.FE_sub_type, True)
 
         mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
                               const.MOL2_EXT)
@@ -248,8 +252,9 @@ class PertTopology(object):
         else:
             raise NotImplementedError
 
-        amber.write_mdin(self.atoms_initial, self.atoms_final,
-                         self.atom_map, 'sander', self.FE_sub_type, False)
+        if self.mdin:
+            amber.write_mdin(self.atoms_initial, self.atoms_final,
+                             self.atom_map, 'sander', self.FE_sub_type, False)
 
         mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
                               const.MOL2_EXT)

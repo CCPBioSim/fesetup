@@ -204,7 +204,7 @@ DECHARGE_MDIN = 'decharge%s.in'
 VDW_MDIN = 'vdw%s.in'
 RECHARGE_MDIN = 'recharge%s.in'
 CHARGE_MDIN = 'charge%s.in'
-GROUP_FILE_TEMPLATE = 'groupfile'
+GROUP_FILE = '%s.group'
 
 PMEMD_TEMPLATE = """\
 timask1='{timask1}', timask2='{timask2}',
@@ -238,6 +238,12 @@ COMMON_TEMPLATE = '''TI/FEP, NpT, {title}
  /
  &ewald
  /
+'''
+
+GROUP_FILE_TEMPLATE = '''\
+# this is a template group file for multi-sander, edit output files as needed
+-i {mdin_a} -p {base_a}.parm7 -c {base_a}.rst7 -O -inf ti001_0.info -o ti001_0.out -r ti001_0.rst7 -e ti001_0.en -x ti001_0.nc
+-i {mdin_b} -p {base_b}.parm7 -c {base_b}.rst7 -O -inf ti001_1.info -o ti001_1.out -r ti001_1.rst7 -e ti001_1.en -x ti001_1.nc
 '''
 
 #FIXME: one vs two topology files
@@ -308,15 +314,6 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
 
     mode = 'w'
 
-    # FIXME: make this more useful
-    if prog == 'sander':
-        with open(GROUP_FILE_TEMPLATE, mode) as tfile:
-            tfile.write('''\
-# this is a template group file for multi-sander, edit as needed
--i type_a.in -p state_a.parm7 -c state_a.rst7 -O -inf ti001_0.info -o ti001_0.out -r ti001_0.rst7 -e ti001_0.en -x ti001_0.nc
--i type_a.in -p state_b.parm7 -c state_b.rst7 -O -inf ti001_1.info -o ti001_1.out -r ti001_1.rst7 -e ti001_1.en -x ti001_1.nc
-''')
-
     if style == 'softcore' or style == 'dummy':
         mask_str0 = ','.join(mask0)
         mask_str1 = ','.join(mask1)
@@ -362,6 +359,12 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
                             crgmask='', ifsc=ifsc,
                             scmask=mask_str))
 
+            with open(GROUP_FILE % 'onestep', mode) as gfile:
+                gfile.write(
+                    GROUP_FILE_TEMPLATE.format(
+                        mdin_a=ONESTEP_MDIN % '_a', mdin_b=ONESTEP_MDIN % '_b',
+                        base_a='state0', base_b='state1'))
+
     elif style == 'softcore2' or style == 'dummy2':
         mask_str0 = ','.join(mask0)
         mask_str1 = ','.join(mask1)
@@ -382,14 +385,18 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
             ifsc1, ifsc2 = 0, 1
             m0, m1, m2, m3 = '', '', mask_str0, mask_str1
             step1_filename = CHARGE_MDIN
+            step1_name = 'charge%s'
             step2_filename = VDW_MDIN
+            step2_name = 'vdw%s'
             title1 = 'charge transformation'
             title2 = 'vdW+bonded transformation'
         else:
             ifsc1, ifsc2 = 1, 0
             m0, m1, m2, m3 = mask_str0, mask_str1, '', ''
             step1_filename = VDW_MDIN
+            step1_name = 'vdw%s'
             step2_filename = CHARGE_MDIN
+            step2_name = 'charge%s'
             title1 = 'vdW+bonded transformation'
             title2 = 'charge transformation'
 
@@ -432,6 +439,13 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
                         noshakemask=':1', crgmask='',
                         ifsc=ifsc1, scmask=m1.replace(':2', ':1', 1)))
 
+            fname = step1_name.replace('%s', '')
+            with open(GROUP_FILE % fname, mode) as gfile:
+                gfile.write(
+                    GROUP_FILE_TEMPLATE.format(
+                        mdin_a=step1_name % '_a', mdin_b=step1_name % '_b',
+                        base_a='state0', base_b='state_int'))
+
             with open(step2_filename % '_a', mode) as stfile:
                 stfile.write(
                     tmpl.format(
@@ -447,6 +461,13 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
                         dt=dt, ntb=ntb, press=press, wrap=wrap,
                         noshakemask=':1', crgmask='',
                         ifsc=ifsc2, scmask=m3.replace(':2', ':1', 1)))
+
+            fname = step2_name.replace('%s', '')
+            with open(GROUP_FILE % fname, mode) as gfile:
+                gfile.write(
+                    GROUP_FILE_TEMPLATE.format(
+                        mdin_a=step2_name % '_a', mdin_b=step2_name % '_b',
+                        base_a='state_int', base_b='state1'))
 
     elif style == 'softcore3' or style == 'dummy3':
         mask_str0 = ','.join(mask0)
@@ -508,6 +529,13 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
                         crgmask=':1', noshakemask=':1',
                         ifsc=0, scmask=''))
 
+            with open(GROUP_FILE % 'decharge', mode) as gfile:
+                gfile.write(
+                    GROUP_FILE_TEMPLATE.format(
+                        mdin_a=DECHARGE_MDIN % '_a',
+                        mdin_b=DECHARGE_MDIN % '_b',
+                        base_a='state0', base_b='state0'))
+
             with open(VDW_MDIN % '_a', mode) as stfile:
                 stfile.write(
                     tmpl.format(
@@ -524,6 +552,12 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
                         crgmask=':1', noshakemask=':1',
                         ifsc=ifsc, scmask=':1@%s' % mask_str1 + add_str1))
 
+            with open(GROUP_FILE % 'vdw', mode) as gfile:
+                gfile.write(
+                    GROUP_FILE_TEMPLATE.format(
+                        mdin_a=VDW_MDIN % '_a', mdin_b=VDW_MDIN % '_b',
+                        base_a='state0', base_b='state1'))
+
             with open(RECHARGE_MDIN % '_a', mode) as stfile:
                 stfile.write(
                     tmpl.format(
@@ -539,5 +573,12 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
                         dt=dt, ntb=ntb, press=press, wrap=wrap,
                         crgmask='', noshakemask=':1',
                         ifsc=0, scmask=''))
+
+            with open(GROUP_FILE % 'recharge', mode) as gfile:
+                gfile.write(
+                    GROUP_FILE_TEMPLATE.format(
+                        mdin_a=RECHARGE_MDIN % '_a',
+                        mdin_b=RECHARGE_MDIN % '_b',
+                        base_a='state1', base_b='state1'))
     else:
         raise errors.SetupError('Unknown FE type: %s' % style)

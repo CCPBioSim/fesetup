@@ -41,7 +41,84 @@ VAC_INP_FILE = 'vac.inp'
 SOL_INP_FILE = 'sol.inp'
 STATE_INT = 'state_int'
 
-TR_TABLE = {'pert': 'dummy', 'pert2': 'dummy2'}
+VAC_TEMPLATE = '''\
+* relative AFE in vacuo
+* Please note that this input file is only intended as a rough template to
+* illustrate how a TI simulation would need to be set up
+*
+
+bomlev -2
+prnlev 5
+
+read rtf card name combined.rtf
+read param flex card name combined.prm
+
+ioformat extended
+read psf xplor card name "{state0}.psf"
+read coor card name "{state0}.cor"
+
+use amber
+
+! {charge0}
+
+format (i1)
+calc old = @step - 1
+set oldrst fe@old.rst
+
+format (f15.7)
+
+if @lambda .lt. 0 then set lambda 0
+if @lambda .gt. 1 then set lambda 1
+
+set lstart @lambda
+set lstop @lambda
+
+calc delta = 0.5 / (@nlambda - 1)
+calc lstart = @lstart - @delta
+calc lstop  = @lstop  + @delta
+
+if @lambda .eq. 0 then set lstart 0.0
+if @lambda .eq. 1 then set lstop 1.0
+
+lower
+set base fe@step
+set rst @base.rst
+set dcd @base.dcd
+set en  @base.en
+set whamf @base.wham
+
+open unit 10 write form name @rst
+open unit 11 write unform name @dcd
+open unit 12 write form name @en
+open unit 22 read form name @oldrst
+open unit 54 write card name @whamf
+
+nbonds atom cdie shift vatom vswith cutnb 999.0 ctofnb 997.0
+update inbfrq -1 ihbfrq -1
+
+pert select segid A end
+delete atoms select all end
+
+read psf xplor card name "{state1}.psf"
+read coor card name "{state1}.cor"
+
+! {charge1}
+
+prnlev 5
+
+scalar fbeta set 5.0 select all end
+
+dynamics langevin leap start nstep 500000 timestep 0.001 -
+  lstart @lstart lambda @lambda lstop @lstop wham 54 -
+    pstart 0 pstop 500000 pwindow nopssp -
+  tbath 300.0 rbuf 0.0 ilbfrq 10 -
+  iunwri 10 iuncrd 11 kunit 12 iunrea 22 -
+  nsavc 10000 nprint 5000 iprfreq 20000 isvfrq 10000 ntrfrq 1000
+
+stop
+'''
+
+TR_TABLE = {'pert': 'dummy', 'pert2': 'dummy2', 'pert3': 'dummy3'}
 
 
 class PertTopology(object):
@@ -53,7 +130,6 @@ class PertTopology(object):
         if FE_sub_type[:4] != 'pert':
             raise errors.SetupError('Morph code only supports the '
                                     'CHARMM/PERT module')
-
         self.separate = separate
         self.ff = ff
         self.gaff = gaff
@@ -65,7 +141,6 @@ class PertTopology(object):
         self.atom_map = atom_map
         self.reverse_atom_map = reverse_atom_map
         self.zz_atoms = zz_atoms
-        self.stype = FE_sub_type
 
         self.topol = None
         self.itypes = []
@@ -73,6 +148,19 @@ class PertTopology(object):
         
         self.dummies0 = not all([a.atom for a in self.atom_map.keys()])
         self.dummies1 = not all([a.atom for a in self.atom_map.values()])
+
+        if self.separate and self.dummies0 and self.dummies1:
+            self.FE_sub_type = 'pert3'
+        elif self.separate and (self.dummies0 or self.dummies1):
+            self.FE_sub_type = 'pert2'
+        else:
+            self.FE_sub_type = 'pert'
+
+            if self.separate:
+                logger.write('Warning: linear transformation, not separated '
+                             'into vdw and electrostatic step\n')
+
+        self.stype = self.FE_sub_type
 
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
@@ -110,11 +198,19 @@ class PertTopology(object):
         top0.writePsf('state0.psf')
         top0.writeCrd('state0.cor')
 
+        # NOTE: pert2 - dummies zero q, vdW
+        #       pert3 - disappearing zero q
         if self.stype == 'pert2':
             top_int = charmm.CharmmTop()
             top_int.readParm(STATE_INT + top, STATE_INT + rst)
             top_int.writePsf(STATE_INT + '.psf')
             top_int.writeCrd(STATE_INT + '.cor')
+
+        # for pert3 we go down the sander route otherwise we would need
+        # 4 topologies (0, 0', 1', 1 where ' means q_on/off only:
+        # step1: state0 + state0(scalar charge set)
+        # step2: state0(scalar charge set) + state1(scalar charge set)
+        # step3: state1(scalar charge set) + state1
 
         top1 = charmm.CharmmTop(self.itypes)
         top1.readParm(lig1 + top, lig1 + rst)
@@ -151,7 +247,7 @@ class PertTopology(object):
         top0.writePsf('state0.psf')
         top0.writeCrd('state0.cor')
 
-        if self.stype == 'pert2':
+        if self.stype == 'pert2' or self.stype == 'pert3':
             top_int = charmm.CharmmTop()
             top_int.readParm(STATE_INT + top, STATE_INT + rst)
             top_int.writePsf(STATE_INT + '.psf')

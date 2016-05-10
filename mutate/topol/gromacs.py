@@ -118,6 +118,11 @@ class PertTopology(object):
         self.dummies0 = not all([a.atom for a in self.atom_map.keys()])
         self.dummies1 = not all([a.atom for a in self.atom_map.values()])
 
+        if self.separate and self.dummies0 and self.dummies1:
+            self.FE_sub_type = 'dummy3'
+        else:
+            self.FE_sub_type = 'dummy'
+
         self.topol = None
         
 
@@ -125,11 +130,6 @@ class PertTopology(object):
         """
         Create TOP and link to GRO.
         """
-
-        if self.separate and self.dummies0 and self.dummies1:
-            self.FE_sub_type = 'dummy3'
-        else:
-            self.FE_sub_type = 'dummy'
 
         topol = sander.PertTopology('_' + self.FE_sub_type, self.separate,
                                     self.ff, self.con_morph, self.atoms_initial,
