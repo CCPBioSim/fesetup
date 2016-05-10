@@ -71,6 +71,9 @@ class PertTopology(object):
         self.itypes = []
         self.ftypes = []
         
+        self.dummies0 = not all([a.atom for a in self.atom_map.keys()])
+        self.dummies1 = not all([a.atom for a in self.atom_map.values()])
+
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
 

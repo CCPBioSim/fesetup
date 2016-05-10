@@ -97,9 +97,6 @@ class PertTopology(object):
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
         if self.FE_sub_type[:8] == 'softcore':
-            amber.write_mdin(self.atoms_initial, self.atoms_final,
-                             self.atom_map, 'sander', True)
-
             state0, state1 = \
                     amber.softcore(lig_morph, self.lig_final,
                                    self.atom_map)
@@ -116,6 +113,9 @@ class PertTopology(object):
             ow_add = '_dummy'
         else:
             raise NotImplementedError
+
+        amber.write_mdin(self.atoms_initial, self.atoms_final,
+                         self.atom_map, 'sander', self.FE_sub_type, True)
 
         mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
                               const.MOL2_EXT)
@@ -230,9 +230,6 @@ class PertTopology(object):
                       cmd1, cmd2, boxdims):
 
         if self.FE_sub_type[:8] == 'softcore':
-            amber.write_mdin(self.atoms_initial, self.atoms_final,
-                             self.atom_map, 'sander', False)
-
             state0, state1 = \
                     amber.softcore(lig_morph, self.lig_final,
                                    self.atom_map)
@@ -250,6 +247,9 @@ class PertTopology(object):
             ow_add = '_dummy'
         else:
             raise NotImplementedError
+
+        amber.write_mdin(self.atoms_initial, self.atoms_final,
+                         self.atom_map, 'sander', self.FE_sub_type, False)
 
         mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
                               const.MOL2_EXT)

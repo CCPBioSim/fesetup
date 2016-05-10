@@ -199,13 +199,12 @@ def softcore(lig_morph, lig_final, atom_map):
     return state0.commit(), state1.commit()
 
 
-PMEMD_SC_ONESTEP = 'onestep.in'
-PMEMD_SC_DECHARGE = 'decharge.in'
-PMEMD_SC_VDW = 'vdw.in'
-PMEMD_SC_RECHARGE = 'recharge.in'
-PMEMD_SC_CHARGE = 'charge.in'
-SANDER_SC0 = 'state0.in'
-SANDER_SC1 = 'state1.in'
+ONESTEP_MDIN = 'onestep%s.in'
+DECHARGE_MDIN = 'decharge%s.in'
+VDW_MDIN = 'vdw%s.in'
+RECHARGE_MDIN = 'recharge%s.in'
+CHARGE_MDIN = 'charge%s.in'
+GROUP_FILE_TEMPLATE = 'groupfile'
 
 PMEMD_TEMPLATE = """\
 timask1='{timask1}', timask2='{timask2}',
@@ -242,7 +241,7 @@ COMMON_TEMPLATE = '''TI/FEP, NpT, {title}
 '''
 
 #FIXME: one vs two topology files
-def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
+def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
     """
     Create mdin input file(s) with proper masks.
 
@@ -252,8 +251,10 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
     :type atoms_final: Sire.Mol.Selector_Atom
     :param atom_map: the forward atom map
     :type atom_map: dict of _AtomInfo to _AtomInfo
-    :param style: pmemd/softcore, pmemd/softcore3, sander/softcore
-    :type style: string
+    :param style: softcoreN or dummyN
+    :type style: str
+    :param prog: pmemd or sander
+    :type prog: str
     :param vac: create vacuum input file
     :type vac: bool
     :raises: SetupError
@@ -261,6 +262,8 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
 
     mask0 = []
     mask1 = []
+    dummies0 = False
+    dummies1 = False
     ifsc = 1
     dt = 0.002
 
@@ -275,9 +278,11 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
 
         # we should never have a dummy to dummy mapping
         if not iinfo.atom:
-            mask1.append(str(finfo.name.value() ) )
+            dummies0 = True
+            mask1.append(str(finfo.name.value()))
         elif not finfo.atom:
-            mask0.append(str(iinfo.name.value() ) )
+            dummies1 = True
+            mask0.append(str(iinfo.name.value()))
 
     # softcores are not necessary if there are no appearing/disappearing atoms
     if not mask0 and not mask1:
@@ -292,151 +297,247 @@ def write_mdin(atoms_initial, atoms_final, atom_map, style='', vac=True):
         press = 'ntp = 1, barostat = 1, pres0 = 1.01325, taup = 2.0'
         wrap = 1
 
-    # FIXME: expand for sander, write group file
-    #        expand for dummy = add @DU= to scmask
-    if style == 'softcore':             # pmemd14
+    add_str0 = ''
+    add_str1 = ''
+
+    if 'dummy' in style and dummies0:
+        add_str0 = 'DU='
+
+    if 'dummy' in style and dummies1:
+        add_str1 = 'DU='
+
+    mode = 'w'
+
+    # FIXME: make this more useful
+    if prog == 'sander':
+        with open(GROUP_FILE_TEMPLATE, mode) as tfile:
+            tfile.write('''\
+# this is a template group file for multi-sander, edit as needed
+-i type_a.in -p state_a.parm7 -c state_a.rst7 -O -inf ti001_0.info -o ti001_0.out -r ti001_0.rst7 -e ti001_0.en -x ti001_0.nc
+-i type_a.in -p state_b.parm7 -c state_b.rst7 -O -inf ti001_1.info -o ti001_1.out -r ti001_1.rst7 -e ti001_1.en -x ti001_1.nc
+''')
+
+    if style == 'softcore' or style == 'dummy':
+        mask_str0 = ','.join(mask0)
+        mask_str1 = ','.join(mask1)
+
+        title='1-step transformation' if ifsc == 1 else \
+               'linear transformation only',
+
+        if mask_str0:
+            mask_str0 = ':1@%s%s' % (mask_str0, ',' + add_str0 if add_str0
+                                     else '')
+        elif add_str0:
+            mask_str0 = ':1@%s' % add_str0
+
+        if mask_str1:
+            mask_str1 = ':2@%s%s' % (mask_str1, ',' + add_str1 if add_str1
+                                     else '')
+        elif add_str1:
+            mask_str1 = ':2@%s' % add_str1
+
+        if prog == 'pmemd':
+            tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
+
+            with open(ONESTEP_MDIN % '', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title=title,
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        timask1=':1', timask2=':2',
+                        noshakemask=':1,2', crgmask='', ifsc=ifsc,
+                        scmask1=mask_str0, scmask2=mask_str1))
+        else:
+            tmpl = COMMON_TEMPLATE % SANDER_TEMPLATE
+
+            for filen, mask_str in ( (ONESTEP_MDIN % '_a', mask_str0),
+                                     (ONESTEP_MDIN % '_b',
+                                      mask_str1.replace(':2', ':1', 1))):
+                with open(filen, mode) as stfile:
+                    stfile.write(
+                        tmpl.format(
+                            title=title,
+                            dt=dt, ntb=ntb, press=press, wrap=wrap,
+                            noshakemask=':1',
+                            crgmask='', ifsc=ifsc,
+                            scmask=mask_str))
+
+    elif style == 'softcore2' or style == 'dummy2':
         mask_str0 = ','.join(mask0)
         mask_str1 = ','.join(mask1)
 
         if mask_str0:
-            mask_str0 = ':%s@' % const.LIGAND0_NAME + mask_str0
+            mask_str0 = ':1@%s%s' % (mask_str0, ',' + add_str0 if add_str0
+                                     else '')
+        elif add_str0:
+            mask_str0 = ':1@%s' % add_str0
 
         if mask_str1:
-            mask_str1 = ':%s@' % const.LIGAND1_NAME + mask_str1
+            mask_str1 = ':2@%s%s' % (mask_str1, ',' + add_str1 if add_str1
+                                     else '')
+        elif add_str1:
+            mask_str1 = ':2@%s' % add_str1
 
-        tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
-
-        with open(PMEMD_SC_ONESTEP, 'w') as stfile:
-            stfile.write(
-                tmpl.format(
-                    title='%s' % '1-step transformation' if ifsc == 1 else
-                    'linear transformation only',
-                    dt=dt, ntb=ntb, press=press, wrap=wrap,
-                    timask1=':1', timask2=':2',
-                    noshakemask=':1,2', crgmask='',
-                    ifsc=ifsc, scmask1=mask_str0, scmask2=mask_str1))
-
-    elif style == 'softcore2':          # pmemd14 3-step
-        idummies = False
-        fdummies = False
-
-        for iinfo, finfo in atom_map.items():
-            istr = iinfo.name.value()
-            fstr = finfo.name.value()
-            iidx = iinfo.index
-
-            if not iinfo.atom:
-                idummies = True
-
-            if not finfo.atom:
-                fdummies = True
-
-        if idummies and fdummies:
-            raise errors.SetupError('2-step protocol cannot be used with '
-                                    'dummies in both states')
-        mask_str0 = ','.join(mask0)
-        mask_str1 = ','.join(mask1)
-
-        if mask_str0:
-            mask_str0 = ':1@%s' % mask_str0
-
-        if mask_str1:
-            mask_str1 = ':2@%s' % mask_str1
-
-        if fdummies:
+        if dummies1:
             ifsc1, ifsc2 = 0, 1
             m0, m1, m2, m3 = '', '', mask_str0, mask_str1
-            step1_filename = PMEMD_SC_CHARGE
-            step2_filename = PMEMD_SC_VDW
+            step1_filename = CHARGE_MDIN
+            step2_filename = VDW_MDIN
             title1 = 'charge transformation'
             title2 = 'vdW+bonded transformation'
         else:
             ifsc1, ifsc2 = 1, 0
-            m0, m1, m2, m3 =  mask_str0, mask_str1, '', ''
-            step1_filename = PMEMD_SC_VDW
-            step2_filename = PMEMD_SC_CHARGE
+            m0, m1, m2, m3 = mask_str0, mask_str1, '', ''
+            step1_filename = VDW_MDIN
+            step2_filename = CHARGE_MDIN
             title1 = 'vdW+bonded transformation'
             title2 = 'charge transformation'
 
-        tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
+        if prog == 'pmemd':
+            tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
 
-        with open(step1_filename, 'w') as stfile:
-            stfile.write(
-                tmpl.format(
-                    title=title1,
-                    dt=dt, ntb=ntb, press=press, wrap=wrap,
-                    timask1=':1', timask2=':2',
-                    noshakemask=':1,2', crgmask='',
-                    ifsc=ifsc1, scmask1=m0, scmask2=m1))
+            with open(step1_filename % '' , mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title=title1,
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        timask1=':1', timask2=':2',
+                        noshakemask=':1,2', crgmask='', ifsc=ifsc1,
+                        scmask1=m0, scmask2=m1))
 
-        with open(step2_filename, 'w') as stfile:
-            stfile.write(
-                tmpl.format(
-                    title=title2,
-                    dt=dt, ntb=ntb, press=press, wrap=wrap,
-                    timask1=':1', timask2=':2',
-                    noshakemask=':1,2', crgmask='',
-                    ifsc=ifsc2, scmask1=m2, scmask2=m3))
+            with open(step2_filename % '', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title=title2,
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        timask1=':1', timask2=':2',
+                        noshakemask=':1,2', crgmask='', ifsc=ifsc2,
+                        scmask1=m2, scmask2=m3))
+        else:
+            tmpl = COMMON_TEMPLATE % SANDER_TEMPLATE
 
-    elif style == 'softcore3':          # pmemd14 3-step
+            with open(step1_filename % '_a' , mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title=title1 + ', step a',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        noshakemask=':1', crgmask='',
+                        ifsc=ifsc1, scmask=m0))
+
+            with open(step1_filename % '_b' , mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title=title1 + ', step b',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        noshakemask=':1', crgmask='',
+                        ifsc=ifsc1, scmask=m1.replace(':2', ':1', 1)))
+
+            with open(step2_filename % '_a', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title=title2 + ', step a',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        noshakemask=':1', crgmask='',
+                        ifsc=ifsc2, scmask=m2))
+
+            with open(step2_filename % '_b', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title=title2 + ', step b',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        noshakemask=':1', crgmask='',
+                        ifsc=ifsc2, scmask=m3.replace(':2', ':1', 1)))
+
+    elif style == 'softcore3' or style == 'dummy3':
         mask_str0 = ','.join(mask0)
         mask_str1 = ','.join(mask1)
 
-        if mask_str0:
-            mask_str0 = ':%s@' % const.LIGAND0_NAME + mask_str0
+        if add_str0:
+            add_str0 = ',%s' % add_str0
 
-        if mask_str1:
-            mask_str1 = ':%s@' % const.LIGAND1_NAME + mask_str1
+        if add_str1:
+            add_str1 = ',%s' % add_str1
 
-        tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
+        if prog == 'pmemd':
+            tmpl = COMMON_TEMPLATE % PMEMD_TEMPLATE
 
-        # FIXME: partial de/recharging with scmask for crgmask?
-        with open(PMEMD_SC_DECHARGE, 'w') as stfile:
-            stfile.write(
-                tmpl.format(
-                    title='decharge transformation',
-                    dt=dt, ntb=ntb, press=press, wrap=wrap,
-                    timask1=':1', timask2=':2',
-                    crgmask=':2', noshakemask=':1,2',
-                    ifsc=0, scmask1='', scmask2=''))
-
-        with open(PMEMD_SC_VDW, 'w') as stfile:
-            stfile.write(
-                tmpl.format(
-                    title='vdW+bonded transformation',
-                    dt=dt, ntb=ntb, press=press, wrap=wrap,
-                    timask1=':1', timask2=':2',
-                    crgmask=':1,2', noshakemask=':1,2',
-                    ifsc=ifsc, scmask1=mask_str0, scmask2=mask_str1) )
-
-        with open(PMEMD_SC_RECHARGE, 'w') as stfile:
-            stfile.write(
-                tmpl.format(
-                    title='recharge transformation',
-                    dt=dt, ntb=ntb, press=press, wrap=wrap,
-                    timask1=':1', timask2=':2',
-                    crgmask=':1', noshakemask=':1,2',
-                    ifsc=0, scmask1='', scmask2=''))
-
-    elif style == 'sander':             # sander/softcore
-        tmpl = COMMON_TEMPLATE % SANDER_TEMPLATE
-
-        for filen, mask in ( (SANDER_SC0, mask0),
-                             (SANDER_SC1, mask1) ):
-            mask_str = ','.join(mask)
-
-            if mask_str:
-                mask_str = ':%s@' % const.LIGAND_NAME + mask_str
-
-            # iwrap avoids imaging issues and ioutfm and ntxo create binary
-            # coordinates to curb overflow issues
-            with open(filen, 'w') as stfile:
+            # FIXME: partial de/recharging with scmask for crgmask?
+            with open(DECHARGE_MDIN % '', mode) as stfile:
                 stfile.write(
                     tmpl.format(
+                        title='decharge transformation',
                         dt=dt, ntb=ntb, press=press, wrap=wrap,
-                        timask1=':1',timask2=':2',
-                        noshakemask=':%s' % const.LIGAND_NAME,
-                        crgmask='', ifsc=ifsc,
-                        scmask = mask_str))
+                        timask1=':1', timask2=':2',
+                        crgmask=':2', noshakemask=':1,2',
+                        ifsc=0, scmask1='', scmask2=''))
+
+            with open(VDW_MDIN % '', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='vdW+bonded transformation',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        timask1=':1', timask2=':2',
+                        crgmask=':1,2', noshakemask=':1,2', ifsc=ifsc,
+                        scmask1=':1@%s' % mask_str0 + add_str0,
+                        scmask2=':2@%s' % mask_str1 + add_str1))
+
+            with open(RECHARGE_MDIN % '', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='recharge transformation',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        timask1=':1', timask2=':2',
+                        crgmask=':1', noshakemask=':1,2',
+                        ifsc=0, scmask1='', scmask2=''))
+        else:
+            tmpl = COMMON_TEMPLATE % SANDER_TEMPLATE
+
+            with open(DECHARGE_MDIN % '_a', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='decharge transformation, step a',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        crgmask='', noshakemask=':1',
+                        ifsc=0, scmask=''))
+
+            with open(DECHARGE_MDIN % '_b', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='decharge transformation, step b',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        crgmask=':1', noshakemask=':1',
+                        ifsc=0, scmask=''))
+
+            with open(VDW_MDIN % '_a', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='vdW+bonded transformation, step a',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        crgmask=':1', noshakemask=':1',
+                        ifsc=ifsc, scmask=':1@%s' % mask_str0 + add_str0))
+
+            with open(VDW_MDIN % '_b', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='vdW+bonded transformation, step b',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        crgmask=':1', noshakemask=':1',
+                        ifsc=ifsc, scmask=':1@%s' % mask_str1 + add_str1))
+
+            with open(RECHARGE_MDIN % '_a', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='recharge transformation, step a',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        crgmask=':1', noshakemask=':1',
+                        ifsc=0, scmask=''))
+
+            with open(RECHARGE_MDIN % '_b', mode) as stfile:
+                stfile.write(
+                    tmpl.format(
+                        title='recharge transformation, step b',
+                        dt=dt, ntb=ntb, press=press, wrap=wrap,
+                        crgmask='', noshakemask=':1',
+                        ifsc=0, scmask=''))
     else:
         raise errors.SetupError('Unknown FE type: %s' % style)
