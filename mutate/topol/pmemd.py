@@ -91,7 +91,7 @@ class PertTopology(object):
             state0, state1 = amber.softcore(lig_morph, self.lig_final,
                                             self.atom_map)
             pert0_info, pert1_info = None, None
-        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
+        elif self.FE_sub_type[:5] == 'dummy':
             state0 = lig_morph
             state1, pert0_info, pert1_info = \
                     amber.dummy(lig_morph, self.con_morph,
@@ -124,15 +124,26 @@ class PertTopology(object):
         lig._parmchk(mol2_0, 'mol2', frcmod0)
         lig._parmchk(mol2_1, 'mol2', frcmod1)
 
-        if self.FE_sub_type == 'softcore':
+        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'dummy':
             lig._parm_overwrite = 'onestep'
 
-        if self.FE_sub_type == 'softcore3':
+        if self.FE_sub_type == 'softcore3' or self.FE_sub_type == 'dummy3':
             lig._parm_overwrite = 'vdw'
 
-        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
-            lig.prepare_top()
-            lig.leap.add_mol(mol2_1, 'mol2', [frcmod1])
+        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3' \
+               or self.FE_sub_type == 'dummy3':
+            if pert0_info:
+                pert0=pert0_info
+            else:
+                pert0=''
+
+            if pert1_info:
+                pert1=pert1_info
+            else:
+                pert1=''
+
+            lig.prepare_top(pert=pert0)
+            lig.leap.add_mol(mol2_1, 'mol2', [frcmod1], pert=pert1)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
@@ -156,13 +167,12 @@ class PertTopology(object):
 
             if self.dummies0:
                 lig._parm_overwrite = 'vdw'
-            else:
-                lig._parm_overwrite = 'charge'
 
-            if self.dummies0:
                 patch_parms.append( (lig._parm_overwrite,
                                      ':%s' % const.LIGAND0_NAME,
                                      ':%s' % const.INT_NAME) )
+            else:
+                lig._parm_overwrite = 'charge'
 
             lig.prepare_top(pert=pert0_info)
             # intermediate state does never have dummies
@@ -176,28 +186,31 @@ class PertTopology(object):
 
             if self.dummies1:
                 lig._parm_overwrite = 'vdw'
-            else:
-                lig._parm_overwrite = 'charge'
 
-            if self.dummies1:
                 patch_parms.append( (lig._parm_overwrite,
                                      ':%s' % const.INT_NAME, 
                                      ':%s' % const.LIGAND1_NAME) )
+            else:
+                lig._parm_overwrite = 'charge'
 
             # intermediate state does never have dummies
             lig.prepare_top()
             lig.leap.add_mol(mol2_1, 'mol2', [frcmod0], pert=pert1_info)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
         # FIXME: residue name will be both the same
-        elif self.FE_sub_type == 'softcore3':
+        elif self.FE_sub_type == 'softcore3' or self.FE_sub_type == 'dummy3':
             lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
                                  start_fmt='mol2', frcmod=frcmod0,
                                  gaff=self.gaff)
             lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'decharge'
 
-            lig.prepare_top()
-            lig.leap.add_mol(mol2_0, 'mol2', [frcmod0])
+            patch_parms.append( (lig._parm_overwrite,
+                                 ':%s' % const.LIGAND0_NAME,
+                                 ':%s' % const.LIGAND1_NAME) )
+
+            lig.prepare_top(pert=pert0)
+            lig.leap.add_mol(mol2_0, 'mol2', [frcmod0], pert=pert0)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
 
             lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_1,
@@ -206,8 +219,13 @@ class PertTopology(object):
             lig.set_atomtype(self.gaff)
             lig._parm_overwrite = 'recharge'
 
-            lig.prepare_top()
-            lig.leap.add_mol(mol2_1, 'mol2', [frcmod1])
+            if pert1_info:
+                pert=pert1_info
+            else:
+                pert=''
+
+            lig.prepare_top(pert=pert1)
+            lig.leap.add_mol(mol2_1, 'mol2', [frcmod1], pert=pert1)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
         elif self.FE_sub_type == 'dummy':
             lig.prepare_top(pert=pert0_info)
@@ -217,7 +235,7 @@ class PertTopology(object):
         self.frcmod0 = frcmod0
         self.frcmod1 = frcmod1
 
-        if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
+        if self.FE_sub_type[:5] == 'dummy':
             for prm in patch_parms:
                 util.patch_parmtop(prm[0] + lig.TOP_EXT, "", prm[1], prm[2])
 
@@ -232,7 +250,7 @@ class PertTopology(object):
                     amber.softcore(lig_morph, self.lig_final,
                                    self.atom_map)
             pert0_info, pert1_info = None, None
-        elif self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
+        elif self.FE_sub_type[:5] == 'dummy':
             state0 = lig_morph
             state1, pert0_info, pert1_info = \
                     amber.dummy(lig_morph, self.con_morph,
@@ -256,15 +274,26 @@ class PertTopology(object):
         com.ligand_fmt = 'mol2'
         com.frcmod = self.frcmod0
 
-        if self.FE_sub_type == 'softcore':
+        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'dummy':
             com._parm_overwrite = 'onestep'
 
-        if self.FE_sub_type == 'softcore3':
+        if self.FE_sub_type == 'softcore3' or self.FE_sub_type == 'dummy3':
             com._parm_overwrite = 'vdw'
 
-        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3':
-            com.prepare_top(gaff=self.gaff)
-            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1])
+        if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3' \
+               or self.FE_sub_type == 'dummy3':
+            if pert0_info:
+                pert0=pert0_info
+            else:
+                pert0=''
+
+            if pert1_info:
+                pert1=pert1_info
+            else:
+                pert1=''
+
+            com.prepare_top(gaff=self.gaff, pert=pert0)
+            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1], pert=pert1)
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
@@ -318,15 +347,15 @@ class PertTopology(object):
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
         # FIXME: residue name will be both the same
-        elif self.FE_sub_type == 'softcore3':
+        elif self.FE_sub_type == 'softcore3' or self.FE_sub_type == 'dummy3':
             com = self.ff.Complex(pdb_file, mol2_0)
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0
             com._parm_overwrite = 'decharge'
 
-            com.prepare_top(gaff=self.gaff)
-            com.leap.add_mol(mol2_0, 'mol2', [self.frcmod0])
+            com.prepare_top(gaff=self.gaff, pert=pert0)
+            com.leap.add_mol(mol2_0, 'mol2', [self.frcmod0], pert=pert0)
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
             com = self.ff.Complex(pdb_file, mol2_1)
@@ -335,16 +364,15 @@ class PertTopology(object):
             com.frcmod = self.frcmod1
             com._parm_overwrite = 'recharge'
 
-            com.prepare_top(gaff=self.gaff)
-            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1])
+            com.prepare_top(gaff=self.gaff, pert=pert1)
+            com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1], pert=pert1)
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
         elif self.FE_sub_type == 'dummy':
             com.prepare_top(gaff=self.gaff, pert=pert0_info)
             com.leap.add_mol(mol2_1, 'mol2', [self.frcmod1], pert=pert1_info)
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
-
-        if self.FE_sub_type == 'dummy' or self.FE_sub_type == 'dummy2':
+        if self.FE_sub_type[:5] == 'dummy':
             for prm in patch_parms:
                 util.patch_parmtop(prm[0] + com.TOP_EXT, "", prm[1], prm[2])
 
