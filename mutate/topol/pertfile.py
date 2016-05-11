@@ -40,10 +40,11 @@ from FESetup.mutate import util
 
 class PertTopology(object):
 
-    def __init__(self, FE_sub_type, sc_type, ff, con_morph, atoms_initial,
+    def __init__(self, FE_sub_type, separate, ff, con_morph, atoms_initial,
                  atoms_final, lig_initial, lig_final, atom_map,
                  reverse_atom_map, zz_atoms, gaff):
 
+        self.separate = separate
         self.ff = ff
         self.gaff = gaff
         self.atoms_final = atoms_final
@@ -54,6 +55,20 @@ class PertTopology(object):
         self.zz_atoms = zz_atoms
         
         self.frcmod = None
+
+        self.dummies0 = not all([a.atom for a in atom_map.keys()])
+        self.dummies1 = not all([a.atom for a in atom_map.values()])
+
+        if self.separate and self.dummies0 and self.dummies1:
+            self.FE_sub_type = 'dummy3'
+        elif self.separate and (self.dummies0 or self.dummies1):
+            self.FE_sub_type = 'dummy2'
+        else:
+            self.FE_sub_type = 'dummy'
+
+            if self.separate:
+                logger.write('Warning: linear transformation, not separating '
+                             'into vdw and electrostatic step\n')
 
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
@@ -98,6 +113,9 @@ class PertTopology(object):
         noangles = False
         shrinkbonds = False
 
+        lig_morph = finalise_morph(lig_morph, self.atoms_final, self.atom_map)
+
+        # FIXME: adapt for step protocols
         make_pert_file(lig_morph, new_morph, self.lig_initial,
                        self.lig_final, self.atoms_final, self.atom_map,
                        self.reverse_atom_map, self.zz_atoms,
@@ -241,6 +259,33 @@ def _isSameBondAnglePotential(ipot, fpot):
         return True
 
 
+def finalise_morph(morph,  atoms_final, atom_map):
+    morph = morph.edit()
+    atom_num = 0
+
+    # finalise non-bonded terms of the morph
+    for iinfo, finfo in atom_map.items():
+        if not finfo.atom:
+            final_charge = 0.0 * Sire.Units.mod_electron
+            final_lj = Sire.MM.LJParameter(0.0 * Sire.Units.angstrom,
+                                           0.0 * Sire.Units.kcal_per_mol)
+            final_type = "du"
+        else:
+            base = atoms_final.select(finfo.index)
+            final_charge = base.property("charge")
+            final_lj = base.property("LJ")
+            final_type = "%s" % base.property("ambertype")
+
+        new = morph.atom(iinfo.index) # AtomEditor
+        new.setProperty('final_charge', final_charge)
+        new.setProperty('final_LJ', final_lj)
+        new.setProperty('final_ambertype', final_type)
+
+        morph = new.molecule()
+
+    return morph.commit()
+
+
 def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                    atoms_final, atom_map, reverse_atom_map, zz_atoms,
                    turnoffdummyangles, shrinkdummybonds,
@@ -275,84 +320,72 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     :raises: SetupError
     """
 
-    old_morph = old_morph.edit()
-    atom_num = 0
-
-    # finalise non-bonded terms of the morph
-    for iinfo, finfo in atom_map.items():
-        if not finfo.atom:
-            final_charge = 0.0 * Sire.Units.mod_electron
-            final_lj = Sire.MM.LJParameter(0.0 * Sire.Units.angstrom,
-                                           0.0 * Sire.Units.kcal_per_mol)
-            final_type = "du"
-        else:
-            base = atoms_final.select(finfo.index)
-            final_charge = base.property("charge")
-            final_lj = base.property("LJ")
-            final_type = "%s" % base.property("ambertype")
-
-        new = old_morph.atom(iinfo.index) # AtomEditor
-        new.setProperty('final_charge', final_charge)
-        new.setProperty('final_LJ', final_lj)
-        new.setProperty('final_ambertype', final_type)
-
-        old_morph = new.molecule()
-    old_morph = old_morph.commit()
-
+    # FIXME: change name according to step protocol
     pert_fname = const.MORPH_NAME + os.extsep + 'pert'
     logger.write('Writing perturbation file %s...\n' % pert_fname)
 
     pertfile = open(pert_fname, 'w')
 
-    outstr = "version 1\n"
-    outstr += "molecule %s\n" % (const.LIGAND_NAME)
+    outstr = 'version 1\n'
+    outstr += 'molecule %s\n' % (const.LIGAND_NAME)
     pertfile.write(outstr)
 
     # Write atom perts
     morph_natoms = old_morph.nAtoms()
 
+    # FIXME: write only charge terms for 2- and 3-step protocol
+    #        1-step: write as now i.e. all information
+    #        2-step: charges from state0->state1
+    #        3-step: all charges-> zero, or only disappearing atoms to zero and
+    #                other atoms to state1
     for atom in old_morph.atoms():
-        if ( (atom.property("initial_ambertype") !=
-              atom.property("final_ambertype") )
-             or (atom.property("initial_charge") !=
-                 atom.property("final_charge") )
-             or (atom.property("initial_LJ") !=
-                 atom.property("final_LJ") ) ):
-            outstr = "\tatom\n"
-            outstr += "\t\tname %s\n" % atom.name().value()
-            outstr += "\t\tinitial_type    %s\n" % atom.property(
-                "initial_ambertype")
-            outstr += "\t\tfinal_type      %s\n" % atom.property(
-                "final_ambertype")
-            outstr += "\t\tinitial_charge %8.5f\n" % atom.property(
-                "initial_charge").value()
-            outstr += "\t\tfinal_charge   %8.5f\n" % atom.property(
-                "final_charge").value()
-            outstr += "\t\tinitial_LJ     %8.5f %8.5f\n" % (
-                atom.property("initial_LJ").sigma().value(),
-                atom.property("initial_LJ").epsilon().value())
-            outstr += "\t\tfinal_LJ       %8.5f %8.5f\n" % (
-                atom.property("final_LJ").sigma().value(),
-                atom.property("final_LJ").epsilon().value())
-            outstr += "\tendatom\n"
+        outstr = ''
 
-            pertfile.write(outstr)
+        if ((atom.property('initial_ambertype') !=
+             atom.property('final_ambertype'))
+            or (atom.property('initial_LJ') !=
+                atom.property('final_LJ'))):
 
+            outstr += '\t\tinitial_type    %s\n' % atom.property(
+                'initial_ambertype')
+            outstr += '\t\tfinal_type      %s\n' % atom.property(
+                'final_ambertype')
+            outstr += '\t\tinitial_LJ     %8.5f %8.5f\n' % (
+               atom.property('initial_LJ').sigma().value(),
+                atom.property('initial_LJ').epsilon().value())
+            outstr += '\t\tfinal_LJ       %8.5f %8.5f\n' % (
+                atom.property('final_LJ').sigma().value(),
+                atom.property('final_LJ').epsilon().value())
+
+        if (atom.property('initial_charge') != atom.property('final_charge')):
+            outstr += '\t\tinitial_charge %8.5f\n' % atom.property(
+                'initial_charge').value()
+            outstr += '\t\tfinal_charge   %8.5f\n' % atom.property(
+                'final_charge').value()
+
+        if outstr:
+            atom_name = '\t\tname %s\n' % atom.name().value()
+            pertfile.write('\tatom\n' + atom_name + outstr + '\tendatom\n')
+
+    # FIXME: write vdW+bonded terms only for 2- and 3-step protocol
+    #        1-step: write as now
+    #        2-step: write only when vdW+bonded, otherwise skip
+    #        3-step: write only when vdW+bonded, otherwise skip
 
     # Figure out which bond, angles, dihedrals have their potential variable
-    params_initial = lig_initial.property("amberparameters")
+    params_initial = lig_initial.property('amberparameters')
     bonds_initial = params_initial.getAllBonds()
     angles_initial = params_initial.getAllAngles()
     dihedrals_initial = params_initial.getAllDihedrals()
     impropers_initial = params_initial.getAllImpropers()
 
-    params_final = lig_final.property("amberparameters")
+    params_final = lig_final.property('amberparameters')
     bonds_final = params_final.getAllBonds()
     angles_final = params_final.getAllAngles()
     dihedrals_final = params_final.getAllDihedrals()
     impropers_final = params_final.getAllImpropers()
 
-    params_morph = new_morph.property("amberparameters")
+    params_morph = new_morph.property('amberparameters')
     bonds_morph = params_morph.getAllBonds()
     angles_morph = params_morph.getAllAngles()
     dihedrals_morph = params_morph.getAllDihedrals()
@@ -387,9 +420,9 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 break
 
         if not ipot:
-            if (at0.name().value().startsWith("DU") or
-                at1.name().value().startsWith("DU") ):
-                ipot = "todefine"
+            if (at0.name().value().startsWith('DU') or
+                at1.name().value().startsWith('DU') ):
+                ipot = 'todefine'
                 idummy = True
             else:
                 raise errors.SetupError('Could not locate bond parameters for '
@@ -413,7 +446,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         if fpot is None:
             if (not map_at0 or not map_at1):
-                fpot = "todefine"
+                fpot = 'todefine'
                 fdummy = True
             else:
                 raise errors.SetupError('Could not locate bond parameters for '
@@ -425,7 +458,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         samepotential = _isSameBondAnglePotential(ipot, fpot)
 
         if (not samepotential and
-            ipot != "todefine" and
+            ipot != 'todefine' and
             not _isSameBondAnglePotential(ipot, mpot) ):
                 if (at0.name().value() in zz_atoms or
                     at1.name().value() in zz_atoms):
@@ -460,14 +493,14 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             if shrinkdummybonds and fdummy:
                 f_eq = 0.2 # Angstrom
 
-            outstr = "\tbond\n"
-            outstr += "\t\tatom0   %s\n" % at0.name().value()
-            outstr += "\t\tatom1   %s\n" % at1.name().value()
-            outstr += "\t\tinitial_force %s\n" % i_force
-            outstr += "\t\tinitial_equil %s\n" % i_eq
-            outstr += "\t\tfinal_force   %s\n" % f_force
-            outstr += "\t\tfinal_equil   %s\n" % f_eq
-            outstr += "\tendbond\n"
+            outstr = '\tbond\n'
+            outstr += '\t\tatom0   %s\n' % at0.name().value()
+            outstr += '\t\tatom1   %s\n' % at1.name().value()
+            outstr += '\t\tinitial_force %s\n' % i_force
+            outstr += '\t\tinitial_equil %s\n' % i_eq
+            outstr += '\t\tfinal_force   %s\n' % f_force
+            outstr += '\t\tfinal_equil   %s\n' % f_eq
+            outstr += '\tendbond\n'
 
             pertfile.write(outstr)
 
@@ -500,10 +533,10 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 break
 
         if ipot is None:
-            if (at0.name().value().startsWith("DU") or
-                at1.name().value().startsWith("DU") or
-                at2.name().value().startsWith("DU") ):
-                ipot = "todefine"
+            if (at0.name().value().startsWith('DU') or
+                at1.name().value().startsWith('DU') or
+                at2.name().value().startsWith('DU') ):
+                ipot = 'todefine'
                 idummy = True
             else:
                 raise errors.SetupError('can not determine ipot for angle %s ' %
@@ -526,7 +559,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         if fpot is None:
             if (not map_at0 or not map_at1 or not map_at2):
-                fpot = "todefine"
+                fpot = 'todefine'
                 fdummy = True
             else:
                 raise errors.SetupError('can not determine fpot for angle %s ' %
@@ -535,7 +568,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         samepotential = _isSameBondAnglePotential(ipot, fpot)
 
         if (not samepotential and
-            ipot != "todefine" and
+            ipot != 'todefine' and
             (not _isSameBondAnglePotential(ipot, mpot) ) ):
             if (at0.name().value() not in zz_atoms or
                 at1.name().value() not in zz_atoms or
@@ -565,23 +598,23 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             f_eq = fpot[1]
 
             if turnoffdummyangles and idummy:
-                if (not at0.name().value().startsWith("DU") or
-                    not at2.name().value().startsWith("DU") ):
+                if (not at0.name().value().startsWith('DU') or
+                    not at2.name().value().startsWith('DU') ):
                     i_force = 0.0
             if turnoffdummyangles and fdummy:
-                if (not at0.name().value().startsWith("DU") or
-                    not at2.name().value().startsWith("DU") ):
+                if (not at0.name().value().startsWith('DU') or
+                    not at2.name().value().startsWith('DU') ):
                     i_force = 0.0
 
-            outstr = "\tangle\n"
-            outstr += "\t\tatom0   %s\n" % at0.name().value()
-            outstr += "\t\tatom1   %s\n" % at1.name().value()
-            outstr += "\t\tatom2   %s\n" % at2.name().value()
-            outstr += "\t\tinitial_force %s\n" % i_force
-            outstr += "\t\tinitial_equil %s\n" % i_eq
-            outstr += "\t\tfinal_force   %s\n" % f_force
-            outstr += "\t\tfinal_equil   %s\n" % f_eq
-            outstr += "\tendangle\n"
+            outstr = '\tangle\n'
+            outstr += '\t\tatom0   %s\n' % at0.name().value()
+            outstr += '\t\tatom1   %s\n' % at1.name().value()
+            outstr += '\t\tatom2   %s\n' % at2.name().value()
+            outstr += '\t\tinitial_force %s\n' % i_force
+            outstr += '\t\tinitial_equil %s\n' % i_eq
+            outstr += '\t\tfinal_force   %s\n' % f_force
+            outstr += '\t\tfinal_equil   %s\n' % f_eq
+            outstr += '\tendangle\n'
 
             pertfile.write(outstr)
 
@@ -630,11 +663,11 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 break
 
         if not ipot:
-            is_dummy = [at.name().value().startsWith("DU")
+            is_dummy = [at.name().value().startsWith('DU')
                         for at in (at0, at1, at2, at3) ]
             
             if any(is_dummy):
-                ipot = "todefine"
+                ipot = 'todefine'
                 idummy = True
             else:
                 raise errors.SetupError('Could not locate torsion parameters for '
@@ -667,7 +700,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         if not fpot:
             if not map_at0 or not map_at1 or not map_at2 or not map_at3:
-                fpot = "todefine"
+                fpot = 'todefine'
                 fdummy = True
             else:
                 # This could be because the dihedral has a 0 force constant and
@@ -682,7 +715,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         samepotential = _isSameDihedralPotential(ipot, fpot)
 
         if (not samepotential and
-            ipot != "todefine" and
+            ipot != 'todefine' and
             (not _isSameDihedralPotential(ipot, mpot) ) ):
             if (at0.name().value() not in zz_atoms or
                 at1.name().value() not in zz_atoms or
@@ -719,14 +752,14 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             continue
 
         if (idummy or fdummy) or (not samepotential):
-            outstr = "\tdihedral\n"
-            outstr += "\t\tatom0   %s\n" % at0.name().value()
-            outstr += "\t\tatom1   %s\n" % at1.name().value()
-            outstr += "\t\tatom2   %s\n" % at2.name().value()
-            outstr += "\t\tatom3   %s\n" % at3.name().value()
-            outstr += "\t\tinitial_form %s\n" % ' '.join([str(i) for i in ipot])
-            outstr += "\t\tfinal_form %s\n" % ' '.join([str(f) for f in fpot])
-            outstr += "\tenddihedral\n"
+            outstr = '\tdihedral\n'
+            outstr += '\t\tatom0   %s\n' % at0.name().value()
+            outstr += '\t\tatom1   %s\n' % at1.name().value()
+            outstr += '\t\tatom2   %s\n' % at2.name().value()
+            outstr += '\t\tatom3   %s\n' % at3.name().value()
+            outstr += '\t\tinitial_form %s\n' % ' '.join([str(i) for i in ipot])
+            outstr += '\t\tfinal_form %s\n' % ' '.join([str(f) for f in fpot])
+            outstr += '\tenddihedral\n'
 
             pertfile.write(outstr)
 
@@ -749,14 +782,14 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         reversemap_at2 = util.search_atom(fat2, reverse_atom_map)
         reversemap_at3 = util.search_atom(fat3, reverse_atom_map)
 
-        outstr = "\tdihedral\n"
-        outstr += "\t\tatom0   %s\n" % reversemap_at0.value()
-        outstr += "\t\tatom1   %s\n" % reversemap_at1.value()
-        outstr += "\t\tatom2   %s\n" % reversemap_at2.value()
-        outstr += "\t\tatom3   %s\n" % reversemap_at3.value()
-        outstr += "\t\tinitial_form %s\n" % ' '.join([str(i) for i in ipot])
-        outstr += "\t\tfinal_form %s\n" % ' '.join([str(f) for f in fpot])
-        outstr += "\tenddihedral\n"
+        outstr = '\tdihedral\n'
+        outstr += '\t\tatom0   %s\n' % reversemap_at0.value()
+        outstr += '\t\tatom1   %s\n' % reversemap_at1.value()
+        outstr += '\t\tatom2   %s\n' % reversemap_at2.value()
+        outstr += '\t\tatom3   %s\n' % reversemap_at3.value()
+        outstr += '\t\tinitial_form %s\n' % ' '.join([str(i) for i in ipot])
+        outstr += '\t\tfinal_form %s\n' % ' '.join([str(f) for f in fpot])
+        outstr += '\tenddihedral\n'
 
         pertfile.write(outstr)
 
@@ -810,11 +843,11 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                 break
 
         if not ipot:
-            is_dummy = [at.name().value().startsWith("DU")
+            is_dummy = [at.name().value().startsWith('DU')
                         for at in (at0, at1, at2, at3) ]
 
             if any(is_dummy):
-                ipot = "todefine"
+                ipot = 'todefine'
                 idummy = True
             else:
                 raise errors.SetupError('Could not locate improper parameters for '
@@ -874,7 +907,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         if not fpot:
             if not map_at0 or not map_at1 or not map_at2 or not map_at3:
-                fpot = "todefine"
+                fpot = 'todefine'
                 fdummy = True
             else:
                 # JM 02/13 Found a case where one final improper does not exist,
@@ -893,7 +926,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
 
         # FIXME: there is a logical problem here!
         if (not samepotential and
-            ipot != "todefine" and
+            ipot != 'todefine' and
             (not _isSameDihedralPotential(ipot, mpot) ) ):
             if (at0.name().value() not in zz_atoms or
                 at1.name().value() not in zz_atoms or
@@ -919,22 +952,22 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             else:
                 fpot = [0.0, 0.0, 0.0]
 
-        ipotstr = ""
+        ipotstr = ''
         for val in ipot:
-            ipotstr += "%s " % val
-        fpotstr = ""
+            ipotstr += '%s ' % val
+        fpotstr = ''
         for val in fpot:
-            fpotstr += "%s " % val
+            fpotstr += '%s ' % val
 
         if ( (idummy or fdummy) or (not samepotential) ):
-            outstr = "\timproper\n"
-            outstr += "\t\tatom0   %s\n" % at0.name().value()
-            outstr += "\t\tatom1   %s\n" % at1.name().value()
-            outstr += "\t\tatom2   %s\n" % at2.name().value()
-            outstr += "\t\tatom3   %s\n" % at3.name().value()
-            outstr += "\t\tinitial_form %s\n" % ipotstr
-            outstr += "\t\tfinal_form %s\n" % fpotstr
-            outstr += "\tendimproper\n"
+            outstr = '\timproper\n'
+            outstr += '\t\tatom0   %s\n' % at0.name().value()
+            outstr += '\t\tatom1   %s\n' % at1.name().value()
+            outstr += '\t\tatom2   %s\n' % at2.name().value()
+            outstr += '\t\tatom3   %s\n' % at3.name().value()
+            outstr += '\t\tinitial_form %s\n' % ipotstr
+            outstr += '\t\tfinal_form %s\n' % fpotstr
+            outstr += '\tendimproper\n'
             pertfile.write(outstr)
 
     logger.write("Impropers in the final topology that haven't been mapped to "
@@ -960,14 +993,14 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         else:
             ipot = [0.0, 0.0, 0.0]
 
-        outstr = "\timproper\n"
-        outstr += "\t\tatom0   %s\n" % at0_info.name.value()
-        outstr += "\t\tatom1   %s\n" % at1_info.name.value()
-        outstr += "\t\tatom2   %s\n" % at2_info.name.value()
-        outstr += "\t\tatom3   %s\n" % at3_info.name.value()
-        outstr += "\t\tinitial_form %s\n" % ' '.join(str(i) for i in ipot)
-        outstr += "\t\tfinal_form %s\n" % ' '.join(str(f) for f in fpot)
-        outstr += "\tendimproper\n"
+        outstr = '\timproper\n'
+        outstr += '\t\tatom0   %s\n' % at0_info.name.value()
+        outstr += '\t\tatom1   %s\n' % at1_info.name.value()
+        outstr += '\t\tatom2   %s\n' % at2_info.name.value()
+        outstr += '\t\tatom3   %s\n' % at3_info.name.value()
+        outstr += '\t\tinitial_form %s\n' % ' '.join(str(i) for i in ipot)
+        outstr += '\t\tfinal_form %s\n' % ' '.join(str(f) for f in fpot)
+        outstr += '\tendimproper\n'
 
         pertfile.write(outstr)
 
@@ -1000,14 +1033,14 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
         ipot = params_initial.getParams(iimproper)
         fpot = [0.0, 0.0, 0.0]
 
-        outstr = "\timproper\n"
-        outstr += "\t\tatom0   %s\n" % iat0.name().value()
-        outstr += "\t\tatom1   %s\n" % iat1.name().value()
-        outstr += "\t\tatom2   %s\n" % iat2.name().value()
-        outstr += "\t\tatom3   %s\n" % iat3.name().value()
-        outstr += "\t\tinitial_form %s\n" % ' '.join(str(i) for i in ipot)
-        outstr += "\t\tfinal_form %s\n" % ' '.join(str(f) for f in fpot)
-        outstr += "\tendimproper\n"
+        outstr = '\timproper\n'
+        outstr += '\t\tatom0   %s\n' % iat0.name().value()
+        outstr += '\t\tatom1   %s\n' % iat1.name().value()
+        outstr += '\t\tatom2   %s\n' % iat2.name().value()
+        outstr += '\t\tatom3   %s\n' % iat3.name().value()
+        outstr += '\t\tinitial_form %s\n' % ' '.join(str(i) for i in ipot)
+        outstr += '\t\tfinal_form %s\n' % ' '.join(str(f) for f in fpot)
+        outstr += '\tendimproper\n'
 
         pertfile.write(outstr)
 

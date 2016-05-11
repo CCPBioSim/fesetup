@@ -94,7 +94,7 @@ class PertTopology(object):
                     self.FE_sub_type = 'dummy'
 
                 if self.separate:
-                    logger.write('Warning: linear transformation, not separated '
+                    logger.write('Warning: linear transformation, not separating '
                                  'into vdw and electrostatic step\n')
 
 

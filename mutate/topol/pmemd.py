@@ -65,7 +65,7 @@ class PertTopology(object):
         if self.separate and self.dummies0 and self.dummies1:
             if want_softcore:
                 self.FE_sub_type = 'softcore3'
-            else:                       # FIXME: not implementeed yet!
+            else:
                 self.FE_sub_type = 'dummy3'
         elif self.separate and (self.dummies0 or self.dummies1):
             if want_softcore:
@@ -79,7 +79,7 @@ class PertTopology(object):
                 self.FE_sub_type = 'dummy'
 
             if self.separate:
-                logger.write('Warning: linear transformation, not separated '
+                logger.write('Warning: linear transformation, not separating '
                              'into vdw and electrostatic step\n')
 
 
