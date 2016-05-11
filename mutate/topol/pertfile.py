@@ -109,17 +109,12 @@ class PertTopology(object):
                                     (crd, top, error) )
 
         new_morph = molecules.first().molecule()
-
-        noangles = False
-        shrinkbonds = False
-
         lig_morph = finalise_morph(lig_morph, self.atoms_final, self.atom_map)
 
         # FIXME: adapt for step protocols
         make_pert_file(lig_morph, new_morph, self.lig_initial,
                        self.lig_final, self.atoms_final, self.atom_map,
-                       self.reverse_atom_map, self.zz_atoms,
-                       noangles, shrinkbonds)
+                       self.reverse_atom_map, self.zz_atoms, True)
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
@@ -259,7 +254,7 @@ def _isSameBondAnglePotential(ipot, fpot):
         return True
 
 
-def finalise_morph(morph,  atoms_final, atom_map):
+def finalise_morph(morph, atoms_final, atom_map):
     morph = morph.edit()
     atom_num = 0
 
@@ -288,8 +283,8 @@ def finalise_morph(morph,  atoms_final, atom_map):
 
 def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
                    atoms_final, atom_map, reverse_atom_map, zz_atoms,
-                   turnoffdummyangles, shrinkdummybonds,
-                   zero_all_dummies = False):
+                   charge_only, turnoffdummyangles=False,
+                   shrinkdummybonds=False, zero_dih_dummies=False):
 
     """
     Create a perturbation file for Sire.
@@ -310,13 +305,15 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     :type reverse_atom_map: dict of _AtomInfo to _AtomInfo
     :param zz_atoms: rename atoms in list to 'zz' to circumvent leap valency check
     :type zz_atoms: list of Sire.Mol.AtomName
+    :param charge_only: write only charges or also vdW+bonded terms
+    :type charge_only: bool
     :param turnoffdummyangles: turn off dummy angles
     :type turnoffdummyangles: bool
     :param shrinkdummybonds: shrink dummy bonds
     :type shrinkdummybonds: bool
-    :param zero_all_dummies: use zero dihedrals and impropers when all atoms are
+    :param zero_dih_dummies: use zero dihedrals and impropers when all atoms are
     dummies
-    :type zero_all_dummies: bool
+    :type zero_dih_dummies: bool
     :raises: SetupError
     """
 
@@ -736,12 +733,12 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             ipot = [0.0, 0.0, 0.0]
             fpot = [0.0, 0.0, 0.0]
         elif idummy:
-            if allidummy and not zero_all_dummies:
+            if allidummy and not zero_dih_dummies:
                 ipot = fpot
             else:
                 ipot = [0.0, 0.0, 0.0]
         elif fdummy:
-            if allfdummy and not zero_all_dummies:
+            if allfdummy and not zero_dih_dummies:
                 fpot = ipot
             else:
                 fpot = [0.0, 0.0, 0.0]
@@ -942,12 +939,12 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
             ipot = [ 0.0, 0.0, 0.0 ]
             fpot = [ 0.0, 0.0, 0.0 ]
         elif idummy:
-            if allidummy and not zero_all_dummies:
+            if allidummy and not zero_dih_dummies:
                 ipot = fpot
             else:
                 ipot = [0.0, 0.0, 0.0]
         elif fdummy:
-            if allfdummy and not zero_all_dummies:
+            if allfdummy and not zero_dih_dummies:
                 fpot = ipot
             else:
                 fpot = [0.0, 0.0, 0.0]
