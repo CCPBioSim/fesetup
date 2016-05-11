@@ -810,16 +810,8 @@ class Ligand(Common):
             outstr.extend((
                 '\tatom',
                 '\t\tname           %s' % atom.name().value(),
-                '\t\tinitial_type   %s' % atom.property('ambertype'),
-                '\t\tfinal_type     %s' % atom.property('ambertype'),
                 '\t\tinitial_charge %-8.5f' % atom.property('charge').value(),
                 '\t\tfinal_charge   0.0',
-                ('\t\tinitial_LJ    %8.5f %8.5f' %
-                 (atom.property('LJ').sigma().value(),
-                  atom.property('LJ').epsilon().value())),
-                ('\t\tfinal_LJ      %8.5f %8.5f' %
-                 (atom.property('LJ').sigma().value(),
-                  atom.property('LJ').epsilon().value())),
                 '\tendatom'))
 
         outstr.append('endmolecule\n')
