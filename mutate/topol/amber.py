@@ -296,7 +296,7 @@ def write_mdin(atoms_initial, atoms_final, atom_map, prog, style='', vac=True):
 
     if vac:
         ntb = 0
-        press = 'ntp = 0, cut = 9999.0'
+        press = 'ntp = 0, cut = 9999.0, igb = 6, ! igb for pmemd'
         wrap = 0
     else:
         ntb = 2

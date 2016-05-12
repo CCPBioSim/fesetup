@@ -300,7 +300,7 @@ class Morph(object):
         :param system: must be either Ligand (solvated) or Complex (solvated).
            The ligand coordinates are computed while the coordinates of the rest
            of the system are taken from the unperturbed solvated system.
-        :param workdir: the name of the work directory
+        :param workdir: the name of the relative work directory
         :param sys_base: the name of the base directory
         :param cmd1: additional leap commands
         :param cmd2: additional leap commands
@@ -324,12 +324,10 @@ class Morph(object):
             raise errors.SetupError('create_coord(): system must be '
                                     'either Ligand or Complex')
 
-        dir_name = workdir              # local work dir relative path
+        if not os.access(workdir, os.F_OK):
+            os.mkdir(workdir)
 
-        if not os.access(dir_name, os.F_OK):
-            os.mkdir(dir_name)
-
-        os.chdir(dir_name)
+        os.chdir(workdir)
 
         crd = os.path.join(sys_base, system.amber_crd)
         top = os.path.join(sys_base, system.amber_top)
@@ -337,8 +335,8 @@ class Morph(object):
         if not crd:
             raise errors.SetupError('no suitable rst7 file found')
 
-        system.sander_rst = crd
-        system.get_box_dims()
+        #system.sander_rst = crd
+        system.get_box_dims(crd)
 
         try:
             mols = Sire.IO.Amber().readCrdTop(crd, top)[0]
@@ -462,7 +460,7 @@ class Morph(object):
 
         boxdims.extend((90.0, 90.0, 90.0))
 
-        self.topol.create_coords(curr_dir, dir_name, self.lig_morph,
+        self.topol.create_coords(curr_dir, workdir, self.lig_morph,
                                  REST_PDB_NAME, system, cmd1, cmd2, boxdims)
 
         os.chdir(curr_dir)

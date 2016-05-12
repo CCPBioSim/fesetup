@@ -1147,16 +1147,22 @@ if __name__ == '__main__':
 
     ### complex morphs
 
+    # FIXME: For some reason the cwd is _perturbations/type/morph for the
+    #        second morph in the loop below as if a chdir didn't take place(?).
+    #        So remember the cwd before entering create_coords()
+    cwd = os.getcwd()
+
     for morph in morphs:
         for complex in complexes.keys():
             name = complex.mol_name + '/' + morph.name
-
-            wd = os.path.join(os.getcwd(), const.COMPLEX_WORKDIR, complex.mol_name)
 
             # FIXME: Complex has no ligand component after restart
             if complex.ligand.mol_name == morph.initial_name:
                 print('Creating complex %s with ligand morph %s...' %
                       (complex.mol_name, morph.name) )
+
+                #print(os.getcwd())
+                wd = os.path.join(cwd, const.COMPLEX_WORKDIR, complex.mol_name)
 
                 try:
                     morph.create_coords(complex, 'complex', wd,
