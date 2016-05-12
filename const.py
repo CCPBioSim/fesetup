@@ -150,7 +150,7 @@ DLFIELD_UDFF_NAME = 'dl_field.udff'
 DLFIELD_PDB_NAME = 'dl_field' + PDB_EXT
 RSTAR_CONV = 0.5612310241546865         # math.pow(2.0, 1.0 / 6.0) / 2.0
 
-SIRE_ABS_PERT_FILE = 'MORPH.1step.pert'
+SIRE_ABS_PERT_FILE = 'MORPH.onestep.pert'
 SIRE_ABS_PERT_EL_FILE = 'MORPH.elec.pert'
 SIRE_ABS_PERT_VDW_FILE = 'MORPH.vdw.pert'
 

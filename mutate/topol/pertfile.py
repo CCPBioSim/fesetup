@@ -112,10 +112,42 @@ class PertTopology(object):
         lig_morph = finalise_morph(lig_morph, self.atoms_final, self.atom_map)
 
         # FIXME: adapt for step protocols
-        make_pert_file(lig_morph, new_morph, self.lig_initial,
-                       self.lig_final, self.atoms_final, self.atom_map,
-                       self.reverse_atom_map, self.zz_atoms, True)
-
+        if self.FE_sub_type == 'dummy':
+            make_pert_file(lig_morph, new_morph, 'MORPH.onestep',
+                           'initial_charge', 'final_charge',
+                           'initial_LJ', 'final_LJ', 'initial_ambertype',
+                           'final_ambertype', self.lig_initial,
+                           self.lig_final, self.atoms_final, self.atom_map,
+                           self.reverse_atom_map, self.zz_atoms, False)
+        elif self.FE_sub_type == 'dummy2':
+            if self.dummies0:
+                make_pert_file(lig_morph, new_morph, 'MORPH.charge',
+                               'initial_charge', 'final_charge',
+                               'final_LJ', 'final_LJ', 'final_ambertype',
+                               'final_ambertype', self.lig_initial,
+                               self.lig_final, self.atoms_final, self.atom_map,
+                               self.reverse_atom_map, self.zz_atoms, True)
+                make_pert_file(lig_morph, new_morph, 'MORPH.vdw',
+                               'initial_charge', 'initial_charge',
+                               'initial_LJ', 'final_LJ', 'initial_ambertype',
+                               'final_ambertype', self.lig_initial,
+                               self.lig_final, self.atoms_final, self.atom_map,
+                               self.reverse_atom_map, self.zz_atoms, False)
+            else:
+                make_pert_file(lig_morph, new_morph, 'MORPH.charge',
+                               'initial_charge', 'final_charge',
+                               'initial_LJ', 'initial_LJ', 'initial_ambertype',
+                               'initial_ambertype', self.lig_initial,
+                               self.lig_final, self.atoms_final, self.atom_map,
+                               self.reverse_atom_map, self.zz_atoms, True)
+                make_pert_file(lig_morph, new_morph, 'MORPH.vdw',
+                               'final_charge', 'final_charge',
+                               'initial_LJ', 'final_LJ', 'initial_ambertype',
+                               'final_ambertype', self.lig_initial,
+                               self.lig_final, self.atoms_final, self.atom_map,
+                               self.reverse_atom_map, self.zz_atoms, False)
+        elif self.FE_sub_type == 'dummy3':
+            pass
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
                       cmd1, cmd2, boxdims):
@@ -281,10 +313,12 @@ def finalise_morph(morph, atoms_final, atom_map):
     return morph.commit()
 
 
-def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
-                   atoms_final, atom_map, reverse_atom_map, zz_atoms,
-                   charge_only, turnoffdummyangles=False,
-                   shrinkdummybonds=False, zero_dih_dummies=False):
+def make_pert_file(old_morph, new_morph, pertfile, qprop0, qprop1,
+                   LJprop0, LJprop1, atprop0, atprop1,
+                   lig_initial, lig_final, atoms_final, atom_map,
+                   reverse_atom_map, zz_atoms, qonly,
+                   turnoffdummyangles=False, shrinkdummybonds=False,
+                   zero_dih_dummies=False):
 
     """
     Create a perturbation file for Sire.
@@ -293,6 +327,20 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     :type old_morph: Sire.Mol.Molecule
     :param new_morph: a new morph molecule for manipulations
     :type new_morph: Sire.Mol.Molecule
+    :param pertfile: basename of the pertfile
+    :type pertfile: str
+    :param qprop0: name of inital charge property
+    :type qprop0: str
+    :param qprop1: name of final charge property
+    :type qprop1: str
+    :param LJprop0: name of inital LJ property
+    :type LJprop0: str
+    :param LJprop1: name of final LJ property
+    :type LJprop1: str
+    :param atprop0: name of inital atom type property
+    :type atprop0: str
+    :param atprop1: name of final atom type property
+    :type atprop1: str
     :param lig_initial: the initial state molecule
     :type lig_initial: Sire.Mol.Molecule
     :param lig_final: the final state molecule
@@ -318,7 +366,7 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     """
 
     # FIXME: change name according to step protocol
-    pert_fname = const.MORPH_NAME + os.extsep + 'pert'
+    pert_fname = pertfile + os.extsep + 'pert'
     logger.write('Writing perturbation file %s...\n' % pert_fname)
 
     pertfile = open(pert_fname, 'w')
@@ -338,31 +386,35 @@ def make_pert_file(old_morph, new_morph, lig_initial, lig_final,
     for atom in old_morph.atoms():
         outstr = ''
 
-        if ((atom.property('initial_ambertype') !=
-             atom.property('final_ambertype'))
-            or (atom.property('initial_LJ') !=
-                atom.property('final_LJ'))):
+        #if ((atom.property(atprop0) !=
+        #     atom.property(atprop1))
+        #    or (atom.property(LJprop0) !=
+        #        atom.property(LJprop1))):
 
-            outstr += '\t\tinitial_type    %s\n' % atom.property(
-                'initial_ambertype')
-            outstr += '\t\tfinal_type      %s\n' % atom.property(
-                'final_ambertype')
-            outstr += '\t\tinitial_LJ     %8.5f %8.5f\n' % (
-               atom.property('initial_LJ').sigma().value(),
-                atom.property('initial_LJ').epsilon().value())
-            outstr += '\t\tfinal_LJ       %8.5f %8.5f\n' % (
-                atom.property('final_LJ').sigma().value(),
-                atom.property('final_LJ').epsilon().value())
+        outstr += '\t\tinitial_type    %s\n' % atom.property(atprop0)
+        outstr += '\t\tfinal_type      %s\n' % atom.property(atprop1)
+        outstr += '\t\tinitial_LJ     %8.5f %8.5f\n' % (
+            atom.property(LJprop0).sigma().value(),
+            atom.property(LJprop0).epsilon().value())
+        outstr += '\t\tfinal_LJ       %8.5f %8.5f\n' % (
+            atom.property(LJprop1).sigma().value(),
+            atom.property(LJprop1).epsilon().value())
 
-        if (atom.property('initial_charge') != atom.property('final_charge')):
-            outstr += '\t\tinitial_charge %8.5f\n' % atom.property(
-                'initial_charge').value()
-            outstr += '\t\tfinal_charge   %8.5f\n' % atom.property(
-                'final_charge').value()
+        #if (atom.property(qprop0) != atom.property(qprop1)):
+        outstr += '\t\tinitial_charge %8.5f\n' % \
+                  atom.property(qprop0).value()
+        outstr += '\t\tfinal_charge   %8.5f\n' % \
+                  atom.property(qprop1).value()
 
         if outstr:
             atom_name = '\t\tname %s\n' % atom.name().value()
             pertfile.write('\tatom\n' + atom_name + outstr + '\tendatom\n')
+
+    if qonly:
+        pertfile.write('endmolecule\n')
+        pertfile.close()
+        return
+
 
     # FIXME: write vdW+bonded terms only for 2- and 3-step protocol
     #        1-step: write as now
