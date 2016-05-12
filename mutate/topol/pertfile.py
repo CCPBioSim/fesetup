@@ -147,7 +147,26 @@ class PertTopology(object):
                                self.lig_final, self.atoms_final, self.atom_map,
                                self.reverse_atom_map, self.zz_atoms, False)
         elif self.FE_sub_type == 'dummy3':
-            pass
+            make_pert_file(lig_morph, new_morph, 'MORPH.decharge',
+                           'initial_charge', 'zero_all',
+                           'initial_LJ', 'initial_LJ', 'initial_ambertype',
+                           'initial_ambertype', self.lig_initial,
+                           self.lig_final, self.atoms_final, self.atom_map,
+                           self.reverse_atom_map, self.zz_atoms, False)
+
+            make_pert_file(lig_morph, new_morph, 'MORPH.vdw',
+                           'zero_all', 'zero_all',
+                           'initial_LJ', 'final_LJ', 'initial_ambertype',
+                           'final_ambertype', self.lig_initial,
+                           self.lig_final, self.atoms_final, self.atom_map,
+                           self.reverse_atom_map, self.zz_atoms, False)
+
+            make_pert_file(lig_morph, new_morph, 'MORPH.recharge',
+                           'zero_all', 'final_charge',
+                           'final_LJ', 'final_LJ', 'final_ambertype',
+                           'final_ambertype', self.lig_initial,
+                           self.lig_final, self.atoms_final, self.atom_map,
+                           self.reverse_atom_map, self.zz_atoms, False)
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
                       cmd1, cmd2, boxdims):
@@ -401,10 +420,26 @@ def make_pert_file(old_morph, new_morph, pertfile, qprop0, qprop1,
             atom.property(LJprop1).epsilon().value())
 
         #if (atom.property(qprop0) != atom.property(qprop1)):
-        outstr += '\t\tinitial_charge %8.5f\n' % \
-                  atom.property(qprop0).value()
-        outstr += '\t\tfinal_charge   %8.5f\n' % \
-                  atom.property(qprop1).value()
+        if qprop0 == 'zero_all' and qprop1 == 'zero_all':
+            outstr += '\t\tinitial_charge  0.0\n'
+            outstr += '\t\tfinal_charge    0.0\n'
+        elif qprop1 == 'zero_all':
+            outstr += '\t\tinitial_charge %8.5f\n' % \
+                      atom.property(qprop0).value()
+            outstr += '\t\tfinal_charge    0.0\n'
+        elif qprop0 == 'zero_all':
+            outstr += '\t\tinitial_charge  0.0\n'
+            outstr += '\t\tfinal_charge   %8.5f\n' % \
+                      atom.property(qprop1).value()
+        elif qprop1 == 'zero_dummy':
+            pass
+        elif qprop0 == 'zero_dummy':
+            pass
+        else:
+            outstr += '\t\tinitial_charge %8.5f\n' % \
+                      atom.property(qprop0).value()
+            outstr += '\t\tfinal_charge   %8.5f\n' % \
+                      atom.property(qprop1).value()
 
         if outstr:
             atom_name = '\t\tname %s\n' % atom.name().value()
