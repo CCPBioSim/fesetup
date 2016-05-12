@@ -29,7 +29,8 @@ propka = False
 
 box.type = rectangular    # this creates the hydrated box
 box.length = 10.0
-neutralize = 1
+ions.conc = 0.15
+ions.dens = 1.0
 align_axes = True
 
 min.nsteps = 300

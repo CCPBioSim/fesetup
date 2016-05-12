@@ -1,6 +1,12 @@
 logfile = morph.log
 forcefield = amber, ff14SB, tip3p, hfe
-FE_type = pmemd/softcore
+gaff = gaff2
+
+AFE.type = gromacs
+AFE.separate_vdw_elec = 1
+
+mcs.timeout = 60
+
 mdengine = amber, pmemd.MPI
 mdengine.prefix = mpirun -np 2
 
@@ -27,7 +33,19 @@ morph_pairs = ethane > methanol, ethane > tbutane, ethane > propane,
               cyclopropyl-benzene > chloro-benzene,
               pyrimidylpropane > phenylacteone
 
-#box.type = rectangular
+box.type = rectangular
 box.length = 12.0
 neutralize = yes
-min.nsteps = 0
+min.nsteps = 100
+
+md.heat.nsteps = 3000
+md.heat.restraint = heavy
+md.heat.restr_force = 6.0
+
+md.press.nsteps = 20000
+md.press.restraint = heavy
+md.press.restr_force = 4.0
+
+md.relax.nsteps = 250
+md.relax.nrestr = 4
+md.relax.restraint = heavy

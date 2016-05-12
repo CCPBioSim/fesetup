@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2013  Hannes H Loeffler
+#  Copyright (C) 2012-2013,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -29,16 +29,14 @@ FES_HOME=/home/hhl/projects/ccpbiosim/FESetup
 #RDBASE=/usr/local/RDKit_2015_03_1
 #DYLD_LIBRARY_PATH=$RDBASE/lib
 #LD_LIBRARY_PATH=$RDBASE/lib
-LD_LIBRARY_PATH=/usr/local/Sire_dev/lib
 
-NAMDHOME=/usr/local/NAMD_2.10_Linux-x86-multicore
-GMXHOME=/usr/local/gromacs-4.6.7
+NAMDHOME=/usr/local/NAMD_2.11_Linux-x86-multicore
+GMXHOME=/usr/local/gromacs-5.1.2
 DLPOLYHOME=/usr/local/dl_poly_4.06
 #AMBERHOME=
 
 # first dir includes FESetup
-#PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$RDBASE/lib/python2.7/site-packages:$AMBERHOME/bin
-PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$AMBERHOME/bin #:/usr/local/Sire_dev/lib/python2.7/site-packages
+PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$AMBERHOME/bin
 
 export DYLD_LIBRARY_PATH LD_LIBRARY_PATH PYTHONPATH NAMDHOME GMXHOME DLPOLYHOME
 export FES_HOME

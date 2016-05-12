@@ -824,7 +824,7 @@ defaults[SECT_DEF] = {
     'logfile': ('dGprep.log', None),
     'forcefield': (['amber', 'ff14SB', 'tip3p', 'hfe'], ('list', LIST_SEP) ),
     'ff_addons': ([], ('list', LIST_SEP) ),
-    'gaff': ('gaff', None),
+    'gaff': ('gaff1', None),
     'mdengine': (['amber', 'sander'], ('list', LIST_SEP) ),
     'mdengine.prefix': ('', None),
     'mdengine.postfix': ('', None),
@@ -949,16 +949,20 @@ if __name__ == '__main__':
 
     options.parse(args.infile, 'globals')
 
+    # backward compatibility
+    if options[SECT_DEF]['FE_type']:
+        options[SECT_DEF]['AFE.type'] = options[SECT_DEF]['FE_type']
+
+    if options[SECT_DEF]['gaff'] == 'gaff1':
+        options[SECT_DEF]['gaff'] = 'gaff'
+
+
     for section in ALL_SECTIONS:
         check_dict(section, options)
 
     ff = prelude(options)
 
     logger.write('Force field and MD engine:\n%s\n' % ff)
-
-    # backward compatibility
-    if options[SECT_DEF]['FE_type']:
-        options[SECT_DEF]['AFE.type'] = options[SECT_DEF]['FE_type']
 
 
     # FIXME: We keep all molecule objects in memory.  For 2000 morph pairs
