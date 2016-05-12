@@ -253,7 +253,7 @@ class Morph(object):
                                   self.reverse_atom_map, connect_final,
                                   self.zz_atoms, self.dummy_idx)
 
-        logger.write('\nWriting pert topology for %s%s\n' %
+        logger.write('\nWriting perturbed topology for %s%s\n' %
                      (self.FE_type, '/' + self.FE_sub_type if self.FE_sub_type
                       else '') )
 

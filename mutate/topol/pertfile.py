@@ -113,7 +113,7 @@ class PertTopology(object):
 
         # FIXME: adapt for step protocols
         if self.FE_sub_type == 'dummy':
-            make_pert_file(lig_morph, new_morph, 'MORPH.onestep',
+            make_pert_file(lig_morph, new_morph, 'onestep',
                            'initial_charge', 'final_charge',
                            'initial_LJ', 'final_LJ', 'initial_ambertype',
                            'final_ambertype', self.lig_initial,
@@ -121,47 +121,47 @@ class PertTopology(object):
                            self.reverse_atom_map, self.zz_atoms, False)
         elif self.FE_sub_type == 'dummy2':
             if self.dummies0:
-                make_pert_file(lig_morph, new_morph, 'MORPH.charge',
+                make_pert_file(lig_morph, new_morph, 'charge',
                                'initial_charge', 'final_charge',
                                'final_LJ', 'final_LJ', 'final_ambertype',
                                'final_ambertype', self.lig_initial,
                                self.lig_final, self.atoms_final, self.atom_map,
                                self.reverse_atom_map, self.zz_atoms, True)
-                make_pert_file(lig_morph, new_morph, 'MORPH.vdw',
+                make_pert_file(lig_morph, new_morph, 'vdw',
                                'initial_charge', 'initial_charge',
                                'initial_LJ', 'final_LJ', 'initial_ambertype',
                                'final_ambertype', self.lig_initial,
                                self.lig_final, self.atoms_final, self.atom_map,
                                self.reverse_atom_map, self.zz_atoms, False)
             else:
-                make_pert_file(lig_morph, new_morph, 'MORPH.charge',
+                make_pert_file(lig_morph, new_morph, 'charge',
                                'initial_charge', 'final_charge',
                                'initial_LJ', 'initial_LJ', 'initial_ambertype',
                                'initial_ambertype', self.lig_initial,
                                self.lig_final, self.atoms_final, self.atom_map,
                                self.reverse_atom_map, self.zz_atoms, True)
-                make_pert_file(lig_morph, new_morph, 'MORPH.vdw',
+                make_pert_file(lig_morph, new_morph, 'vdw',
                                'final_charge', 'final_charge',
                                'initial_LJ', 'final_LJ', 'initial_ambertype',
                                'final_ambertype', self.lig_initial,
                                self.lig_final, self.atoms_final, self.atom_map,
                                self.reverse_atom_map, self.zz_atoms, False)
         elif self.FE_sub_type == 'dummy3':
-            make_pert_file(lig_morph, new_morph, 'MORPH.decharge',
+            make_pert_file(lig_morph, new_morph, 'decharge',
                            'initial_charge', 'zero_all',
                            'initial_LJ', 'initial_LJ', 'initial_ambertype',
                            'initial_ambertype', self.lig_initial,
                            self.lig_final, self.atoms_final, self.atom_map,
                            self.reverse_atom_map, self.zz_atoms, False)
 
-            make_pert_file(lig_morph, new_morph, 'MORPH.vdw',
+            make_pert_file(lig_morph, new_morph, 'vdw',
                            'zero_all', 'zero_all',
                            'initial_LJ', 'final_LJ', 'initial_ambertype',
                            'final_ambertype', self.lig_initial,
                            self.lig_final, self.atoms_final, self.atom_map,
                            self.reverse_atom_map, self.zz_atoms, False)
 
-            make_pert_file(lig_morph, new_morph, 'MORPH.recharge',
+            make_pert_file(lig_morph, new_morph, 'recharge',
                            'zero_all', 'final_charge',
                            'final_LJ', 'final_LJ', 'final_ambertype',
                            'final_ambertype', self.lig_initial,
@@ -332,7 +332,7 @@ def finalise_morph(morph, atoms_final, atom_map):
     return morph.commit()
 
 
-def make_pert_file(old_morph, new_morph, pertfile, qprop0, qprop1,
+def make_pert_file(old_morph, new_morph, stepname, qprop0, qprop1,
                    LJprop0, LJprop1, atprop0, atprop1,
                    lig_initial, lig_final, atoms_final, atom_map,
                    reverse_atom_map, zz_atoms, qonly,
@@ -346,8 +346,8 @@ def make_pert_file(old_morph, new_morph, pertfile, qprop0, qprop1,
     :type old_morph: Sire.Mol.Molecule
     :param new_morph: a new morph molecule for manipulations
     :type new_morph: Sire.Mol.Molecule
-    :param pertfile: basename of the pertfile
-    :type pertfile: str
+    :param stepname: name of the current morph step
+    :type stepname: str
     :param qprop0: name of inital charge property
     :type qprop0: str
     :param qprop1: name of final charge property
@@ -385,7 +385,7 @@ def make_pert_file(old_morph, new_morph, pertfile, qprop0, qprop1,
     """
 
     # FIXME: change name according to step protocol
-    pert_fname = pertfile + os.extsep + 'pert'
+    pert_fname = const.MORPH_NAME + '.' + stepname + os.extsep + 'pert'
     logger.write('Writing perturbation file %s...\n' % pert_fname)
 
     pertfile = open(pert_fname, 'w')

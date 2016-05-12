@@ -405,6 +405,7 @@ def make_ligand(name, ff, opts):
 
         # FIXME: also check for boxlength and neutralize
         if lig['box.type']:
+            ligand.prepare_top()
             ligand.create_top(boxtype = lig['box.type'],
                               boxlength = lig['box.length'],
                               neutralize = lig['neutralize'],
@@ -565,6 +566,7 @@ def make_protein(name, ff, opts):
 
         # FIXME: also check for boxlength and neutralize
         if prot['box.type']:
+            protein.prepare_top()
             protein.create_top(boxtype = prot['box.type'],
                                boxlength = prot['box.length'],
                                neutralize = prot['neutralize'],
@@ -713,6 +715,7 @@ def make_complex(prot, lig, ff, opts, load_cmds):
 
         # FIXME: also check for boxlength and neutralize
         if com['box.type']:
+            complex.prepare_top()
             complex.create_top(boxtype = com['box.type'],
                                boxlength = com['box.length'],
                                neutralize = com['neutralize'],
