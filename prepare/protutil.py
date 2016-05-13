@@ -42,7 +42,9 @@ def protonate_propka(self, pH = 7.0):
     :type pH: float
     """
 
-    import os, sys, StringIO
+    import os
+    import sys
+    import  StringIO
 
     import FESetup.propka.lib as plib
     import FESetup.propka.newmc as pmc

@@ -3,9 +3,11 @@ from __future__ import division
 from __future__ import print_function
 
 import math, time
-import lib as lib
-from determinant import Determinant
-import calculations
+
+import propka.lib as lib
+from propka.determinant import Determinant
+import propka.calculations
+from propka.lib import info, warning, debug
 
 # Some library functions for the interative pKa determinants
 
@@ -36,11 +38,11 @@ def addtoDeterminantList(group1, group2, distance, iterative_interactions, versi
 
 
 def addIterativeAcidPair(object1, object2, interaction):
-    """ 
+    """
     Adding the Coulomb 'iterative' interaction (an acid pair):
     the higher pKa is raised  with QQ+HB
     the lower  pKa is lowered with HB
-    """ 
+    """
     values       = interaction[1]
     annihilation = interaction[2]
     hbond_value   = values[0]
@@ -73,10 +75,10 @@ def addIterativeAcidPair(object1, object2, interaction):
 
 
 def addIterativeBasePair(object1, object2, interaction):
-    """ 
+    """
     Adding the Coulomb 'iterative' interaction (a base pair):
     the lower pKa is lowered
-    """ 
+    """
     values       = interaction[1]
     annihilation = interaction[2]
     hbond_value   = values[0]
@@ -110,10 +112,10 @@ def addIterativeBasePair(object1, object2, interaction):
 
 
 def addIterativeIonPair(object1, object2, interaction, version):
-    """ 
+    """
     Adding the Coulomb 'iterative' interaction (an acid-base pair):
     the pKa of the acid is lowered & the pKa of the base is raised
-    """ 
+    """
     values       = interaction[1]
     annihilation = interaction[2]
     hbond_value   = values[0]
@@ -136,7 +138,7 @@ def addIterativeIonPair(object1, object2, interaction, version):
 
     annihilation[0] = 0.00
     annihilation[1] = 0.00
-    
+
     if add_term == True:
 
       # Coulomb
@@ -165,9 +167,9 @@ def addIterativeIonPair(object1, object2, interaction, version):
 
 
 def addDeterminants(iterative_interactions, version, options=None):
-    """ 
+    """
     The iterative pKa scheme. Later it is all added in 'calculateTotalPKA'
-    """ 
+    """
     # --- setup ---
     iteratives = []
     done_group = []
@@ -185,8 +187,8 @@ def addDeterminants(iterative_interactions, version, options=None):
                 done_group.append(group)
 
     # Initialize iterative scheme
-    if options.verbose == True:
-      print("\n   --- pKa iterations (%d groups, %d interactions) ---" % ( len(iteratives), len(iterative_interactions) ))
+    debug("\n   --- pKa iterations (%d groups, %d interactions) ---" %
+          (len(iteratives), len(iterative_interactions)))
     converged = False
     iteration = 0
     # set non-iterative pka values as first step
@@ -245,36 +247,36 @@ def addDeterminants(iterative_interactions, version, options=None):
         itres.pKa_iter.append(itres.pKa_new)
 
       if iteration == 10:
-          print("did not converge in %d iterations" % (iteration))
+          info("did not converge in %d iterations" % (iteration))
           break
 
     # --- Iterations finished ---
 
     # printing pKa iterations
-    if options.verbose == True:
-      str = "%12s" % (" ")
-      for index in range(0, iteration+1 ):
+    # formerly was conditioned on if options.verbosity >= 2 - now unnecessary
+    str = "%12s" % (" ")
+    for index in range(0, iteration+1 ):
         str += "%8d" % (index)
-      print(str)
-      for itres in iteratives:
+    debug(str)
+    for itres in iteratives:
         str  = "%s   " % (itres.label)
         for pKa in itres.pKa_iter:
           str += "%8.2lf" % (pKa)
         if itres.converged == False:
           str += " *"
-        print(str)
+        debug(str)
 
     # creating real determinants and adding them to group object
     for itres in iteratives:
         for type in ['sidechain','backbone','coulomb']:
             for interaction in itres.determinants[type]:
-                #print('done',itres.group.label,interaction[0],interaction[1])
+                #info('done',itres.group.label,interaction[0],interaction[1])
                 value = interaction[1]
                 if value > 0.005 or value < -0.005:
                     g = interaction[0]
                     newDeterminant = Determinant(g, value)
                     itres.group.determinants[type].append(newDeterminant)
-    
+
 
 
 def findIterative(pair, iteratives):

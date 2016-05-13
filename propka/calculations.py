@@ -2,8 +2,8 @@
 from __future__ import division
 from __future__ import print_function
 
-import sys, math
-import protonate, bonds, calculations
+import math, propka.protonate, propka.bonds,copy, sys
+from propka.lib import info, warning
 
 
 #
@@ -20,9 +20,9 @@ def setup_bonding_and_protonation(parameters, molecular_container):
     # apply information on pi electrons
     my_bond_maker.add_pi_electron_information(molecular_container)
 
-    # Protonate atoms 
+    # Protonate atoms
     if molecular_container.options.protonate_all:
-        my_protonator = protonate.Protonate(verbose=False)
+        my_protonator = propka.protonate.Protonate(verbose=False)
         my_protonator.protonate(molecular_container)
 
 
@@ -32,7 +32,7 @@ def setup_bonding_and_protonation(parameters, molecular_container):
 
 def setup_bonding(parameters, molecular_container):
     # make bonds
-    my_bond_maker = bonds.bondmaker()
+    my_bond_maker = propka.bonds.bondmaker()
     my_bond_maker.find_bonds_for_molecules_using_boxes(molecular_container)
 
     return my_bond_maker
@@ -49,11 +49,11 @@ def set_ligand_atom_names(molecular_container):
 # The following methods imitates propka3.0 protonation!
 #
 def setup_bonding_and_protonation_30_style(parameters, molecular_container):
-    # Protonate atoms 
+    # Protonate atoms
     protonate_30_style(molecular_container)
 
     # make bonds
-    my_bond_maker = bonds.bondmaker()
+    my_bond_maker = propka.bonds.bondmaker()
     my_bond_maker.find_bonds_for_molecules_using_boxes(molecular_container)
 
     return
@@ -61,7 +61,7 @@ def setup_bonding_and_protonation_30_style(parameters, molecular_container):
 
 def protonate_30_style(molecular_container):
     for name in molecular_container.conformation_names:
-        print('Now protonating',name)
+        info('Now protonating', name)
         # split atom into residues
         curres = -1000000
         residue = []
@@ -90,14 +90,14 @@ def protonate_30_style(molecular_container):
                     residue = []
             if atom.type=='atom':
                 residue.append(atom)
-                    
+
     return
 
 def addArgHydrogen(residue):
     """
     Adds Arg hydrogen atoms to residues according to the 'old way'.
     """
-    #print('Adding arg H',residue)
+    #info('Adding arg H',residue)
     for atom in residue:
         if   atom.name == "CD":
             CD  = atom
@@ -120,7 +120,7 @@ def addArgHydrogen(residue):
     H4.name = "HN3"
     H5 = protonateDirection([NH2, NE, H1])
     H5.name = "HN4"
-    
+
     return [H1,H2,H3,H4,H5]
 
 def addHisHydrogen(residue):
@@ -160,7 +160,7 @@ def addTrpHydrogen(residue):
             CE  = atom
     if CD == None or NE == None or CE == None:
         str = "Did not find all atoms in %s%4d - in %s" % (self.resName, self.resNumb, "addTrpHydrogen()")
-        print(str)
+        info(str)
         sys.exit(0)
 
     HE = protonateSP2([CD, NE, CE])
@@ -182,30 +182,30 @@ def addAmdHydrogen(residue):
             O = atom
         elif (atom.resName == "GLN" and atom.name == "NE2") or (atom.resName == "ASN" and atom.name == "ND2"):
             N = atom
-     
+
     if C == None or O == None or N == None:
         str = "Did not find N, C and/or O in %s%4d - in %s" % (atom.resName, atom.resNumb, "addAmdHydrogen()")
-        print(str)
+        info(str)
         sys.exit(0)
 
     H1 = protonateDirection([N, O, C])
     H1.name = "HN1"
     H2 = protonateAverageDirection([N, C, O])
     H2.name = "HN2"
-    
+
     return
 
 def addBackBoneHydrogen(residue, O, C):
     """
-    Adds hydrogen backbone atoms to residues according to the old way; dR is wrong for the N-terminus 
+    Adds hydrogen backbone atoms to residues according to the old way; dR is wrong for the N-terminus
     (i.e. first residue) but it doesn't affect anything at the moment. Could be improved, but works
     for now.
     """
-    
+
     new_C     = None
     new_O     = None
     N     = None
-    
+
 
     for atom in residue:
         if atom.name == "N":
@@ -214,20 +214,20 @@ def addBackBoneHydrogen(residue, O, C):
             new_C = atom
         if atom.name == "O":
             new_O = atom
-        
-        
-    
+
+
+
 
     if None in [C,O,N]:
         return [new_O,new_C]
 
-  
+
     if N.resName == "PRO":
         """ PRO doesn't have an H-atom; do nothing """
     else:
         H = protonateDirection([N, O, C])
         H.name = "H"
-        
+
     return [new_O,new_C]
 
 
@@ -250,7 +250,7 @@ def protonateDirection(list):
     y = X1.y + dY/length
     z = X1.z + dZ/length
 
-    
+
     H  = make_new_H(X1,x,y,z)
     H.name = "H"
 
@@ -280,7 +280,7 @@ def protonateAverageDirection(list):
     H  = make_new_H(X1,x,y,z)
     H.name = "H"
 
-    
+
 
     return H
 
@@ -293,7 +293,7 @@ def protonateSP2(list):
     X1 = list[0]
     X2 = list[1]
     X3 = list[2]
-    
+
     dX = (X1.x + X3.x)*0.5 - X2.x
     dY = (X1.y + X3.y)*0.5 - X2.y
     dZ = (X1.z + X3.z)*0.5 - X2.z
@@ -304,16 +304,16 @@ def protonateSP2(list):
 
     H  = make_new_H(X2,x,y,z)
     H.name = "H"
-    
+
     return H
 
 
 def make_new_H(atom, x,y,z):
 
-    new_H = atom.Atom()
-    new_H.setProperty(numb    = None, 
-                      name    = 'H%s'%atom.name[1:], 
-                      resName = atom.resName, 
+    new_H = propka.atom.Atom()
+    new_H.setProperty(numb    = None,
+                      name    = 'H%s'%atom.name[1:],
+                      resName = atom.resName,
                       chainID = atom.chainID,
                       resNumb = atom.resNumb,
                       x       = x,
@@ -332,7 +332,7 @@ def make_new_H(atom, x,y,z):
     new_H.number_of_pi_electrons_in_double_and_triple_bonds = 0
 
     atom.bonded_atoms.append(new_H)
-    atom.conformation_container.add_atom(new_H)        
+    atom.conformation_container.add_atom(new_H)
 
     return new_H
 
@@ -359,18 +359,17 @@ def radial_volume_desolvation(parameters, group):
         # ignore atoms in the same residue
         if atom.resNumb == group.atom.resNumb and atom.chainID == group.atom.chainID:
             continue
-        
+
         sq_dist = squared_distance(group, atom)
 
         # desolvation
         if sq_dist < parameters.desolv_cutoff_squared:
             # use a default relative volume of 1.0 if the volume of the element is not found in parameters
-            dv = 1.0
-            if atom.element in parameters.VanDerWaalsVolume.keys():
-                dv = parameters.VanDerWaalsVolume[atom.element]
             # insert check for methyl groups
             if atom.element == 'C' and atom.name not in ['CA','C']:
                 dv = parameters.VanDerWaalsVolume['C4']
+            else:
+                dv = parameters.VanDerWaalsVolume.get(atom.element, 1.0)
 
             dv_inc = dv/max(min_distance_4th, sq_dist*sq_dist)
 #            dv_inc = dv/(sq_dist*sq_dist) - dv/(parameters.desolv_cutoff_squared*parameters.desolv_cutoff_squared)
@@ -378,7 +377,7 @@ def radial_volume_desolvation(parameters, group):
         # buried
         if sq_dist < parameters.buried_cutoff_squared:
             group.Nmass += 1
-            
+
     group.buried = calculate_weight(parameters, group.Nmass)
     scale_factor = calculate_scale_factor(parameters, group.buried)
     volume_after_allowance = max(0.00, volume-parameters.desolvationAllowance)
@@ -388,9 +387,9 @@ def radial_volume_desolvation(parameters, group):
     # Elocl, Nlocl -> reorganisation energy (count backbone hydorgen bond acceptors, C=O)
 
 
-                
-    #print('%s %5.2f %5.2f %4d'%(group, group.buried, group.Emass, group.Nmass))
-    return 
+
+    #info('%s %5.2f %5.2f %4d'%(group, group.buried, group.Emass, group.Nmass))
+    return
 
 
 
@@ -398,7 +397,7 @@ def contactDesolvation(parameters, group):
     """
     calculates the desolvation according to the Contact Model, the old default
     """
-    
+
     local_radius = {'ASP': 4.5,
                     'GLU': 4.5,
                     'HIS': 4.5,
@@ -408,7 +407,7 @@ def contactDesolvation(parameters, group):
                     'ARG': 5.0,
                     'C-': 4.5,
                     'N+': 4.5}
-    
+
     all_atoms = group.atom.conformation_container.get_non_hydrogen_atoms()
     if residue.resName in version.desolvationRadii:
         local_cutoff = version.desolvationRadii[residue.resName]
@@ -437,7 +436,7 @@ def contactDesolvation(parameters, group):
         # Note, there will be an unforseen problem: e.g. if one residue has Nmass > Nmax and
         # the other Nmass < Nmax, the Npair will not be Nmass1 + Nmass2!
         residue.buried = calculateWeight(residue.Nmass)
-    
+
         return 0.00, 0.00, 0.00, 0.00
 
 
@@ -458,10 +457,10 @@ def calculate_weight(parameters, Nmass):
     weight = float(Nmass - parameters.Nmin)/float(parameters.Nmax - parameters.Nmin)
     weight = min(1.0, weight)
     weight = max(0.0, weight)
-    
+
     return weight
 
-    
+
 
 def squared_distance(atom1, atom2):
 #    if atom1 in atom2.squared_distances:
@@ -521,9 +520,9 @@ def HydrogenBondEnergy(distance, dpka_max, cutoff, f_angle=1.0):
         value = 0.00
     else:
         value = 1.0-(distance-cutoff[0])/(cutoff[1]-cutoff[0])
-          
+
     dpKa  = dpka_max*value*f_angle
-    
+
     return abs(dpKa)
 
 
@@ -538,13 +537,13 @@ def AngleFactorX(atom1=None, atom2=None, atom3=None, center=None):
     dX_32 = atom2.x - atom3.x
     dY_32 = atom2.y - atom3.y
     dZ_32 = atom2.z - atom3.z
-    
+
     distance_23 = math.sqrt( dX_32*dX_32 + dY_32*dY_32 + dZ_32*dZ_32 )
-    
+
     dX_32 = dX_32/distance_23
     dY_32 = dY_32/distance_23
     dZ_32 = dZ_32/distance_23
-    
+
     if atom1 == None:
         dX_21 = center[0] - atom2.x
         dY_21 = center[1] - atom2.y
@@ -553,13 +552,13 @@ def AngleFactorX(atom1=None, atom2=None, atom3=None, center=None):
         dX_21 = atom1.x - atom2.x
         dY_21 = atom1.y - atom2.y
         dZ_21 = atom1.z - atom2.z
-        
+
     distance_12 = math.sqrt( dX_21*dX_21 + dY_21*dY_21 + dZ_21*dZ_21 )
-    
+
     dX_21 = dX_21/distance_12
     dY_21 = dY_21/distance_12
     dZ_21 = dZ_21/distance_12
-        
+
     f_angle = dX_21*dX_32 + dY_21*dY_32 + dZ_21*dZ_32
 
 
@@ -572,28 +571,28 @@ def hydrogen_bond_interaction(group1, group2, version):
     # find the smallest distance between interacting atoms
     atoms1 = group1.get_interaction_atoms(group2)
     atoms2 = group2.get_interaction_atoms(group1)
-    [closest_atom1, distance, closest_atom2] = calculations.get_smallest_distance(atoms1, atoms2)
+    [closest_atom1, distance, closest_atom2] = propka.calculations.get_smallest_distance(atoms1, atoms2)
 
     if None in [closest_atom1, closest_atom2]:
-        print('Warning: Side chain interaction failed for %s and %s'%(group1.label, group2.label))
+        warning('Side chain interaction failed for %s and %s' % (group1.label, group2.label))
         return None
 
     # get the parameters
     [dpka_max, cutoff] = version.get_hydrogen_bond_parameters(closest_atom1,closest_atom2)
-    
+
     if dpka_max==None or None in cutoff:
         return None
-    
+
     # check that the closest atoms are close enough
     if distance >= cutoff[1]:
         return None
 
     # check that bond distance criteria is met
-    bond_distance_too_short = group1.atom.is_atom_within_bond_distance(group2.atom, 
+    bond_distance_too_short = group1.atom.is_atom_within_bond_distance(group2.atom,
                                                                        version.parameters.min_bond_distance_for_hydrogen_bonds,1)
     if bond_distance_too_short:
         return None
-        
+
     # set the angle factor
     #
     #  ---closest_atom1/2
@@ -605,18 +604,18 @@ def hydrogen_bond_interaction(group1, group2, version):
         if closest_atom2.element == 'H':
             heavy_atom = closest_atom2.bonded_atoms[0]
             hydrogen   = closest_atom2
-            distance, f_angle, nada = calculations.AngleFactorX(closest_atom1, hydrogen, heavy_atom)   
+            distance, f_angle, nada = propka.calculations.AngleFactorX(closest_atom1, hydrogen, heavy_atom)
         else:
             # Either the structure is corrupt (no hydrogen), or the heavy atom is closer to
             # the titratable atom than the hydrogen. In either case we set the angle factor
             # to 0
             f_angle = 0.0
-   
+
     elif group1.type in version.parameters.angular_dependent_sidechain_interactions:
         if closest_atom1.element == 'H':
             heavy_atom = closest_atom1.bonded_atoms[0]
             hydrogen   = closest_atom1
-            distance, f_angle, nada = calculations.AngleFactorX(closest_atom2, hydrogen, heavy_atom)  
+            distance, f_angle, nada = propka.calculations.AngleFactorX(closest_atom2, hydrogen, heavy_atom)
         else:
             # Either the structure is corrupt (no hydrogen), or the heavy atom is closer to
             # the titratable atom than the hydrogen. In either case we set the angle factor
@@ -624,22 +623,22 @@ def hydrogen_bond_interaction(group1, group2, version):
             f_angle = 0.0
 
     weight = version.calculatePairWeight(group1.Nmass, group2.Nmass)
-    
+
     exception, value = version.checkExceptions(group1, group2)
     #exception = False # circumventing exception
     if exception == True:
         """ do nothing, value should have been assigned """
-            #print(" exception for %s %s %6.2lf" % (group1.label, group2.label, value))
+            #info(" exception for %s %s %6.2lf" % (group1.label, group2.label, value))
     else:
         value = version.calculateSideChainEnergy(distance, dpka_max, cutoff, weight, f_angle)
-        
-    # print('distance',distance)
-    # print('dpka_max',dpka_max)
-    # print('cutoff',cutoff)
-    # print('f_angle',f_angle)
-    # print('weight',weight)
-    # print('value',value)
-    # print('===============================================')
+
+    # info('distance',distance)
+    # info('dpka_max',dpka_max)
+    # info('cutoff',cutoff)
+    # info('f_angle',f_angle)
+    # info('weight',weight)
+    # info('value',value)
+    # info('===============================================')
 
     return value
 
@@ -657,7 +656,7 @@ def HydrogenBondEnergy(distance, dpka_max, cutoff, f_angle=1.0):
         value = 1.0-(distance-cutoff[0])/(cutoff[1]-cutoff[0])
 
     dpKa  = dpka_max*value*f_angle
-    
+
     return abs(dpKa)
 
 
@@ -681,15 +680,15 @@ def checkCoulombPair(parameters, group1, group2, distance):
     """
     Npair = group1.Nmass + group2.Nmass
     do_coulomb = True
-    
+
     # check if both groups are titratable (ions are taken care of in determinants::setIonDeterminants)
     if not (group1.titratable and group2.titratable):
         do_coulomb = False
-    
+
     # check if the distance is not too big
     if distance > parameters.coulomb_cutoff2:
         do_coulomb = False
-    
+
     # check that desolvation is ok
     if Npair < parameters.Nmin:
         do_coulomb = False
@@ -728,8 +727,8 @@ def BackBoneReorganization(parameters, conformation):
         dpKa = 0.00
         for BBC_group in BBC_groups:
             center = [titratable_group.x, titratable_group.y, titratable_group.z]
-            distance, f_angle, nada = AngleFactorX(atom2=BBC_group.get_interaction_atoms(titratable_group)[0], 
-                                                   atom3=BBC_group.atom, 
+            distance, f_angle, nada = AngleFactorX(atom2=BBC_group.get_interaction_atoms(titratable_group)[0],
+                                                   atom3=BBC_group.atom,
                                                    center=center)
             if distance <  6.0 and f_angle > 0.001:
                 value = 1.0-(distance-3.0)/(6.0-3.0)
@@ -770,7 +769,7 @@ def checkExceptions(version, group1, group2):
     else:
         # do nothing, no exception for this pair
         exception = False; value = None
-        
+
     return exception, value
 
 
@@ -783,12 +782,12 @@ def checkCooArgException(group_coo, group_arg, version):
     str = "xxx"
     exception = True
     value_tot = 0.00
-   
+
     #dpka_max = parameters.sidechain_interaction.get_value(group_coo.type,group_arg.type)
     #cutoff   = parameters.sidechain_cutoffs.get_value(group_coo.type,group_arg.type)
 
     # needs to be this way since you want to find shortest distance first
-    #print("--- exception for %s %s ---" % (group_coo.label, group_arg.label))
+    #info("--- exception for %s %s ---" % (group_coo.label, group_arg.label))
     atoms_coo = []
     atoms_coo.extend(group_coo.get_interaction_atoms(group_arg))
     atoms_arg = []
@@ -804,15 +803,15 @@ def checkCooArgException(group_coo, group_arg, version):
         if group_arg.type in version.parameters.angular_dependent_sidechain_interactions:
             atom3 = closest_arg_atom.bonded_atoms[0]
             distance, f_angle, nada = AngleFactorX(closest_coo_atom, closest_arg_atom, atom3)
-            
+
         value = HydrogenBondEnergy(distance, dpka_max, cutoff, f_angle)
-        #print(iter, closest_coo_atom, closest_arg_atom,distance,value)
+        #info(iter, closest_coo_atom, closest_arg_atom,distance,value)
         value_tot += value
         # remove closest atoms before we attemp to find the runner-up pair
         atoms_coo.remove(closest_coo_atom)
         atoms_arg.remove(closest_arg_atom)
 
-    
+
     return exception, value_tot
 
 
@@ -823,7 +822,7 @@ def checkCooCooException(group1, group2, version):
     exception = True
     [closest_atom1, distance, closest_atom2] = get_smallest_distance(group1.get_interaction_atoms(group2),
                                                                      group2.get_interaction_atoms(group1))
-                                                                           
+
     #dpka_max = parameters.sidechain_interaction.get_value(group1.type,group2.type)
     #cutoff   = parameters.sidechain_cutoffs.get_value(group1.type,group2.type)
     [dpka_max, cutoff] = version.get_hydrogen_bond_parameters(closest_atom1,closest_atom2)
@@ -866,7 +865,7 @@ def checkCysHisException(group1, group2, version):
     if checkBuried(group1.Nmass, group2.Nmass):
         exception = True
 
-    return exception, version.parameters.CYS_HIS_exception 
+    return exception, version.parameters.CYS_HIS_exception
 
 
 def checkCysCysException(group1, group2, version):

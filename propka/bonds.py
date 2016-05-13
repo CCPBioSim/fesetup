@@ -2,17 +2,19 @@
 from __future__ import division
 from __future__ import print_function
 
-import pickle,sys,os,math,calculations
+import pickle,sys,os,math,propka.calculations
 
+import pkg_resources
+from propka.lib import info, warning
 
 class bondmaker:
     def __init__(self):
-        
+
         # predefined bonding distances
         self.distances = {
             'S-S':2.5,
             'F-F':1.7}
-    
+
         self.distances_squared = {}
         for k in self.distances.keys():
             self.distances_squared[k]=self.distances[k]*self.distances[k]
@@ -22,12 +24,11 @@ class bondmaker:
 
         self.H_dist_squared  = self.H_dist * self.H_dist
         self.default_dist_squared = self.default_dist * self.default_dist
-        
-        self.max_sq_distance = max(list(self.distances_squared.values())+[self.default_dist_squared]) 
-        
+
+        self.max_sq_distance = max(list(self.distances_squared.values())+[self.default_dist_squared])
+
         # protein bonding data
-        path = os.path.split(__file__)[0]
-        self.data_file_name = os.path.join(path,'protein_bonds.dat')
+        self.data_file_name = pkg_resources.resource_filename(__name__, 'protein_bonds.dat')
 
         data = open(self.data_file_name,'rb')
         self.protein_bonds = pickle.load(data)
@@ -108,17 +109,17 @@ class bondmaker:
 
 
     def find_bonds_for_protein(self, protein):
-        """ Finds bonds proteins based on the way atoms 
+        """ Finds bonds proteins based on the way atoms
         normally bond in proteins"""
 
-        print('++++ Side chains ++++')
+        info('++++ Side chains ++++')
         # side chains
         for chain in protein.chains:
-            for residue in chain.residues: 
+            for residue in chain.residues:
                 if residue.resName.replace(' ','') not in ['N+','C-']:
                     self.find_bonds_for_side_chain(residue.atoms)
 
-        print('++++ Backbones ++++')
+        info('++++ Backbones ++++')
         # backbone
         last_residues = []
         for chain in protein.chains:
@@ -128,12 +129,12 @@ class bondmaker:
                         self.connect_backbone(chain.residues[i-1], chain.residues[i])
                         last_residues.append(chain.residues[i])
 
-        print('++++ terminal oxygen ++++')
+        info('++++ terminal oxygen ++++')
         # terminal OXT
         for last_residue in last_residues:
             self.find_bonds_for_terminal_oxygen(last_residue)
 
-        print('++++ cysteines ++++')
+        info('++++ cysteines ++++')
         # Cysteines
         for chain in protein.chains:
             for i in range(0,len(chain.residues)):
@@ -149,7 +150,7 @@ class bondmaker:
             if atom1.name == 'SG':
                 for atom2 in cys2.atoms:
                     if atom2.name == 'SG':
-                        if calculations.squared_distance(atom1,atom2) < self.SS_dist_squared:
+                        if propka.calculations.squared_distance(atom1,atom2) < self.SS_dist_squared:
                             self.make_bond(atom1, atom2)
 
 
@@ -178,7 +179,7 @@ class bondmaker:
             if atom1.name == 'C':
                 for atom2 in residue2.atoms:
                     if atom2.name == 'N':
-                        if calculations.squared_distance(atom1,atom2) < self.default_dist_squared:
+                        if propka.calculations.squared_distance(atom1,atom2) < self.default_dist_squared:
                             self.make_bond(atom1, atom2)
 
         return
@@ -213,7 +214,7 @@ class bondmaker:
                     for atom2 in atoms:
                         if atom2.name in self.protein_bonds[atom1.resName][atom1.name]:
                             self.make_bond(atom1,atom2)
-                        
+
         return
 
 
@@ -274,7 +275,7 @@ class bondmaker:
 
                 if atoms[i] in atoms[j].bonded_atoms:
                     continue
-        
+
                 if self.check_distance(atoms[i], atoms[j]):
                     self.make_bond(atoms[i],atoms[j])
                     # di-sulphide bonds
@@ -287,14 +288,14 @@ class bondmaker:
 
 
     def check_distance(self, atom1, atom2):
-        sq_dist = calculations.squared_distance(atom1, atom2)
-        
+        sq_dist = propka.calculations.squared_distance(atom1, atom2)
+
         if sq_dist > self.max_sq_distance:
             return False
-        
+
         key = '%s-%s'%(atom1.element,atom2.element)
         h_count = key.count('H')
-        
+
         if sq_dist <  self.H_dist_squared and h_count==1:
             return True
         if sq_dist < self.default_dist_squared and h_count==0:
@@ -303,8 +304,8 @@ class bondmaker:
             if sq_dist < self.distances_squared[key]:
                 return True
 
-        
- 
+
+
         return False
 
     def find_bonds_for_molecules_using_boxes(self, molecules):
@@ -324,7 +325,7 @@ class bondmaker:
 
     def find_bonds_for_atoms_using_boxes(self, atoms):
         """ Finds all bonds for a list of atoms"""
-        
+
         box_size = 2.5
 
         # find min and max coordinates
@@ -349,27 +350,28 @@ class bondmaker:
         ylen = ymax-ymin
         zlen = zmax-zmin
 
-        #print('x range: [%6.2f;%6.2f] %6.2f'%(xmin,xmax,xlen))
-        #print('y range: [%6.2f;%6.2f] %6.2f'%(ymin,ymax,ylen))
-        #print('z range: [%6.2f;%6.2f] %6.2f'%(zmin,zmax,zlen))
-        
+        #info('x range: [%6.2f;%6.2f] %6.2f'%(xmin,xmax,xlen))
+        #info('y range: [%6.2f;%6.2f] %6.2f'%(ymin,ymax,ylen))
+        #info('z range: [%6.2f;%6.2f] %6.2f'%(zmin,zmax,zlen))
+
         # how many boxes do we need in each dimension?
-        # NOTE: math.ceil() returns an int in python3 and a float in python2,
-        # so we need to cast it to int for range() to work.
+        # NOTE: math.ceil() returns an int in python3 and a float in
+        # python2, so we need to convert it to an int for range() to work in
+        # both versions. See PEP 3141.
         self.no_box_x = max(1, int(math.ceil(xlen/box_size)))
         self.no_box_y = max(1, int(math.ceil(ylen/box_size)))
         self.no_box_z = max(1, int(math.ceil(zlen/box_size)))
 
-        #print('No. box x: %6.2f'%self.no_box_x)
-        #print('No. box y: %6.2f'%self.no_box_y)
-        #print('No. box z: %6.2f'%self.no_box_z)
+        #info('No. box x: %6.2f'%self.no_box_x)
+        #info('No. box y: %6.2f'%self.no_box_y)
+        #info('No. box z: %6.2f'%self.no_box_z)
 
         # initialize boxes
         self.boxes = {}
         for x in range(self.no_box_x):
             for y in range(self.no_box_y):
                 for z in range(self.no_box_z):
-                    self.boxes[self.box_key(x,y,z)] = []
+                    self.boxes[(x,y,z)] = []
 
         # put atoms into boxes
         for atom in atoms:
@@ -378,54 +380,52 @@ class bondmaker:
             z = math.floor((atom.z-zmin)/box_size)
             self.put_atom_in_box(x,y,z,atom)
 
-        # assign bonds 
-        keys = self.boxes.keys()
-        for key in keys:
-            self.find_bonds_for_atoms(self.boxes[key])
+        # assign bonds
+        for key, value in self.boxes.items():
+            self.find_bonds_for_atoms(value)
 
-            
 
         return
 
     def put_atom_in_box(self,x,y,z,atom):
         # atom in the x,y,z box and the up to 7 neighboring boxes on
         # one side of the x,y,z box in each dimension
+
         for bx in [x,x+1]:
             for by in [y,y+1]:
-                for bz in [z,z+1]:   
-                    key = self.box_key(bx,by,bz)
-                    if key in self.boxes.keys():
+                for bz in [z,z+1]:
+                    key = (bx,by,bz)
+                    try:
                         self.boxes[key].append(atom)
+                    except KeyError:
+                        # No box exists for this coordinate
+                        pass
 
-                        #print(atom,'->',key,':',len(self.boxes[key]))
+                        #info(atom,'->',key,':',len(self.boxes[key]))
 
         return
-
-    def box_key(self, x, y, z):
-        return '%d-%d-%d'%(x,y,z)
-        
 
     def has_bond(self, atom1, atom2):
         if atom1 in atom2.bonded_atoms or atom2 in atom1.bonded_atoms:
             return True
         return False
-        
+
 
     def make_bond(self, atom1, atom2):
         """ Makes a bond between atom1 and atom2 """
         if atom1 == atom2:
             return
 
-        #print('making bond for',atom1,atom2)
+        #info('making bond for',atom1,atom2)
         if not atom1 in atom2.bonded_atoms:
             atom2.bonded_atoms.append(atom1)
-        
+
         if not atom2 in atom1.bonded_atoms:
-            atom1.bonded_atoms.append(atom2)       
+            atom1.bonded_atoms.append(atom2)
 
         return
 
-        
+
     def generate_protein_bond_dictionary(self, atoms):
 
         for atom in atoms:
@@ -439,25 +439,25 @@ class bondmaker:
                         not name_j in self.backbone_atoms:
                     if not name_i in self.terminal_oxygen_names and\
                             not name_j in self.terminal_oxygen_names:
-                    
+
                         if not resi_i in list(self.protein_bonds.keys()):
                             self.protein_bonds[resi_i] = {}
                         if not name_i in self.protein_bonds[resi_i]:
                             self.protein_bonds[resi_i][name_i] = []
-                
+
                         if not name_j in self.protein_bonds[resi_i][name_i]:
                             self.protein_bonds[resi_i][name_i].append(name_j)
-            
+
 
                         if not resi_j in list(self.protein_bonds.keys()):
                             self.protein_bonds[resi_j] = {}
                         if not name_j in self.protein_bonds[resi_j]:
                             self.protein_bonds[resi_j][name_j] = []
-                            
+
                         if not name_i in self.protein_bonds[resi_j][name_j]:
                             self.protein_bonds[resi_j][name_j].append(name_i)
 
-        
+
         return
 
 
@@ -466,17 +466,17 @@ if __name__ == '__main__':
     import protein, pdb, sys,os
     arguments = sys.argv
     if len(arguments) != 2:
-        print('Usage: bonds.py <pdb_file>')
+        info('Usage: bonds.py <pdb_file>')
         sys.exit(0)
 
     filename = arguments[1]
     if not os.path.isfile(filename):
-        print('Error: Could not find \"%s\"'%filename)
+        info('Error: Could not find \"%s\"' % filename)
         sys.exit(1)
-   
+
     pdblist = pdb.readPDB(filename)
     my_protein = protein.Protein(pdblist,'test.pdb')
-    
+
     for chain in my_protein.chains:
         for residue in chain.residues:
             residue.atoms = [atom for atom in residue.atoms if atom.element != 'H']
