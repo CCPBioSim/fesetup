@@ -107,15 +107,12 @@ class PertTopology(object):
                                    self.atom_map)
 
             pert0_info, pert1_info = None, None
-            ow_add = '_sc'
         elif self.FE_sub_type[:5] == 'dummy':
             # also for Gromacs and CHARMM
             state0 = lig_morph
             state1, pert0_info, pert1_info = \
                     amber.dummy(lig_morph, self.con_morph,
                                 self.lig_final, self.atom_map)
-
-            ow_add = '_dummy'
         else:
             raise NotImplementedError
 
@@ -123,12 +120,11 @@ class PertTopology(object):
             amber.write_mdin(self.atoms_initial, self.atoms_final,
                              self.atom_map, 'sander', self.FE_sub_type, True)
 
-        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
+        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + '0' +
                               const.MOL2_EXT)
         util.write_mol2(state0, mol2_0)
 
-        frcmod0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
-                               '0.frcmod')
+        frcmod0 = os.path.join(curr_dir, const.MORPH_NAME + '0.frcmod')
 
         lig0 = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
                               start_fmt='mol2', frcmod=frcmod0,
@@ -136,7 +132,7 @@ class PertTopology(object):
 
         lig0.set_atomtype(self.gaff)
         lig0._parmchk(mol2_0, 'mol2', frcmod0)
-        lig0._parm_overwrite = 'state0' + ow_add
+        lig0._parm_overwrite = 'state0'
 
         if pert0_info:
             lig0.prepare_top(pert=pert0_info)
@@ -145,12 +141,11 @@ class PertTopology(object):
 
         lig0.create_top(boxtype='', addcmd=cmd1 + cmd2)
 
-        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
+        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + '1' +
                               const.MOL2_EXT)
         util.write_mol2(state1, mol2_1)
 
-        frcmod1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add +
-                               '1.frcmod')
+        frcmod1 = os.path.join(curr_dir, const.MORPH_NAME + '1.frcmod')
 
         lig1 = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_1,
                               start_fmt='mol2', frcmod=frcmod1,
@@ -158,7 +153,7 @@ class PertTopology(object):
 
         lig1.set_atomtype(self.gaff)
         lig1._parmchk(mol2_1, 'mol2', frcmod1)
-        lig1._parm_overwrite = 'state1' + ow_add
+        lig1._parm_overwrite = 'state1'
 
         if pert1_info:
             lig1.prepare_top(pert=pert1_info)
@@ -241,7 +236,6 @@ class PertTopology(object):
                                    self.atom_map)
 
             pert0_info, pert1_info = None, None
-            ow_add = '_sc'
         elif self.FE_sub_type[:5] == 'dummy':
             # also for Gromacs and CHARMM
             state0 = lig_morph
@@ -250,7 +244,6 @@ class PertTopology(object):
                                 self.lig_final, self.atom_map)
 
             leap_extra = 'source "%s"\n'
-            ow_add = '_dummy'
         else:
             raise NotImplementedError
 
@@ -258,7 +251,7 @@ class PertTopology(object):
             amber.write_mdin(self.atoms_initial, self.atoms_final,
                              self.atom_map, 'sander', self.FE_sub_type, False)
 
-        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '0' +
+        mol2_0 = os.path.join(curr_dir, const.MORPH_NAME + '0' +
                               const.MOL2_EXT)
         util.write_mol2(state0, mol2_0)
 
@@ -267,7 +260,7 @@ class PertTopology(object):
         com0.ligand_fmt = 'mol2'
         com0.frcmod = self.frcmod0
 
-        com0._parm_overwrite = 'state0' + ow_add
+        com0._parm_overwrite = 'state0'
         com0.ligand_fmt = 'mol2'
 
         if pert0_info:
@@ -277,7 +270,7 @@ class PertTopology(object):
 
         com0.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
-        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + ow_add + '1' +
+        mol2_1 = os.path.join(curr_dir, const.MORPH_NAME + '1' +
                               const.MOL2_EXT)
         util.write_mol2(state1, mol2_1)
 
@@ -286,7 +279,7 @@ class PertTopology(object):
         com1.ligand_fmt = 'mol2'
         com1.frcmod = self.frcmod1
 
-        com1._parm_overwrite = 'state1' + ow_add
+        com1._parm_overwrite = 'state1'
 
         if pert1_info:
             com1.prepare_top(gaff=self.gaff, pert=pert1_info)
