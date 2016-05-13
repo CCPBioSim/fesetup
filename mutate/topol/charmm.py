@@ -145,6 +145,8 @@ class PertTopology(object):
         self.topol = None
         self.itypes = []
         self.ftypes = []
+
+        self.files_created = []
         
         self.dummies0 = not all([a.atom for a in self.atom_map.keys()])
         self.dummies1 = not all([a.atom for a in self.atom_map.values()])
@@ -197,6 +199,7 @@ class PertTopology(object):
         top0.readParm(lig0 + top, lig0 + rst)
         top0.writePsf('state0.psf')
         top0.writeCrd('state0.cor')
+        self.files_created.extend(('state0.psf', 'state0.cor'))
 
         # NOTE: pert2 - dummies zero q, vdW
         #       pert3 - disappearing zero q
@@ -205,6 +208,7 @@ class PertTopology(object):
             top_int.readParm(STATE_INT + top, STATE_INT + rst)
             top_int.writePsf(STATE_INT + '.psf')
             top_int.writeCrd(STATE_INT + '.cor')
+            self.files_created.extend((STATE_INT + '.psf', STATE_INT + '.cor'))
 
         # for pert3 we go down the sander route otherwise we would need
         # 4 topologies (0, 0', 1', 1 where ' means q_on/off only:
@@ -219,6 +223,9 @@ class PertTopology(object):
 
         top0.combine(top1)              # adds parms from top1 to top0!
         top0.writeRtfPrm('combined.rtf', 'combined.prm')
+
+        self.files_created.extend(('state1.psf', 'state1.cor',
+                                   'combined.rtf', 'combined.prm'))
 
         self.topol = topol
 

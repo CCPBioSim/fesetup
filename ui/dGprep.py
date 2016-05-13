@@ -504,7 +504,6 @@ def make_protein(name, ff, opts):
     if not opts[SECT_DEF]['remake']:
         model_path = _search_for_model([sol_model_filename, vac_model_filename],
                                        const.PROTEIN_WORKDIR)
-
         # FIXME: check for KeyError
         if model_path:
             model = read_model(model_path)

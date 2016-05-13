@@ -51,6 +51,8 @@ class PertTopology(object):
         self.reverse_atom_map = reverse_atom_map
         self.zz_atoms = zz_atoms
 
+        self.files_created = []
+
         self.lig0 = None                # for GROMACS
         self.lig1 = None                # for GROMACS
         self.int_state = None           # for GROMACS
@@ -202,7 +204,7 @@ class PertTopology(object):
 
             util.patch_parmtop(top0, top1, ':%s' % const.LIGAND_NAME, '')
 
-        if self.FE_sub_type == 'dummy3':  # for GROMACS and CHARMM
+        if self.FE_sub_type == 'dummy3':
             ow_add = '_int'
 
             int_mol = util.zero_charges(state1, self.atom_map)

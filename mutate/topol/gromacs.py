@@ -115,6 +115,8 @@ class PertTopology(object):
         self.reverse_atom_map = reverse_atom_map
         self.zz_atoms = zz_atoms
 
+        self.files_created = []
+
         self.dummies0 = not all([a.atom for a in self.atom_map.keys()])
         self.dummies1 = not all([a.atom for a in self.atom_map.values()])
 
@@ -181,6 +183,10 @@ class PertTopology(object):
                                                  fep_lambdas=fepl,
                                                  vdw_lambdas=vdwl,
                                                  mass_lambdas=masl))
+
+            self.files_created.extend((const.GROMACS_PERT_ATP,
+                                       const.GROMACS_PERT_ITP, MORPH_GRO,
+                                       MORPH_TOP, VAC_MDP_FILE))
                                                       
         elif self.FE_sub_type == 'dummy3':
             int_name = topol.int_state._parm_overwrite
@@ -241,6 +247,12 @@ class PertTopology(object):
                                                  fep_lambdas=fepvdw,
                                                  vdw_lambdas=fepvdw,
                                                  mass_lambdas=masl))
+
+            self.files_created.extend((PERT1_ATP, PERT2_ITP, MORPH1_GRO,
+                                       MORPH1_TOP, VAC1_MDP_FILE,
+                                       PERT1_ATP, PERT1_ITP, MORPH2_GRO,
+                                       MORPH2_TOP, VAC2_MDP_FILE))
+
         else:
             raise NotImplementedError
 

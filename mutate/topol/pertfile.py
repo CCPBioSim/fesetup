@@ -25,7 +25,8 @@ Create perturbed topologies for Sire.
 __revision__ = "$Id$"
 
 
-import os, sys
+import os
+import sys
 
 import Sire.Mol
 import Sire.MM
@@ -54,6 +55,8 @@ class PertTopology(object):
         self.reverse_atom_map = reverse_atom_map
         self.zz_atoms = zz_atoms
         
+        self.files_created = []
+
         self.frcmod = None
 
         self.dummies0 = not all([a.atom for a in atom_map.keys()])
@@ -119,6 +122,10 @@ class PertTopology(object):
                            'final_ambertype', self.lig_initial,
                            self.lig_final, self.atoms_final, self.atom_map,
                            self.reverse_atom_map, self.zz_atoms, False)
+
+            self.files_created.extend(('onestep.parm7', 'onestep.rst7',
+                                       const.MORPH_NAME + os.extsep + 'onestep'
+                                       + os.extsep + 'pert'))
         elif self.FE_sub_type == 'dummy2':
             if self.dummies0:
                 make_pert_file(lig_morph, new_morph, 'charge',
@@ -146,6 +153,13 @@ class PertTopology(object):
                                'final_ambertype', self.lig_initial,
                                self.lig_final, self.atoms_final, self.atom_map,
                                self.reverse_atom_map, self.zz_atoms, False)
+
+            self.files_created.extend(('charge.parm7', 'charge.rst7',
+                                       const.MORPH_NAME + os.extsep +
+                                       'charge' + os.extsep + 'pert',
+                                       'vdw.parm7', 'vdw.rst7',
+                                       const.MORPH_NAME + os.extsep +
+                                       'vdw' + os.extsep + 'pert'))
         elif self.FE_sub_type == 'dummy3':
             make_pert_file(lig_morph, new_morph, 'decharge',
                            'initial_charge', 'zero_all',
@@ -167,6 +181,17 @@ class PertTopology(object):
                            'final_ambertype', self.lig_initial,
                            self.lig_final, self.atoms_final, self.atom_map,
                            self.reverse_atom_map, self.zz_atoms, False)
+
+            self.files_created.extend(('decharge.parm7', 'decharge.rst7',
+                                       const.MORPH_NAME + os.extsep +
+                                       'decharge' + os.extsep + 'pert',
+                                       'vdw.parm7', 'vdw.rst7',
+                                       const.MORPH_NAME + os.extsep +
+                                       'vdw' + os.extsep + 'pert',
+                                       'recharge.parm7', 'recharge.rst7',
+                                       const.MORPH_NAME + os.extsep +
+                                       'recharge' + os.extsep + 'pert'))
+
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
                       cmd1, cmd2, boxdims):
@@ -385,7 +410,7 @@ def make_pert_file(old_morph, new_morph, stepname, qprop0, qprop1,
     """
 
     # FIXME: change name according to step protocol
-    pert_fname = const.MORPH_NAME + '.' + stepname + os.extsep + 'pert'
+    pert_fname = const.MORPH_NAME + os.extsep + stepname + os.extsep + 'pert'
     logger.write('Writing perturbation file %s...\n' % pert_fname)
 
     pertfile = open(pert_fname, 'w')

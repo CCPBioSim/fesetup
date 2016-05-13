@@ -141,6 +141,8 @@ class Morph(object):
         self.connect_final = None
         self.dummy_idx = []
 
+        self.files_created = []
+
         self.mcs_timeout = mcs_timeout
         self.mcs_sel = mcs_sel
 
@@ -230,6 +232,8 @@ class Morph(object):
                     util.map_atoms(lig_initial, lig_final, self.mcs_timeout,
                                    isotope_map, self.mcs_sel)
 
+        self.files_created.append(const.MCS_MAP_FILE)
+
         logger.write('\nAtom mapping between initial and final states:')
 
         for i, f in self.atom_map.items():
@@ -274,6 +278,7 @@ class Morph(object):
                                    self.zz_atoms, self.gaff)
 
         topol.setup(os.getcwd(), lig_morph, cmd1, cmd2)
+        self.files_created.extend(topol.files_created)
 
         self.lig_morph = lig_morph
         self.lig_initial = lig_initial

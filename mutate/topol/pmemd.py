@@ -52,6 +52,8 @@ class PertTopology(object):
         self.reverse_atom_map = reverse_atom_map
         self.zz_atoms = zz_atoms
 
+        self.files_created = []
+
         self.frcmod0 = None
         self.frcmod1 = None
 
@@ -126,9 +128,11 @@ class PertTopology(object):
 
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'dummy':
             lig._parm_overwrite = 'onestep'
+            self.files_created.extend(('onestep.parm7', 'onestep.rst7'))
 
         if self.FE_sub_type == 'softcore3' or self.FE_sub_type == 'dummy3':
             lig._parm_overwrite = 'vdw'
+            self.files_created.extend(('vdw.parm7', 'vdw.rst7'))
 
         if self.FE_sub_type == 'softcore' or self.FE_sub_type == 'softcore3' \
                or self.FE_sub_type == 'dummy3':
@@ -197,6 +201,9 @@ class PertTopology(object):
             lig.prepare_top()
             lig.leap.add_mol(mol2_1, 'mol2', [frcmod0], pert=pert1_info)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
+
+            self.files_created.extend(('charge.parm7', 'charge.rst7',
+                                       'vdw.par7', 'vdw.rst7'))
         # FIXME: residue name will be both the same
         elif self.FE_sub_type == 'softcore3' or self.FE_sub_type == 'dummy3':
             lig = self.ff.Ligand(const.MORPH_NAME, start_file=mol2_0,
@@ -227,6 +234,9 @@ class PertTopology(object):
             lig.prepare_top(pert=pert1)
             lig.leap.add_mol(mol2_1, 'mol2', [frcmod1], pert=pert1)
             lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
+
+            self.files_created.extend(('recharge.parm7', 'recharge.rst7',
+                                       'decharge.parm7', 'decharge.rst7'))
         elif self.FE_sub_type == 'dummy':
             lig.prepare_top(pert=pert0_info)
             lig.leap.add_mol(mol2_1, 'mol2', [frcmod1], pert=pert1_info)
