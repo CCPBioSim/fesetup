@@ -62,7 +62,7 @@ failed = []
 
 for name in ligand_names:
     ligand_file = os.path.join(top, 'thrombin/poses/%s/ligand.pdb' % name)
-    ligand_wd = os.path.join(top, '_ligand', name)
+    ligand_wd = os.path.join(top, '_ligands', name)
 
     print 'Making ligand %s...' % name
     ligand = amber.Ligand(name, ligand_file)
