@@ -248,6 +248,7 @@ class GromacsTop(object):
         self.tot_natoms = sum(mols.at(num).molecule().nAtoms()
                               for num in mol_numbers)
 
+        mcnt = 0
 
         # second pass to get atomtypes: grompp allows only one such section
         for num in mol_numbers:
@@ -262,7 +263,6 @@ class GromacsTop(object):
                 resnames[key] = [num, 1, [], natoms]
 
             idx = []
-            mcnt = 0
 
             if key[0] != 'WAT':
                 if len(key) == 1:
