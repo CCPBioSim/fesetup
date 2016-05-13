@@ -27,8 +27,8 @@ __revision__ = "$Id$"
 
 import os, sys
 
-from chemistry.amber.mask import AmberMask
-from chemistry.amber.readparm import AmberParm
+from parmed.amber.mask import AmberMask
+from parmed.amber.readparm import AmberParm
 
 from FESetup import const
 

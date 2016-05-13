@@ -25,7 +25,12 @@ Actual functionality and utility functions for the Morph class.
 __revision__ = "$Id$"
 
 
-import sys, os, re, glob, math
+import sys
+import os
+import re
+import glob
+import math
+import itertools
 import cPickle as pickle
 from collections import OrderedDict, defaultdict
 
@@ -40,9 +45,10 @@ import Sire.MM
 import Sire.Units
 import Sire.Maths
 
-from chemistry.amber.mask import AmberMask
-from chemistry.amber.readparm import AmberParm
-import ParmedTools.ParmedActions as pact
+# parmed from AMBER16
+from parmed.amber.mask import AmberMask
+from parmed.amber.readparm import AmberParm
+import parmed.tools.actions as Action
 
 from FESetup import const, errors, logger
 
@@ -975,10 +981,10 @@ def _get_dihedrals(dihedrals, idx_list):
     impropers = {}
 
     for dihedral in dihedrals:
-        i1 = dihedral.atom1.starting_index
-        i2 = dihedral.atom2.starting_index
-        i3 = dihedral.atom3.starting_index
-        i4 = dihedral.atom4.starting_index
+        i1 = dihedral.atom1.idx
+        i2 = dihedral.atom2.idx
+        i3 = dihedral.atom3.idx
+        i4 = dihedral.atom4.idx
 
         if i1 not in idx_list or i2 not in idx_list or i3 not in idx_list or \
                i4 not in idx_list:
@@ -989,11 +995,11 @@ def _get_dihedrals(dihedrals, idx_list):
         i3 += 1
         i4 += 1
 
-        per = dihedral.dihed_type.per
-        phi_k = dihedral.dihed_type.phi_k
-        phase = dihedral.dihed_type.phase * const.RAD2DEG
-        scee = dihedral.dihed_type.scee
-        scnb = dihedral.dihed_type.scnb
+        per = dihedral.type.per
+        phi_k = dihedral.type.phi_k
+        phase = dihedral.type.phase * const.RAD2DEG
+        scee = dihedral.type.scee
+        scnb = dihedral.type.scnb
 
         if dihedral.signs[1] < 0:
             ordered = tuple(sorted((i1, i2, i3, i4) ) )
@@ -1008,7 +1014,7 @@ def _get_dihedrals(dihedrals, idx_list):
 def _add_proper(idx, terms, parm):
     """Helper function to recreate parmtop proper dihedral table."""
 
-    act = pact.deletedihedral(parm, '@%i @%i @%i @%i' % idx)
+    act = Action.deleteDihedral(parm, '@%i @%i @%i @%i' % idx)
     act.execute()
 
     for term in terms:
@@ -1018,17 +1024,17 @@ def _add_proper(idx, terms, parm):
         scee = term[3]
         scnb = term[4]
 
-        if term[0] < 1:
-            dtype = 'multiterm'
-        else:
-            dtype = 'normal'
+#       if term[0] < 1:
+#           dtype = 'multiterm'
+#       else:
+#           dtype = 'normal'
 
         # FIXME: also add scee and scnb from unperturbed state if necessary,
         #        e.g. dummies in carbohydrates have 1.2/2.0 instead of the
         #        1.0/1.0 for the GLYCAM force field
-        act = pact.adddihedral(parm, '@%i @%i @%i @%i %f %f %f %f %f '
-                               'type %s' %
-                               (idx + (phi_k, per, phase, scee, scnb, dtype) ) )
+        act = Action.addDihedral(parm, '@%i @%i @%i @%i %f %f %f %f %f '
+                               'type normal' %
+                               (idx + (phi_k, per, phase, scee, scnb) ) )
 
         act.execute()
 
@@ -1041,10 +1047,10 @@ def _add_improper(impropers0, impropers1, parm):
             i1, i2, i3, i4 = v[:4]
             per, phi_k, phase, scee, scnb = v[4:]
 
-            act = pact.deletedihedral(parm, '@%i @%i @%i @%i' % (i1, i2, i3, i4) )
+            act = Action.deleteDihedral(parm, '@%i @%i @%i @%i' % (i1, i2, i3, i4) )
             act.execute()
 
-            act = pact.adddihedral(parm, '@%i @%i @%i @%i %f %f %f %f %f '
+            act = Action.addDihedral(parm, '@%i @%i @%i @%i %f %f %f %f %f '
                                    'type improper' % (i1, i2, i3, i4,
                                                       phi_k, per, phase,
                                                       scee, scnb) )
@@ -1130,70 +1136,63 @@ def patch_parmtop(parm0_fn, parm1_fn, mask0, mask1, copy_dih=True):
 
         offset = idx2 - idx             # FIXME: check if really constant
 
-    bonds0 = parm0.bonds_inc_h + parm0.bonds_without_h
-    bonds1 = parm1.bonds_inc_h + parm1.bonds_without_h
-
-    for b0 in bonds0:
-        idx1 = b0.atom1.starting_index
-        idx2 = b0.atom2.starting_index
+    for b0 in itertools.chain(parm0.bonds_inc_h, parm0.bonds_without_h):
+        idx1 = b0.atom1.idx
+        idx2 = b0.atom2.idx
 
         if idx1 not in idx_list or idx2 not in idx_list:
             continue
 
-        for b1 in bonds1:
-            i1 = b1.atom1.starting_index
-            i2 = b1.atom2.starting_index
+        for b1 in itertools.chain(parm1.bonds_inc_h, parm1.bonds_without_h):
+            i1 = b1.atom1.idx
+            i2 = b1.atom2.idx
 
             if i1 not in idx_list2 or i2 not in idx_list2:
                 continue
 
             if (idx1+offset, idx2+offset) == (i1, i2) or \
                    (idx1+offset, idx2+offset) == (i2, i1):
-                k0 = b0.bond_type.k
-                k1 = b1.bond_type.k
+                k0 = b0.type.k
+                k1 = b1.type.k
 
                 if k0 == k1 == 0.0:
                     raise errors.SetupError('BUG: bonds of both states are '
                                             'zero: %i %i' % (idx1, idx2) )
 
                 if k0 == 0.0:
-                    req1 = b1.bond_type.req
+                    req1 = b1.type.req
 
-                    act = pact.setbond(parm0, '@%i @%i %f %f' %
+                    act = Action.setBond(parm0, '@%i @%i %f %f' %
                                        (idx1+1, idx2+1, k1, req1) )
                     act.execute()
 
                 if k1 == 0.0:
-                    req0 = b0.bond_type.req
+                    req0 = b0.type.req
 
-                    act = pact.setbond(parm1, '@%i @%i %f %f' %
+                    act = Action.setBond(parm1, '@%i @%i %f %f' %
                                        (i1+1, i2+1, k0, req0) )
                     act.execute()
 
-
-    angles0 = parm0.angles_inc_h + parm0.angles_without_h
-    angles1 = parm1.angles_inc_h + parm1.angles_without_h
-
-    for a0 in angles0:
-        idx1 = a0.atom1.starting_index
-        idx2 = a0.atom2.starting_index
-        idx3 = a0.atom3.starting_index
+    for a0 in itertools.chain(parm0.angles_inc_h, parm0.angles_without_h):
+        idx1 = a0.atom1.idx
+        idx2 = a0.atom2.idx
+        idx3 = a0.atom3.idx
 
         if idx1 not in idx_list or idx2 not in idx_list or idx3 not in idx_list:
             continue
 
-        for a1 in angles1:
-            i1 = a1.atom1.starting_index
-            i2 = a1.atom2.starting_index
-            i3 = a1.atom3.starting_index
+        for a1 in itertools.chain(parm1.angles_inc_h, parm1.angles_without_h):
+            i1 = a1.atom1.idx
+            i2 = a1.atom2.idx
+            i3 = a1.atom3.idx
 
             if i1 not in idx_list2 or i2 not in idx_list2 or i3 not in idx_list2:
                 continue
 
             if (idx1+offset, idx2+offset, idx3+offset) == (i1, i2, i3) or \
                    (idx1+offset, idx2+offset, idx3+offset) == (i3, i2, i1):
-                k0 = a0.angle_type.k
-                k1 = a1.angle_type.k
+                k0 = a0.type.k
+                k1 = a1.type.k
 
                 # this may happen when dummies are created for atoms that
                 # could otherwise be represented as real atoms, e.g.
@@ -1205,26 +1204,27 @@ def patch_parmtop(parm0_fn, parm1_fn, mask0, mask1, copy_dih=True):
                     #                        (idx1, idx2, idx3) )
                 else:
                     if k0 == 0.0:
-                        theteq1 = a1.angle_type.theteq * const.RAD2DEG
+                        theteq1 = a1.type.theteq * const.RAD2DEG
 
-                        act = pact.setangle(parm0, '@%i @%i @%i %f %f' %
+                        act = Action.setAngle(parm0, '@%i @%i @%i %f %f' %
                                         (idx1+1, idx2+1, idx3+1, k1, theteq1) )
                         act.execute()
 
                     if k1 == 0.0:
-                        theteq0 = a0.angle_type.theteq * const.RAD2DEG
+                        theteq0 = a0.type.theteq * const.RAD2DEG
 
-                        act = pact.setangle(parm1, '@%i @%i @%i %f %f' %
+                        act = Action.setAngle(parm1, '@%i @%i @%i %f %f' %
                                         (i1+1, i2+1, i3+1, k0, theteq0) )
                         act.execute()
-
 
     # NOTE: dihedrals can be all zero, can be multiterm in the other state,
     #       dummy propers will have per = 0, end-groups may be excluded in
     #       single term but if multi-term always excluded
     #       impropers may be missing and atoms differently ordered
-    dihedrals0 = parm0.dihedrals_inc_h + parm0.dihedrals_without_h
-    dihedrals1 = parm1.dihedrals_inc_h + parm1.dihedrals_without_h
+    dihedrals0 = itertools.chain(parm0.dihedrals_inc_h,
+                                 parm0.dihedrals_without_h)
+    dihedrals1 = itertools.chain(parm1.dihedrals_inc_h,
+                                 parm1.dihedrals_without_h)
 
     propers0, impropers0 = _get_dihedrals(dihedrals0, idx_list)
     propers1, impropers1 = _get_dihedrals(dihedrals1, idx_list2)
@@ -1312,12 +1312,12 @@ def patch_parmtop(parm0_fn, parm1_fn, mask0, mask1, copy_dih=True):
     _add_improper(impropers0, impropers1, parm1)
     _add_improper(impropers1, impropers0, parm0)
 
-    parm0.overwrite = True
-    parm0.writeParm(parm0_fn)
+    #parm0.overwrite = True
+    parm0.write_parm(parm0_fn)
 
     if not pmemd:
-        parm1.overwrite = True
-        parm1.writeParm(parm1_fn)
+        #parm1.overwrite = True
+        parm1.write_parm(parm1_fn)
 
 
 def transfer_charges(mol0, mol1, atom_map, dum=False):

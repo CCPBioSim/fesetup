@@ -32,7 +32,7 @@ import Sire.Mol
 import Sire.MM
 import Sire.Units
 
-from chemistry.amber.readparm import AmberParm
+from parmed.amber.readparm import AmberParm
 
 from FESetup import const, errors, logger
 from FESetup.mutate import util
@@ -260,8 +260,8 @@ def patch_element(parmtop, lig_morph, lig_initial, lig_final, atom_map):
             parm.parm_data['ATOMIC_NUMBER'][idx] = atnum
             parm.parm_data['MASS'][idx] = mass
 
-    parm.overwrite = True
-    parm.writeParm(parmtop)
+    #parm.overwrite = True
+    parm.write_parm(parmtop)
  
     return
 
