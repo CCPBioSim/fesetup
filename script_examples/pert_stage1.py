@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2014  Hannes H Loeffler
+#  Copyright (C) 2012-2014,2016  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,40 +17,46 @@
 #  For full details of the license please see the COPYING file
 #  that should have come with this distribution.
 
+
+
+import os
 import sys
-import FESetup as setup
-import FESetup.prepare as prep
-import FESetup.errors as errors
+from FESetup import create_logger, prepare, errors, DirManager
 
 
-setup.create_logger('pert.log')
+create_logger('pert.log')
 
-base = './thrombin/poses'
+top = os.getcwd()
+
+# force field, sub type, water model, divalent ions, MD engine
+amber = prepare.ForceField('amber', 'ff14SB', 'tip3p', 'cm', [], 'amber')
+
 ligand_names = ['3A', '3B']
 
 failed = []
 
-# force field, sub type, water model, divalent ions, MD engine
-amber = prep.ForceField('amber', 'ff14SB', 'tip3p', 'cm', [], 'amber')
-
 for name in ligand_names:
-  with amber.Ligand(name, base) as ligand:
+  ligand_file = os.path.join(top, 'thrombin/poses/%s/ligand.pdb' % name)
+  ligand_wd = os.path.join(top, '_ligand', name)
+
+  print 'Making ligand %s...' % name
+  ligand = amber.Ligand(name, ligand_file)
+
+  with DirManager(ligand_wd):
     try:
       ligand.prepare()
       ligand.param()
 
-      ligand.create_top(boxtype = '')
+      ligand.create_top(boxtype='')
       ligand.flex()
 
-      ligand.conf_search(numconf = 100, geomsteps = 10)
-      ligand.align()
-
-      ligand.create_top(boxtype = 'rectangular', neutralize = True)
+      ligand.create_top(boxtype='rectangular', neutralize=True)
 
       ligand.setup_MDEngine('sander')
 
-      ligand.minimize(restraint = 'notsolvent')
-      ligand.md(nsteps = 1000, restraint = 'notsolvent')
+      ligand.minimize(namelist='%ALL', restraint='notsolvent')
+      ligand.md(namelist='%HEAT', nsteps=500, restraint='notsolvent', T=300.0)
+      ligand.md(namelist='%CONSTT', nsteps=500, restraint='notsolvent', T=300.0)
 
     except errors.SetupError, why:
       failed.append(name)
