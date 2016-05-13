@@ -48,12 +48,14 @@ import Sire.IO
 
 
 
-def ssbonds(ss_file):
+def ssbonds(ss_file, offset=0):
     """
     Read file with SS-bond information.
 
     :param ss_file: filename with disulfide bond information
-    :type ss_file: string
+    :type ss_file: str
+    :param offset: offset to work around leap indexing
+    :type offset: int
 
     :returns: pair of SS-bond indices
     """
@@ -71,7 +73,7 @@ def ssbonds(ss_file):
 
             try:
                 a, b = line.split()
-                a, b = int(a), int(b)
+                a, b = int(a) + offset, int(b) + offset
 
                 if a == b:
                     raise errors.SetupError('malformed file %s in '
@@ -105,6 +107,7 @@ class Common(object):
 
     TOP_EXT = os.extsep + 'parm7'
     RST_EXT = os.extsep + 'rst7'
+    SSBONDS_OFFSET = 0
 
 
     def __new__(cls, *args, **kwargs):
@@ -214,7 +217,7 @@ class Common(object):
         leapin = self.leap.generate_init()
 
         if os.access(const.SSBOND_FILE, os.R_OK):
-            pairs = ssbonds(const.SSBOND_FILE)
+            pairs = ssbonds(const.SSBOND_FILE, self.__class__.SSBONDS_OFFSET)
             cmd = []
 
             for a, b in pairs:

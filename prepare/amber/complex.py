@@ -44,6 +44,8 @@ class Complex(Common):
 
     from FESetup.prepare.ligutil import flex as lig_flex
 
+    SSBONDS_OFFSET = 1
+
     def __init__(self, protein, ligand):
         """
         :param protein: the protein for complex composition
