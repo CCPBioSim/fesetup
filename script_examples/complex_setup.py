@@ -25,6 +25,7 @@
 
 import os
 import sys
+
 from FESetup import create_logger, prepare, errors, DirManager
 
 
@@ -35,7 +36,7 @@ top = os.getcwd()
 # force field, sub type, water model, divalent ions, add on ff, MD engine
 amber = prepare.ForceField('amber', 'ff14SB', 'tip3p', 'cm', [], 'amber')
 
-# prepare protein
+# make protein
 protein_file = os.path.join(top, 'thrombin/protein/2ZC9/protein.pdb')
 protein_wd = os.path.join(top, '_protein', '2ZC9')
 
@@ -43,83 +44,86 @@ print 'Making protein 2ZC9...'
 protein = amber.Protein('2ZC9', protein_file)
 
 with DirManager(protein_wd):
-  protein.protonate_propka(pH=7.0)
-  protein.get_charge()
-  protein.prepare_top()
-  protein.create_top(boxtype = '')
+    protein.protonate_propka(pH=7.0)
+    protein.get_charge()                  # must be done explicitly!
+    protein.prepare_top()                 # must be done explicitly!
+    protein.create_top(boxtype = '')
 
-  # will look in AMBERHOME for this
-  protein.setup_MDEngine('sander.MPI', 'mpirun -np 2')
-  protein.minimize(namelist='%FIXH', restraint='heavy', nsteps=50)
-  protein.minimize(namelist='%ALL', restraint='backbone', nsteps=150)
+    # will look in AMBERHOME for this
+    protein.setup_MDEngine('sander.MPI', 'mpirun -np 2')
+    protein.minimize(namelist='%FIXH', restraint='heavy', nsteps=50)
+    protein.minimize(namelist='%ALL', restraint='backbone', nsteps=150)
 
-# prepare ligands
+# make ligands
 ligand_names = ['3A','3B','3C','3D','3E','3F','3G','3H','3I','3J','3K',
   '5A','5B','5C','5D','5E','5F','5G','5H','5I','5J','5K']
 
 failed = []
 
 for name in ligand_names:
-  ligand_file = os.path.join(top, 'thrombin/poses/%s/ligand.pdb' % name)
-  ligand_wd = os.path.join(top, '_ligand', name)
+    ligand_file = os.path.join(top, 'thrombin/poses/%s/ligand.pdb' % name)
+    ligand_wd = os.path.join(top, '_ligand', name)
 
-  print 'Making ligand %s...' % name
-  ligand = amber.Ligand(name, ligand_file)
+    print 'Making ligand %s...' % name
+    ligand = amber.Ligand(name, ligand_file)
 
-  with DirManager(ligand_wd):
-    try:
-      ligand.prepare()
-      ligand.param()
+    with DirManager(ligand_wd):
+        try:
+            ligand.prepare()
+            ligand.param()
 
-      ligand.prepare_top()
-      ligand.create_top(boxtype = '')
+            ligand.prepare_top()
+            ligand.create_top(boxtype = '')
 
-      #ligand.conf_search(numconf=100, geomsteps=10)
-      #ligand.align()
+            #ligand.conf_search(numconf=100, geomsteps=10)
+            #ligand.align()
 
-      ligand.create_top(boxtype='rectangular', neutralize=True)
+            ligand.create_top(boxtype='rectangular', neutralize=True)
 
-      ligand.setup_MDEngine('sander')
-      ligand.minimize(namelist='%ALL', restraint='notsolvent')
-      ligand.md(namelist='%HEAT', nsteps=200, restraint='notsolvent', T=300.0)
-      ligand.md(namelist='%CONSTT', nsteps=200, restraint='notsolvent', T=300.0)
+            ligand.setup_MDEngine('sander')
+            ligand.minimize(namelist='%ALL', restraint='notsolvent')
+            ligand.md(namelist='%HEAT', nsteps=200, restraint='notsolvent',
+                      T=300.0)
+            ligand.md(namelist='%CONSTT', nsteps=200, restraint='notsolvent',
+                      T=300.0)
 
-      print 'Making complex with %s...' % name
-      complex = amber.Complex(protein, ligand)
+            print 'Making complex with %s...' % name
+            complex = amber.Complex(protein, ligand)
 
-      # prepare complexes
-      with DirManager(os.path.join(top, '_complex', '2ZC9-%s' % name)):
-        complex.copy_files((ligand_wd, protein_wd),
-                           (ligand.orig_file, ligand.frcmod, protein.orig_file,
-                            'ligand.ac'))
+            # make complexes
+            with DirManager(os.path.join(top, '_complex', '2ZC9-%s' % name)):
+                complex.copy_files((ligand_wd, protein_wd),
+                                   (ligand.orig_file, ligand.frcmod,
+                                    protein.orig_file, 'ligand.ac'))
 
-        complex.ligand_fmt = ligand.mol_fmt
-        complex.prepare_top()
-        complex.create_top(boxtype = 'rectangular', neutralize = True)
+                complex.ligand_fmt = ligand.mol_fmt
+                complex.prepare_top()
+                complex.create_top(boxtype = 'rectangular', neutralize = True)
 
-        complex.setup_MDEngine('pmemd.MPI', 'mpirun -np 4')
+                complex.setup_MDEngine('pmemd.MPI', 'mpirun -np 4')
 
-        complex.minimize(namelist='%FIXH', restraint='heavy', nsteps=50)
-        complex.minimize(namelist='%ALL', restraint='backbone', nsteps=150)
+                complex.minimize(namelist='%FIXH', restraint='heavy', nsteps=50)
+                complex.minimize(namelist='%ALL', restraint='backbone', nsteps=150)
 
-        #complex.prot_flex()
-        #complex.flatten_rings()
+                #complex.prot_flex()
+                #complex.flatten_rings()
 
-        # these MD steps will take a long time...
-        complex.md('%HEAT', restraint='backbone', nsteps=2000, T=300.0)
-        complex.md('%PRESS', restraint='backbone', nsteps=5000, T=300.0, p=1.0)
+                # these MD steps will take a long time...
+                complex.md('%HEAT', restraint='backbone', nsteps=2000, T=300.0)
+                complex.md('%PRESS', restraint='backbone', nsteps=5000, T=300.0,
+                           p=1.0)
 
-        for rforce in range(4, -1, -2):
-          complex.md(namelist='%PRESS', restraint='backbone', nsteps=500,
-                     restr_force=rforce)
+                for rforce in range(4, -1, -2):
+                    complex.md(namelist='%PRESS', restraint='backbone', nsteps=500,
+                               restr_force=rforce)
 
 
-    except errors.SetupError, why:
-      failed.append(name)
-      print '%s failed: %s' % (name, why)
+        except errors.SetupError, why:
+            failed.append(name)
+            print '%s failed: %s' % (name, why)
 
 if failed:
-  print >>sys.stderr, 'The following ligands have failed:'
+    print >>sys.stderr, 'The following ligands have failed:'
 
-  for name in failed:
-    print >>sys.stderr, '  %s' % name
+    for name in failed:
+        print >>sys.stderr, '  %s' % name
