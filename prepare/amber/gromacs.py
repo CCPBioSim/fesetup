@@ -793,9 +793,9 @@ def mixer(top0, top1, filename = const.GROMACS_PERT_ITP,
 
             for bond0, bond1 in zip(mt0.bonds, mt1.bonds):
                 if bond0[2] == 0.0 or bond1[2] == 0.0:
-                    raise errors.SetupError('Zero bonds BUG (parmed): %s, %s' %
-                                            (' '.join(str(i) for i in bond0),
-                                             ' '.join(str(i) for i in bond1)))
+                    logger.write('Warning: zero bonds in %s, %s' %
+                                 (' '.join(str(i) for i in bond0),
+                                  ' '.join(str(i) for i in bond1)))
 
                 itp.write('%7i %7i 1 %12.6e %12.6e   %12.6e %12.6e\n' %
                           (bond0 + bond1[2:]) )
@@ -808,9 +808,9 @@ def mixer(top0, top1, filename = const.GROMACS_PERT_ITP,
 
             for angle0, angle1 in zip(mt0.angles, mt1.angles):
                 if angle0[3] == 0.0 or angle1[3] == 0.0:
-                    raise errors.SetupError('Zero angles BUG (parmed): %s, %s' %
-                                            (' '.join(str(i) for i in angle0),
-                                             ' '.join(str(i) for i in angle1)))
+                    logger.write('Warning: zero angles in %s, %s' %
+                                 (' '.join(str(i) for i in angle0),
+                                  ' '.join(str(i) for i in angle1)))
 
                 itp.write('%7i %7i %7i 1 %12.6e %12.6e   %12.6e %12.6e\n' %
                           (angle0 + angle1[3:]) )

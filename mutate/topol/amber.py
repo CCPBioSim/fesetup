@@ -83,7 +83,6 @@ def dummy(lig_morph, con_morph, lig_final, atom_map):
                 name = '%s' % rname.name.value()
                 pert1_info.append((str(fstr), str(name)))
 
-
         if not finfo.atom:
             charge = 0.0 * Sire.Units.mod_electron
             ambertype = const.DUMMY_TYPE
