@@ -45,7 +45,7 @@ import Sire.MM
 import Sire.Units
 import Sire.Maths
 
-# parmed from AMBER16
+# parmed 2.4.0 from AMBER16
 from parmed.amber.mask import AmberMask
 from parmed.amber.readparm import AmberParm
 import parmed.tools.actions as Action
@@ -997,7 +997,7 @@ def _get_dihedrals(dihedrals, idx_list):
 
         per = dihedral.type.per
         phi_k = dihedral.type.phi_k
-        phase = dihedral.type.phase * const.RAD2DEG
+        phase = dihedral.type.phase
         scee = dihedral.type.scee
         scnb = dihedral.type.scnb
 

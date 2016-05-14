@@ -500,7 +500,6 @@ def make_pert_file(old_morph, new_morph, stepname, qprop0, qprop1,
     dihedrals_morph = params_morph.getAllDihedrals()
     impropers_morph = params_morph.getAllImpropers()
 
-
     # For each pair of atoms making a bond in the morph we find
     # the equivalent pair in the initial topology. If there
     # are no matches this should be because one of the two atoms is a dummy
