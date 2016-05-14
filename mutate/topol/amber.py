@@ -56,7 +56,7 @@ def dummy(lig_morph, con_morph, lig_final, atom_map):
 
     pert0_info = []
     pert1_info = []
-
+    H_bonded = set()
 
     for iinfo, finfo in atom_map.items():
         istr = iinfo.name.value()
@@ -64,26 +64,24 @@ def dummy(lig_morph, con_morph, lig_final, atom_map):
 
         new = state1.atom(iinfo.index)  # AtomEditor
 
-        # Dummy may be bonded to H which exceeds leap's valency limit.  Leap
-        # will only keep the first bond encountered.  Solution:
-        # "pert=true" and explicit bonding to DU, recreate all bonds to not
-        # rely on which one leap had kept
-        if not iinfo.atom:
-            for idx in con_morph.connectionsTo(iinfo.index):
-                atom = lig_morph.select(idx)
-                name = '%s' % atom.name().value()
-                ambertype = '%s' % atom.property('ambertype')
+        # Dummies bonded to H exceed leap's valency limit of 2 and leap will
+        # only keep the first bond encountered.  Solution: "pert=true" and
+        # recreate _ALL_ bonds to H.  Do not rely on which one leap had kept
+        # so delete all bonds first because leap terminates on prmtop writing
+        # when the one existing bond had been defined twice.
 
-                if ambertype.upper().startswith('H') and \
-                       name.startswith('H'):
-                    pert0_info.append( (str(istr), str(name)) )
+        if istr.startsWith('H') and con_morph.nConnections(iinfo.index) > 1:
+            for bond_index in con_morph.connectionsTo(iinfo.index):
+                atom = lig_morph.select(bond_index)
+                name = '%s' % atom.name().value()
+                pert0_info.append((str(istr), str(name)))
 
         if fstr.startsWith('H') and con_morph.nConnections(iinfo.index) > 1:
             for bond_index in con_morph.connectionsTo(iinfo.index):
                 atom1 = lig_morph.select(bond_index)
                 rname = util.search_atominfo(atom1.index(), atom_map)
                 name = '%s' % rname.name.value()
-                pert1_info.append( (str(fstr), str(name)) )
+                pert1_info.append((str(fstr), str(name)))
 
 
         if not finfo.atom:
