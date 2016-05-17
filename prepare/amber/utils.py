@@ -109,7 +109,7 @@ def _setenv():
     if 'LOCAL_AMBER' in os.environ and \
            os.environ['LOCAL_AMBER'] != os.environ['AMBERHOME'] and \
            'COPY_LD_LIBRARY_PATH' in os.environ:
-       os.environ['LD_LIBRARY_PATH'] = os.environ['COPY_LD_LIBRARY_PATH']
+        os.environ['LD_LIBRARY_PATH'] = os.environ['COPY_LD_LIBRARY_PATH']
 
 
 def run_amber(program, params):
