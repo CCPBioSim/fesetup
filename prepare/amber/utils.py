@@ -105,11 +105,14 @@ def _setenv():
     is external, make sure that it doesn't use LD_LIBRARY_PATH but a copy
     if it exists.  Otherwise, use the current LD_LIBRARY_PATH.
     """
+    env = os.environ.copy()
 
     if 'LOCAL_AMBER' in os.environ and \
            os.environ['LOCAL_AMBER'] != os.environ['AMBERHOME'] and \
            'COPY_LD_LIBRARY_PATH' in os.environ:
-        os.environ['LD_LIBRARY_PATH'] = os.environ['COPY_LD_LIBRARY_PATH']
+        env['LD_LIBRARY_PATH'] = env['COPY_LD_LIBRARY_PATH']
+
+     return env
 
 
 def run_amber(program, params):
@@ -130,8 +133,8 @@ def run_amber(program, params):
 
     logger.write('Executing command:\n%s %s\n' % (program, params) )
 
-    _setenv()
-    proc = subp.Popen(cmd, stdout = subp.PIPE, stderr = subp.PIPE)
+    env = _setenv()
+    proc = subp.Popen(cmd, stdout=subp.PIPE, stderr=subp.PIPE, env=env)
     out, err = proc.communicate()
 
     for stream in out, err:
@@ -168,22 +171,22 @@ def run_leap(top, crd, program='tleap', script=''):
     leap = check_amber(program)
     cmd = [leap, '-f']
 
-    _setenv()
+    env = _setenv()
 
     if script == 'leap.in':
         cmd.append(script)
         logger.write('Executing command:\n%s' % ' '.join(cmd) )
 
-        proc = subp.Popen(cmd, stdin = None, stdout = subp.PIPE,
-                          stderr = subp.PIPE)
+        proc = subp.Popen(cmd, stdin=None, stdout=subp.PIPE, stderr=subp.PIPE,
+                          env=env)
         out = proc.communicate()[0]
     else:
         cmd.append('-')
         logger.write('Executing command:\n%s -f - <<_EOF \n%s\n_EOF\n' %
                      (leap, script) )
 
-        proc = subp.Popen(cmd, stdin = subp.PIPE, stdout = subp.PIPE,
-                          stderr = subp.PIPE)
+        proc = subp.Popen(cmd, stdin=subp.PIPE, stdout=subp.PIPE,
+                          stderr=subp.PIPE, env=env)
         out = proc.communicate(script)[0]
 
     if top and crd:
@@ -206,12 +209,15 @@ def run_exe(cmdline):
 
     logger.write('Executing command:\n%s\n' % cmdline)
 
-    if 'COPY_LD_LIBRARY_PATH' in os.environ:
-         os.environ['LD_LIBRARY_PATH'] = os.environ['COPY_LD_LIBRARY_PATH']
-    else:
-         os.environ['LD_LIBRARY_PATH'] = ''
+    env = os.environ.copy()
 
-    proc = subp.Popen(shlex.split(cmdline), stdout=subp.PIPE, stderr=subp.PIPE)
+    if 'COPY_LD_LIBRARY_PATH' in os.environ:
+         env['LD_LIBRARY_PATH'] = os.environ['COPY_LD_LIBRARY_PATH']
+    else:
+         env['LD_LIBRARY_PATH'] = ''
+
+    proc = subp.Popen(shlex.split(cmdline), stdout=subp.PIPE, stderr=subp.PIPE,
+                      env=env)
     out, err =  proc.communicate()
 
     return proc.returncode, out, err
