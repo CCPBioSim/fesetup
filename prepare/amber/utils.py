@@ -112,7 +112,7 @@ def _setenv():
            'COPY_LD_LIBRARY_PATH' in os.environ:
         env['LD_LIBRARY_PATH'] = env['COPY_LD_LIBRARY_PATH']
 
-     return env
+    return env
 
 
 def run_amber(program, params):
