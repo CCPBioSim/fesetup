@@ -30,11 +30,12 @@ if ('%x' % sys.hexversion)[:3] != '207':
     sys.exit(1)
 
 
+from FESetup import _release
+
 __revision__ = "$Id$"
 __version__ = '0.8.0'
 
 vstring = 'FESetup SUI version: %s' % __version__
-print ('\n=== %s ===\n' % vstring)
 
 
 import os
@@ -931,12 +932,18 @@ defaults[SECT_COM].update(_minmd)
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('infile', nargs = '?',
-                        help = 'input file in INI format, if not given then '
+    parser.add_argument('infile', nargs='?',
+                        help='input file in INI format, if not given then '
                         'just output defaults')
-    parser.add_argument('--tracebacklimit', type = int, default = 0,
-               help = 'set the Python traceback limit (for debugging)')
+    parser.add_argument('-v', '--version', action='version',
+                        version='SUI version %s, FESetup release %s' % (
+                            __version__, _release.release),
+                        help='full version information')
+    parser.add_argument('--tracebacklimit', metavar='N', type=int, default=0,
+                        help='set the Python traceback limit (for debugging)')
     args = parser.parse_args()
+
+    print('\n=== %s ===\n' % vstring)
 
     options = IniParser(copy.deepcopy(defaults))
 
