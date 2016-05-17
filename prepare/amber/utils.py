@@ -99,6 +99,19 @@ def check_amber(program):
     return exe
 
 
+def _setenv():
+    """
+    Check if we are running on the internal or an external AMBER.  If it
+    is external, make sure that it doesn't use LD_LIBRARY_PATH but a copy
+    if it exists.  Otherwise, use the current LD_LIBRARY_PATH.
+    """
+
+    if 'LOCAL_AMBER' in os.environ and \
+           os.environ['LOCAL_AMBER'] != os.environ['AMBERHOME'] and \
+           'COPY_LD_LIBRARY_PATH' in os.environ:
+       os.environ['LD_LIBRARY_PATH'] = os.environ['COPY_LD_LIBRARY_PATH']
+
+
 def run_amber(program, params):
     """
     Simple wrapper to execute external AMBER programs through subprocess.
@@ -117,6 +130,7 @@ def run_amber(program, params):
 
     logger.write('Executing command:\n%s %s\n' % (program, params) )
 
+    _setenv()
     proc = subp.Popen(cmd, stdout = subp.PIPE, stderr = subp.PIPE)
     out, err = proc.communicate()
 
@@ -153,6 +167,8 @@ def run_leap(top, crd, program='tleap', script=''):
 
     leap = check_amber(program)
     cmd = [leap, '-f']
+
+    _setenv()
 
     if script == 'leap.in':
         cmd.append(script)
