@@ -35,7 +35,7 @@ from FESetup import _release
 __revision__ = "$Id$"
 __version__ = '0.8.0'
 
-vstring = 'FESetup SUI version: %s' % __version__
+vstring = 'FESetup release %s, SUI version: %s' % (_release.release, __version__)
 
 
 import os
@@ -936,8 +936,7 @@ if __name__ == '__main__':
                         help='input file in INI format, if not given then '
                         'just output defaults')
     parser.add_argument('-v', '--version', action='version',
-                        version='SUI version %s, FESetup release %s' % (
-                            __version__, _release.release),
+                        version=vstring,
                         help='full version information')
     parser.add_argument('--tracebacklimit', metavar='N', type=int, default=0,
                         help='set the Python traceback limit (for debugging)')
