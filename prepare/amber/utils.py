@@ -190,6 +190,11 @@ def run_exe(cmdline):
 
     logger.write('Executing command:\n%s\n' % cmdline)
 
+    if 'COPY_LD_LIBRARY_PATH' in os.environ:
+         os.environ['LD_LIBRARY_PATH'] = os.environ['COPY_LD_LIBRARY_PATH']
+    else:
+         os.environ['LD_LIBRARY_PATH'] = ''
+
     proc = subp.Popen(shlex.split(cmdline), stdout=subp.PIPE, stderr=subp.PIPE)
     out, err =  proc.communicate()
 
