@@ -111,7 +111,7 @@ def prelude(opts):
     logger.write('\n%s\n\n' % vstring)
     atexit.register(lambda : logger.finalize() )
 
-    ff_opts = opts[SECT_DEF]['forcefield']
+    ff_opts = list(opts[SECT_DEF]['forcefield'])
     lu = len(ff_opts)
     ff_opts[lu:] = deff[lu:]
 
@@ -947,7 +947,7 @@ if __name__ == '__main__':
     options = IniParser(copy.deepcopy(defaults))
 
     if not args.infile:
-        options.output()
+        print('\n'.join(options.format()))
         sys.exit(0)
 
     sys.tracebacklimit = args.tracebacklimit
@@ -967,7 +967,9 @@ if __name__ == '__main__':
 
     ff = prelude(options)
 
-    logger.write('Force field and MD engine:\n%s\n' % ff)
+    logger.write('Command line: %s\n\nOptions:\n--------' % ' '.join(sys.argv))
+    logger.write('\n'.join(options.format()))
+    logger.write('--------\n\nForce field and MD engine:\n%s\n' % ff)
 
 
     # FIXME: We keep all molecule objects in memory.  For 2000 morph pairs
