@@ -995,7 +995,8 @@ if __name__ == '__main__':
     Ligdata = namedtuple('Ligdata', ['ref', 'leapcmd'])
     lig_failed = []
 
-    morph_pairs = options[SECT_LIG]['morph_pairs']
+    morph_pairs = copy.deepcopy(options[SECT_LIG]['morph_pairs'])
+    molecules = copy.deepcopy(options[SECT_LIG]['molecules'])
     morph_maps = {}
 
     if morph_pairs:
@@ -1031,9 +1032,9 @@ if __name__ == '__main__':
 
         mols = [val for pairs in morph_pairs for val in pairs]  # flatten
         uniq = list(OrderedDict( (val, None) for val in mols) )
-        options[SECT_LIG]['molecules'] = uniq
+        molecules = uniq
 
-    for lig_name in options[SECT_LIG]['molecules']:
+    for lig_name in molecules:
         try:
             ligand, cmds = make_ligand(lig_name, ff, options)
             ligands[lig_name] = Ligdata(ligand, cmds)
