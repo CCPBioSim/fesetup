@@ -99,8 +99,9 @@ class IniParser(dict):
                 if val == '':
                     val = '(empty)'
                 else:
-                    if key == 'morph_pairs':    # FIXME: special case
-                        val = ', '.join('%s > %s' %(a, b) for a, b in val)
+                    # FIXME: special cas
+                    if key == 'morph_pairs' or key == 'pairs':
+                        val = ', '.join('%s > %s' % (a, b) for a, b in val)
                     elif type(val) in (tuple, list):
                         val = ', '.join(val)
 
