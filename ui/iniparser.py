@@ -83,27 +83,35 @@ class IniParser(dict):
 
 
 
-    def output(self):
+    def format(self):
         """
-        Print option dictionary.
+        Return a formatted version of the option dictionary.
         """
 
+        all = []
+
         for section in self:
-            print '[' + section + ']'
+            all.append('[' + section + ']')
 
             for key in sorted(self[section]):
                 val = self[section][key]
-                print key, '=',
 
                 if val == '':
-                    print '(empty)'
+                    val = '(empty)'
                 else:
-                    if type(val) in (tuple, list):
-                        print ', '.join(val)
-                    else:
-                        print val
+                    # FIXME: special cases
+                    if key == 'morph_pairs':
+                        val = ', '.join('%s > %s' % (a, b) for a, b in val)
+                    elif key == 'pairs':
+                        val = ', '.join('%s : %s' % (a, b) for a, b in val)
+                    elif type(val) in (tuple, list):
+                        val = ', '.join(val)
 
-            print
+                all.append('%s = %s' % (key, val))
+
+            all.append('')
+
+        return all
 
 
     def parse(self, filename, section = 'defaults'):

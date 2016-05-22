@@ -30,11 +30,12 @@ if ('%x' % sys.hexversion)[:3] != '207':
     sys.exit(1)
 
 
+from FESetup import _release
+
 __revision__ = "$Id$"
 __version__ = '0.8.0'
 
-vstring = 'FESetup SUI version: %s' % __version__
-print ('\n=== %s ===\n' % vstring)
+vstring = 'FESetup release %s, SUI version: %s' % (_release.release, __version__)
 
 
 import os
@@ -110,7 +111,7 @@ def prelude(opts):
     logger.write('\n%s\n\n' % vstring)
     atexit.register(lambda : logger.finalize() )
 
-    ff_opts = opts[SECT_DEF]['forcefield']
+    ff_opts = list(opts[SECT_DEF]['forcefield'])
     lu = len(ff_opts)
     ff_opts[lu:] = deff[lu:]
 
@@ -931,17 +932,22 @@ defaults[SECT_COM].update(_minmd)
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('infile', nargs = '?',
-                        help = 'input file in INI format, if not given then '
+    parser.add_argument('infile', nargs='?',
+                        help='input file in INI format, if not given then '
                         'just output defaults')
-    parser.add_argument('--tracebacklimit', type = int, default = 0,
-               help = 'set the Python traceback limit (for debugging)')
+    parser.add_argument('-v', '--version', action='version',
+                        version=vstring,
+                        help='full version information')
+    parser.add_argument('--tracebacklimit', metavar='N', type=int, default=0,
+                        help='set the Python traceback limit (for debugging)')
     args = parser.parse_args()
+
+    print('\n=== %s ===\n' % vstring)
 
     options = IniParser(copy.deepcopy(defaults))
 
     if not args.infile:
-        options.output()
+        print('\n'.join(options.format()))
         sys.exit(0)
 
     sys.tracebacklimit = args.tracebacklimit
@@ -961,7 +967,9 @@ if __name__ == '__main__':
 
     ff = prelude(options)
 
-    logger.write('Force field and MD engine:\n%s\n' % ff)
+    logger.write('Command line: %s\n\nOptions:\n--------' % ' '.join(sys.argv))
+    logger.write('\n'.join(options.format()))
+    logger.write('--------\n\nForce field and MD engine:\n%s\n' % ff)
 
 
     # FIXME: We keep all molecule objects in memory.  For 2000 morph pairs
@@ -987,7 +995,8 @@ if __name__ == '__main__':
     Ligdata = namedtuple('Ligdata', ['ref', 'leapcmd'])
     lig_failed = []
 
-    morph_pairs = options[SECT_LIG]['morph_pairs']
+    morph_pairs = copy.deepcopy(options[SECT_LIG]['morph_pairs'])
+    molecules = copy.deepcopy(options[SECT_LIG]['molecules'])
     morph_maps = {}
 
     if morph_pairs:
@@ -1023,9 +1032,9 @@ if __name__ == '__main__':
 
         mols = [val for pairs in morph_pairs for val in pairs]  # flatten
         uniq = list(OrderedDict( (val, None) for val in mols) )
-        options[SECT_LIG]['molecules'] = uniq
+        molecules = uniq
 
-    for lig_name in options[SECT_LIG]['molecules']:
+    for lig_name in molecules:
         try:
             ligand, cmds = make_ligand(lig_name, ff, options)
             ligands[lig_name] = Ligdata(ligand, cmds)
