@@ -36,7 +36,7 @@ DLPOLYHOME=/usr/local/dl_poly_4.06
 #AMBERHOME=
 
 # first dir includes FESetup
-PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$AMBERHOME/bin
+PYTHONPATH=/home/hhl/projects/ccpbiosim/FESetup:$AMBERHOME/lib/python2.7/site-packages
 
 export DYLD_LIBRARY_PATH LD_LIBRARY_PATH PYTHONPATH NAMDHOME GMXHOME DLPOLYHOME
 export FES_HOME

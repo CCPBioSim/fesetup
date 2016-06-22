@@ -690,7 +690,8 @@ def make_complex(prot, lig, ff, opts, load_cmds):
     if from_scratch:
         model = ModelConfig(name)
 
-    complex = ff.Complex(prot, lig)
+    if not model_path:
+        complex = ff.Complex(prot, lig)
 
     lig_src = os.path.join(os.getcwd(), const.LIGAND_WORKDIR, lig.mol_name)
     prot_src = os.path.join(os.getcwd(), const.PROTEIN_WORKDIR, prot.mol_name)
