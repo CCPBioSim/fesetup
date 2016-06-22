@@ -231,6 +231,10 @@ def save_model(model, mol, filename, dest_dir):
         model['box.dimensions'] = box_dims
         model['box.format'] = 'bla'  # FIXME: boxlengths-angle
 
+    if mol.ssbond_file and os.path.isfile(mol.ssbond_file):
+        model['top.ssbond_file'] = mol.ssbond_file
+        model.add_file(mol.ssbond_file)
+
     # the final blessing
     model['is.valid'] = 1
 
@@ -522,6 +526,9 @@ def make_protein(name, ff, opts):
             protein.amber_crd = model['crd.filename']
             protein.orig_file = model['crd.original']
 
+            if 'top.ssbond_file' in model:
+                protein.ssbond_file = model['top.ssbond_file']
+
             if 'box.dimensions' in model:
                 protein.box_dims = model['box.dimensions']
 
@@ -676,6 +683,9 @@ def make_complex(prot, lig, ff, opts, load_cmds):
             complex.charge = float(model['charge.total'])
             complex.amber_top = model['top.filename']
             complex.amber_crd = model['crd.filename']
+
+            if 'top.ssbond_file' in model:
+                complex.ssbond_file = model['top.ssbond_file']
 
             if 'box.dimensions' in model:
                 complex.box_dims = model['box.dimensions']

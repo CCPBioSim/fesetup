@@ -337,6 +337,10 @@ class Morph(object):
         crd = os.path.join(sys_base, system.amber_crd)
         top = os.path.join(sys_base, system.amber_top)
 
+        if system.ssbond_file and not os.path.isfile(system.ssbond_file):
+            os.symlink(os.path.join(sys_base, system.ssbond_file),
+                       system.ssbond_file)
+
         if not crd:
             raise errors.SetupError('no suitable rst7 file found')
 

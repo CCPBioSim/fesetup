@@ -132,6 +132,7 @@ class Common(object):
 
         self.sander_rst = ''
         self.sander_crd = ''
+        self.ssbond_file = ''
         self.namd_prefix = ''
 
         self.min_no = 0                 # number of current minimisation step
@@ -224,6 +225,8 @@ class Common(object):
                 cmd.append('bond s.%i.SG s.%i.SG\n' % (a, b) )
 
             leapin += ''.join(cmd)
+
+            self.ssbond_file = const.SSBOND_FILE
 
         boxdata = None
 
