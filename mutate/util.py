@@ -1199,19 +1199,16 @@ def patch_parmtop(parm0_fn, parm1_fn, mask0, mask1, copy_dih=True):
                 # when breaking rings
                 if k0 == k1 == 0.0:
                     pass
-                    #raise errors.SetupError('BUG: angles of both states are '
-                    #                        'zero: %i %i %i' %
-                    #                        (idx1, idx2, idx3) )
                 else:
                     if k0 == 0.0:
-                        theteq1 = a1.type.theteq * const.RAD2DEG
+                        theteq1 = a1.type.theteq
 
                         act = Action.setAngle(parm0, '@%i @%i @%i %f %f' %
                                         (idx1+1, idx2+1, idx3+1, k1, theteq1) )
                         act.execute()
 
                     if k1 == 0.0:
-                        theteq0 = a0.type.theteq * const.RAD2DEG
+                        theteq0 = a0.type.theteq
 
                         act = Action.setAngle(parm1, '@%i @%i @%i %f %f' %
                                         (i1+1, i2+1, i3+1, k0, theteq0) )
