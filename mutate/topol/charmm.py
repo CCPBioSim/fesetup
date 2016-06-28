@@ -39,8 +39,9 @@ from FESetup.prepare.amber import charmm
 
 ONESTEP_INP_FILE = 'onestep.inp'
 CHARGE_INP_FILE = 'charge.inp'
-VDW_INP_FILE = 'vdw.inp'
 DECHARGE_INP_FILE = 'decharge.inp'
+VDW_INP_FILE = 'vdw.inp'
+RECHARGE_INP_FILE = 'recharge.inp'
 
 STATE_INT = 'state_int'
 
@@ -96,7 +97,22 @@ def _create_inp_file(stype, softcore, dummies1, tmpl):
                                   state0='state_int', state1='state1',
                                   softcore=sc2))
     elif stype == 'pert3':
-        pass
+        cht = ('!scalar charge set 0.0 select FIXME: atom-name-or-other end\n'
+               'scalar charge set 0.0 select resname LIG end')
+        with open(DECHARGE_INP_FILE, 'w') as inp:
+            inp.write(tmpl.format(charge0='', charge1=cht,
+                                  state0='state0', state1='state1',
+                                  softcore='nopssp'))
+
+        with open(VDW_INP_FILE, 'w') as inp:
+            inp.write(tmpl.format(charge0=cht, charge1=cht,
+                                  state0='state0', state1='state1',
+                                  softcore='pssp'))
+
+        with open(RECHARGE_INP_FILE, 'w') as inp:
+            inp.write(tmpl.format(charge0=cht, charge1='',
+                                  state0='state0', state1='state1',
+                                  softcore='nopssp'))
 
 
 class PertTopology(object):
