@@ -101,7 +101,7 @@ def _create_inp_file(stype, softcore, dummies1, tmpl):
                'scalar charge set 0.0 select resname LIG end')
         with open(DECHARGE_INP_FILE, 'w') as inp:
             inp.write(tmpl.format(charge0='', charge1=cht,
-                                  state0='state0', state1='state1',
+                                  state0='state0', state1='state0',
                                   softcore='nopssp'))
 
         with open(VDW_INP_FILE, 'w') as inp:
@@ -111,7 +111,7 @@ def _create_inp_file(stype, softcore, dummies1, tmpl):
 
         with open(RECHARGE_INP_FILE, 'w') as inp:
             inp.write(tmpl.format(charge0=cht, charge1='',
-                                  state0='state0', state1='state1',
+                                  state0='state1', state1='state1',
                                   softcore='nopssp'))
 
 
