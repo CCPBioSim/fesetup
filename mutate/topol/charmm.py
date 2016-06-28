@@ -37,88 +37,66 @@ from FESetup.prepare.amber import charmm
 
 
 
-VAC_INP_FILE = 'vac.inp'
-SOL_INP_FILE = 'sol.inp'
+ONESTEP_INP_FILE = 'onestep.inp'
+CHARGE_INP_FILE = 'charge.inp'
+VDW_INP_FILE = 'vdw.inp'
+DECHARGE_INP_FILE = 'decharge.inp'
+
 STATE_INT = 'state_int'
 
-VAC_TEMPLATE = '''\
-* relative AFE in vacuo
-* Please note that this input file is only intended as a rough template to
-* illustrate how a TI simulation would need to be set up
-*
-
-bomlev -2
-prnlev 5
-
-read rtf card name combined.rtf
-read param flex card name combined.prm
-
-ioformat extended
-read psf xplor card name "{state0}.psf"
-read coor card name "{state0}.cor"
-
-use amber
-
-! {charge0}
-
-format (i1)
-calc old = @step - 1
-set oldrst fe@old.rst
-
-format (f15.7)
-
-if @lambda .lt. 0 then set lambda 0
-if @lambda .gt. 1 then set lambda 1
-
-set lstart @lambda
-set lstop @lambda
-
-calc delta = 0.5 / (@nlambda - 1)
-calc lstart = @lstart - @delta
-calc lstop  = @lstop  + @delta
-
-if @lambda .eq. 0 then set lstart 0.0
-if @lambda .eq. 1 then set lstop 1.0
-
-lower
-set base fe@step
-set rst @base.rst
-set dcd @base.dcd
-set en  @base.en
-set whamf @base.wham
-
-open unit 10 write form name @rst
-open unit 11 write unform name @dcd
-open unit 12 write form name @en
-open unit 22 read form name @oldrst
-open unit 54 write card name @whamf
-
-nbonds atom cdie shift vatom vswith cutnb 999.0 ctofnb 997.0
-update inbfrq -1 ihbfrq -1
-
-pert select segid A end
-delete atoms select all end
-
-read psf xplor card name "{state1}.psf"
-read coor card name "{state1}.cor"
-
-! {charge1}
-
-prnlev 5
-
-scalar fbeta set 5.0 select all end
-
-dynamics langevin leap start nstep 500000 timestep 0.001 -
-  lstart @lstart lambda @lambda lstop @lstop wham 54 -
-    pstart 0 pstop 500000 pwindow nopssp -
-  tbath 300.0 rbuf 0.0 ilbfrq 10 -
-  iunwri 10 iuncrd 11 kunit 12 iunrea 22 -
-  nsavc 10000 nprint 5000 iprfreq 20000 isvfrq 10000 ntrfrq 1000
-
-stop
-'''
 
 TR_TABLE = {'pert': 'dummy', 'pert2': 'dummy2', 'pert3': 'dummy3'}
+
+
+def _create_inp_file(stype, softcore, dummies1, tmpl):
+    """
+    Create a CHARMM INP file for TI.
+
+    :param stype:
+    :type stype: str
+    :param dummies1: are there dummies in the final state?
+    :type dummies1: bool
+    :param softcore: softcore
+    :type softcore: str
+    :param tmpl: template file
+    :type tmpl: str
+    """
+
+    # for pert3 we go down the sander route otherwise we would need
+    # 4 topologies (0, 0', 1', 1 where ' means q_on/off only:
+    # step1: state0 + state0(scalar charge set)
+    # step2: state0(scalar charge set) + state1(scalar charge set)
+    # step3: state1(scalar charge set) + state1
+    # FIXME: consider this for all stypeS
+
+    if stype == 'pert':        # no separation, linear
+        with open(ONESTEP_INP_FILE, 'w') as inp:
+            inp.write(tmpl.format(charge0='', charge1='',
+                                  state0='state0', state1='state1',
+                                  softcore=softcore))
+    elif stype == 'pert2':
+        if dummies1:
+            file1 = CHARGE_INP_FILE
+            file2 = VDW_INP_FILE
+            sc1 = 'nopssp'
+            sc2 = 'pssp'
+        else:
+            file1 = VDW_INP_FILE
+            file2 = CHARGE_INP_FILE
+            sc1 = 'pssp'
+            sc2 = 'nopssp'
+
+        with open(file1, 'w') as inp:
+            inp.write(tmpl.format(charge0='', charge1='',
+                                  state0='state0', state1='state_int',
+                                  softcore=sc1))
+
+        with open(file2, 'w') as inp:
+            inp.write(tmpl.format(charge0='', charge1='',
+                                  state0='state_int', state1='state1',
+                                  softcore=sc2))
+    elif stype == 'pert3':
+        pass
 
 
 class PertTopology(object):
@@ -150,6 +128,11 @@ class PertTopology(object):
         
         self.dummies0 = not all([a.atom for a in self.atom_map.keys()])
         self.dummies1 = not all([a.atom for a in self.atom_map.values()])
+
+        if not self.dummies0 and not self.dummies1:
+            self.softcore = 'nopssp'
+        else:
+            self.softcore = 'pssp'
 
         if self.separate and self.dummies0 and self.dummies1:
             self.FE_sub_type = 'pert3'
@@ -210,12 +193,6 @@ class PertTopology(object):
             top_int.writeCrd(STATE_INT + '.cor')
             self.files_created.extend((STATE_INT + '.psf', STATE_INT + '.cor'))
 
-        # for pert3 we go down the sander route otherwise we would need
-        # 4 topologies (0, 0', 1', 1 where ' means q_on/off only:
-        # step1: state0 + state0(scalar charge set)
-        # step2: state0(scalar charge set) + state1(scalar charge set)
-        # step3: state1(scalar charge set) + state1
-
         top1 = charmm.CharmmTop(self.itypes)
         top1.readParm(lig1 + top, lig1 + rst)
         top1.writePsf('state1.psf')
@@ -229,8 +206,7 @@ class PertTopology(object):
 
         self.topol = topol
 
-        with open(VAC_INP_FILE, 'w') as inp:
-            inp.write(VAC_INP)
+        _create_inp_file(self.stype, self.softcore, self.dummies1, VAC_TEMPLATE)
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
@@ -254,7 +230,7 @@ class PertTopology(object):
         top0.writePsf('state0.psf')
         top0.writeCrd('state0.cor')
 
-        if self.stype == 'pert2' or self.stype == 'pert3':
+        if self.stype == 'pert2':
             top_int = charmm.CharmmTop()
             top_int.readParm(STATE_INT + top, STATE_INT + rst)
             top_int.writePsf(STATE_INT + '.psf')
@@ -268,19 +244,128 @@ class PertTopology(object):
         top0.combine(top1)              # adds parms from top1 to top0!
         top0.writeRtfPrm('combined.rtf', 'combined.prm')
 
-        with open(SOL_INP_FILE, 'w') as inp:
-            inp.write(SOL_INP)
+        _create_inp_file(self.stype, self.softcore, self.dummies1, SOL_TEMPLATE)
 
 
 
-VAC_INP = '''* vacuum
-* FESetup
+COMMON_TEMPLATE = '''\
+* Please note that this input file is only intended as a rough template to
+* illustrate how a TI simulation would need to be set up
 *
 
+bomlev -2
+prnlev 5
+
+read rtf card name combined.rtf
+read param flex card name combined.prm
+
+ioformat extended
+read psf xplor card name "{state0}.psf"
+read coor card name "{state0}.cor"
+
+use amber
+
+format (i1)
+calc old = @step - 1
+set oldrst fe@old.rst
+
+format (f15.7)
+
+if @lambda .lt. 0 then set lambda 0
+if @lambda .gt. 1 then set lambda 1
+
+lower
+set base fe@step
+set rst @base.rst
+set dcd @base.dcd
+set en  @base.en
+set whamf @base.wham
+
+open unit 10 write form name @rst
+open unit 11 write unform name @dcd
+open unit 12 write form name @en
+open unit 22 read form name @oldrst
+open unit 54 write card name @whamf
 '''
+
+VAC_TEMPLATE = '''\
+* relative AFE in vacuo
+%s
+
+nbonds atom cdie shift vatom vswith cutnb 999.0 ctofnb 997.0
+update inbfrq -1 ihbfrq -1
+
+{charge0}
+
+pert select segid AAAA end
+delete atoms select all end
+
+read psf xplor card name "{state1}.psf"
+read coor card name "{state1}.cor"
+
+{charge1}
+
+prnlev 5
+
+scalar fbeta set 5.0 select all end
+
+dynamics langevin leap start nstep 500000 timestep 0.001 -
+  lstart 0.0 lambda @lambda lstop 1.0 wham 54 -
+    pstart 0 pstop 500000 pwindow {softcore} -
+  tbath 300.0 rbuf 0.0 ilbfrq 10 -
+  iunwri 10 iuncrd 11 kunit 12 iunrea 22 -
+  nsavc 10000 nprint 5000 iprfreq 20000 isvfrq 10000 ntrfrq 1000
+
+stop
+''' % COMMON_TEMPLATE
+
 
 SOL_INP = '''* solution
 * FESEtup
 *
 
 '''
+
+SOL_TEMPLATE = '''\
+* relative AFE in a periodic box
+%s
+
+prnlev 5 node 0
+
+! scalar charge set X.XXX select end
+{charge0}
+
+pert select segid AAAA end
+delete atoms select all end
+
+read psf xplor card name "{state1}.psf"
+read coor card name "{state1}.cor"
+
+{charge1}
+
+crystal define orthorhombic 32.2 32.2 31.4 90.0 90.0 90.0
+
+open unit 21 read card name box.xtl
+crystal read card unit 21
+close unit 21
+
+! FIXME: other molecules than ligand and water
+image byres xcen 0.0 ycen 0.0 zcen 0.0 select segid AAAA .or. segid WATER end
+
+shake bonh tol 1.0e-6 para select segid WATER end
+update ctonnb 8.0 ctofnb 8.0 cutnb 10.0 atom vatom vswitch lrc -
+  inbfrq -1 imgfrq -1 cutim 10.0 bycb -
+  ewald pmew kappa 0.34 spline order 6 fftx 32 ffty 32 fftz 32 qcor 0.0
+
+scalar fbeta set 5.0 select all end
+
+dynamics leap verlet restart nstep 500000 timestep 0.001 -
+  lstart 0.0 lambda @lambda lstop 1.0 wham 54 -
+    pstart 20000 pstop 500000 pwindow {softcore} -
+  tconst berendsen treference 298.15 tcoupling 5.0 -
+  pconst preference 1.01325 compress 4.63e-5 pcoupling 5.0 -
+  iunwri 10 iuncrd 11 kunit 12 iunrea 22 -
+  nsavc 10000 nprint 5000 iprfreq 20000 isvfrq 10000 ntrfrq 1000
+
+stop
+'''  % COMMON_TEMPLATE
