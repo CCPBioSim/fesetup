@@ -99,6 +99,7 @@ def _create_inp_file(stype, softcore, dummies1, tmpl):
     elif stype == 'pert3':
         cht = ('!scalar charge set 0.0 select FIXME: atom-name-or-other end\n'
                'scalar charge set 0.0 select resname LIG end')
+
         with open(DECHARGE_INP_FILE, 'w') as inp:
             inp.write(tmpl.format(charge0='', charge1=cht,
                                   state0='state0', state1='state0',
@@ -222,7 +223,8 @@ class PertTopology(object):
 
         self.topol = topol
 
-        _create_inp_file(self.stype, self.softcore, self.dummies1, VAC_TEMPLATE)
+        _create_inp_file(self.stype, self.softcore, self.dummies1,
+                         VAC_TEMPLATE)
 
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
@@ -260,7 +262,8 @@ class PertTopology(object):
         top0.combine(top1)              # adds parms from top1 to top0!
         top0.writeRtfPrm('combined.rtf', 'combined.prm')
 
-        _create_inp_file(self.stype, self.softcore, self.dummies1, SOL_TEMPLATE)
+        _create_inp_file(self.stype, self.softcore, self.dummies1,
+                         SOL_TEMPLATE)
 
 
 
@@ -335,20 +338,12 @@ dynamics langevin leap start nstep 500000 timestep 0.001 -
 stop
 ''' % COMMON_TEMPLATE
 
-
-SOL_INP = '''* solution
-* FESEtup
-*
-
-'''
-
 SOL_TEMPLATE = '''\
-* relative AFE in a periodic box
+* relative AFE in a periodic solvent box
 %s
 
 prnlev 5 node 0
 
-! scalar charge set X.XXX select end
 {charge0}
 
 pert select segid AAAA end
