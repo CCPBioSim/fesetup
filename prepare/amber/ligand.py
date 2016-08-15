@@ -605,15 +605,17 @@ class Ligand(Common):
                                 '-at %s -s 2 -pf y' %
                                 (const.LIGAND_AC_FILE, mol_file,
                                  self.gaff) )
-            else:
-                mol_file = self.mol_file
+                self.mol_file = mol_file
+        elif self.mol_fmt == 'pdb':
+            pass
         else:
             raise errors.SetupError('unsupported leap input format: %s (only '
                                     'mol2 and pdb)' % self.mol_fmt)
 
-        self.mol_file = mol_file
-
-        frcmods = [self.frcmod]
+        if os.path.isfile(self.frcmod):
+            frcmods = [self.frcmod]
+        else:
+            frcmods = []
 
         if add_frcmods:
             frcmods.extend(add_frcmods)
@@ -621,7 +623,7 @@ class Ligand(Common):
 
         if not self.leap_added:
             self.leap.add_force_field(self.gaff)
-            self.leap.add_mol(mol_file, self.mol_fmt, frcmods, pert=pert)
+            self.leap.add_mol(self.mol_file, self.mol_fmt, frcmods, pert=pert)
 
             self.leap_added = True
 

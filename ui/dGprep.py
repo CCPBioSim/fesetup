@@ -304,7 +304,12 @@ def make_ligand(name, ff, opts):
                 ligand.amber_crd = model['crd.filename']
                 ligand.orig_file = model['crd.original']
                 ligand.mol_fmt ='mol2'
-                ligand.frcmod = model['frcmod']
+
+                # this file will not be created when skip_param = True
+                try:
+                    ligand.frcmod = model['frcmod']
+                except KeyError:
+                    pass
 
                 if 'box.dimensions' in model:
                     ligand.box_dims = [float(b) for b in
@@ -336,8 +341,11 @@ def make_ligand(name, ff, opts):
         fmt = lig['file.format']
 
     ligand = ff.Ligand(name, lig['file.name'], fmt)
-    model['frcmod'] = ligand.frcmod
-    model.add_file(ligand.frcmod)
+
+    # this file will not be created when skip_param = True
+    if os.path.isfile(ligand.frcmod):
+        model['frcmod'] = ligand.frcmod
+        model.add_file(ligand.frcmod)
 
     if os.path.isabs(lig['basedir']):
         src = os.path.join(lig['basedir'], name)
@@ -376,8 +384,10 @@ def make_ligand(name, ff, opts):
             ligand.create_top(boxtype='', addcmd=load_cmds,
                               write_dlf=lig['write_dlf'])
 
-            model['charge.filename'] = const.LIGAND_AC_FILE
-            model.add_file(const.LIGAND_AC_FILE)
+            # this file will not be created when skip_param = True
+            if os.path.isfile(const.LIGAND_AC_FILE):
+                model['charge.filename'] = const.LIGAND_AC_FILE
+                model.add_file(const.LIGAND_AC_FILE)
 
             model['charge.total'] = ligand.charge
             model['charge.filetype'] = 'ac'
