@@ -280,6 +280,7 @@ class PertTopology(object):
         util.write_mol2(state1, mol2_1, resname = const.LIGAND1_NAME)
 
         com = self.ff.Complex(pdb_file, mol2_0)
+        com.__class__.SSBONDS_OFFSET = 2 # FIXME: kludge
         com.box_dims = boxdims
         com.ligand_fmt = 'mol2'
         com.frcmod = self.frcmod0
@@ -321,6 +322,7 @@ class PertTopology(object):
             util.write_mol2(int_state, mol2_int, resname = const.INT_NAME)
 
             com = self.ff.Complex(pdb_file, mol2_0)
+            com.__class__.SSBONDS_OFFSET = 2 # FIXME: kludge
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0
@@ -339,6 +341,7 @@ class PertTopology(object):
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
             com = self.ff.Complex(pdb_file, mol2_int)
+            com.__class__.SSBONDS_OFFSET = 2 # FIXME: kludge
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1
@@ -359,6 +362,7 @@ class PertTopology(object):
         # FIXME: residue name will be both the same
         elif self.FE_sub_type == 'softcore3' or self.FE_sub_type == 'dummy3':
             com = self.ff.Complex(pdb_file, mol2_0)
+            com.__class__.SSBONDS_OFFSET = 2 # FIXME: kludge
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod0
@@ -369,6 +373,7 @@ class PertTopology(object):
             com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
             com = self.ff.Complex(pdb_file, mol2_1)
+            com.__class__.SSBONDS_OFFSET = 2 # FIXME: kludge
             com.box_dims = boxdims
             com.ligand_fmt = 'mol2'
             com.frcmod = self.frcmod1

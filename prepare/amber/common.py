@@ -193,9 +193,8 @@ class Common(object):
             raise errors.SetupError(why)
 
 
-    def _amber_top_common(self, boxtype = '', boxlength = '10.0',
-                          neutralize = 0, align=None, remove_first = False,
-                          conc = 0.0, dens = 1.0):
+    def _amber_top_common(self, boxtype='', boxlength='10.0', neutralize=0,
+                          align=None, remove_first=False, conc=0.0, dens=1.0):
         """Common scripting commands for leap.  Internal function only.
 
         :param boxtype: rectangular, octahedron or set

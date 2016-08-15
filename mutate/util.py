@@ -37,7 +37,7 @@ from collections import OrderedDict, defaultdict
 import openbabel as ob
 
 import rdkit.Chem
-from rdkit.Chem import ChiralType
+from rdkit.Chem import rdMolAlign, ChiralType
 from rdkit import rdBase
 
 import Sire.Mol
@@ -226,7 +226,8 @@ else:
                    ringMatchesRingOnly = True, completeRingsOnly = True,
                    threshold = None)
 
-def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
+def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec='',
+         check_rms=True):
     """
     Maximum common substructure search via RDKit/fmcs.
 
@@ -241,6 +242,8 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
     :param selec: selection method for multiple MCS
     :type selec: string
     :raises: SetupError
+    :param check_rms: compute RMS for MCS selection
+    :type check_rms: bool
     :returns: index map
     :rtype: dict
     """
@@ -389,9 +392,9 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
 
         # FIXME: assume there is only one match for 2nd molecule
         if swapped:
-            mapping = dict(zip(m2[0], m1[min_idx]) )
+            mapping = zip(m2[0], m1[min_idx])
         else:
-            mapping = dict(zip(m1[min_idx], m2[0]) )
+            mapping = zip(m1[min_idx], m2[0])
 
         m1 = m1[min_idx]
         m2 = m2[0]
@@ -399,37 +402,28 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
         m1 = mol1.GetSubstructMatch(p)
         m2 = mol2.GetSubstructMatch(p)
 
-        mapping = dict(zip(m1, m2) )
+        mapping = zip(m1, m2)
 
-    # FIXME: we may have to reconsider this and understand when rings have
-    #        to be assumed "broken"
-    #
-    # delete atoms from mapping that are also part of an map-external ring
-    if False:
-        ring_info1 = mol1.GetRingInfo()
-        ring_info2 = mol2.GetRingInfo()
+    if check_rms:
+        match_map = [(x, y) for x, y in mapping]
+        rms = rdMolAlign.AlignMol(mol1, mol2, atomMap=match_map)
+        logger.write('\nRMSD(mapped atoms) = %f\n' % rms)
 
-        rings1 = ring_info1.AtomRings()
-        rings2 = ring_info2.AtomRings()
+        conf1 = mol1.GetConformer()
+        conf2 = mol2.GetConformer()
 
-        map1 = set(mapping.keys())
-        map2 = set(mapping.values())
+        for idx1, idx2 in mapping:
+            pos1 = conf1.GetAtomPosition(idx1)
+            pos2 = conf2.GetAtomPosition(idx2)
 
-        for ring in rings1:
-            if not set(ring).issubset(map1):
-                for idx in map1:
-                    if idx in ring and ring_info1.NumAtomRings(idx) == 1:
-                        del(mapping[idx])
+            d = math.sqrt((pos1.x - pos2.x)**2 +
+                          (pos1.y - pos2.y)**2 +
+                          (pos1.z - pos2.z)**2)
 
-        delete_values = []
-        for ring in rings2:
-            if not set(ring).issubset(map2):
-                for idx in map2:
-                    if idx in ring and ring_info2.NumAtomRings(idx) == 1:
-                        delete_values.append(idx)
+            if d > 1.5:                 # FIXME: arbitrary
+                logger.write('distance larger than 1.5')
 
-        mapping = {k: v for k, v in mapping.items() if v not in delete_values}
-
+    mapping = dict(mapping)
 
     delete_atoms = []
 

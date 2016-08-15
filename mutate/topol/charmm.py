@@ -354,7 +354,7 @@ read coor card name "{state1}.cor"
 
 {charge1}
 
-crystal define orthorhombic 32.2 32.2 31.4 90.0 90.0 90.0
+crystal define orthorhombic 30.0 30.0 30.0 90.0 90.0 90.0
 
 open unit 21 read card name box.xtl
 crystal read card unit 21
