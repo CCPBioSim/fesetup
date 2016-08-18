@@ -303,6 +303,7 @@ def make_ligand(name, ff, opts):
                 ligand.amber_top = model['top.filename']
                 ligand.amber_crd = model['crd.filename']
                 ligand.orig_file = model['crd.original']
+                ligand.mol_file = ligand.orig_file
                 ligand.mol_fmt ='mol2'
 
                 # this file will not be created when skip_param = True
@@ -329,9 +330,6 @@ def make_ligand(name, ff, opts):
 
     print('Making ligand %s...' % name)
 
-    if from_scratch:
-        model = ModelConfig(name)
-
     if not lig['basedir']:
         raise dGprepError('[%s] "basedir" must be set' % SECTLIG)
 
@@ -340,7 +338,9 @@ def make_ligand(name, ff, opts):
     else:
         fmt = lig['file.format']
 
-    ligand = ff.Ligand(name, lig['file.name'], fmt)
+    if from_scratch:
+        model = ModelConfig(name)
+        ligand = ff.Ligand(name, lig['file.name'], fmt)
 
     # this file will not be created when skip_param = True
     if os.path.isfile(ligand.frcmod):
