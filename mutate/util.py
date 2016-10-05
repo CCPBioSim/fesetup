@@ -37,7 +37,7 @@ from collections import OrderedDict, defaultdict
 import openbabel as ob
 
 import rdkit.Chem
-from rdkit.Chem import rdMolAlign, ChiralType
+from rdkit.Chem import ChiralType
 from rdkit import rdBase
 
 import Sire.Mol
@@ -226,8 +226,7 @@ else:
                    ringMatchesRingOnly = True, completeRingsOnly = True,
                    threshold = None)
 
-def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec='',
-         check_rms=True):
+def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
     """
     Maximum common substructure search via RDKit/fmcs.
 
@@ -242,8 +241,6 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec='',
     :param selec: selection method for multiple MCS
     :type selec: string
     :raises: SetupError
-    :param check_rms: compute RMS for MCS selection
-    :type check_rms: bool
     :returns: index map
     :rtype: dict
     """
@@ -351,8 +348,8 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec='',
 
     # NOTE: experimental!
     if selec == 'spatially-closest':
-        m1 = mol1.GetSubstructMatches(p, uniquify=True, useChirality=False)
-        m2 = mol2.GetSubstructMatches(p, uniquify=True, useChirality=False)
+        m1 = mol1.GetSubstructMatches(p, uniquify=False, maxMatches=100, useChirality=False)
+        m2 = mol2.GetSubstructMatches(p, uniquify=False, maxMatches=100, useChirality=False)
 
         logger.write('Applying spatially-closest algorithm (%s, %s matches)\n' %
                      (len(m1), len(m2) ) )
@@ -369,61 +366,103 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec='',
             conf2 = mol2.GetConformer()
             swapped = False
 
-        dist_sum = []
-
-        for match1 in m1:
-            dists = []
-
-            for i, idx1 in enumerate(match1):
-                pos1 = conf1.GetAtomPosition(idx1)
-
-                for match2 in m2:
+        # for x in range(m1)...
+        #     match1 = m1[x]
+        #     for y in range(m2)...
+        #         match2 = m2[y]
+        #         find sumd
+        #         save x, y with smallest sumd
+        mind = 999999.0
+        minxy = [-1,-1]
+        #DEVTHRESHOLD = 0.2**2# That's 0.2 Angstrom
+        for x in range(len(m1)):
+            match1 = m1[x]
+            for y in range(len(m2)):
+                match2 = m2[y]
+                sumd = 0.0
+                for i, idx1 in enumerate(match1):
+                    pos1 = conf1.GetAtomPosition(idx1)
                     idx2 = match2[i]
                     pos2 = conf2.GetAtomPosition(idx2)
-
-                    d = math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2 +
-                                  (pos1.z - pos2.z)**2)
-
-                    dists.append(d)
-
-            dist_sum.append(sum(dists))
-
-        min_idx = dist_sum.index(min(dist_sum) )
-
-        # FIXME: assume there is only one match for 2nd molecule
+                    d2 = (pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2 +\
+                         (pos1.z - pos2.z)**2
+                    # Ignore small deviations
+                    #if d2 < DEVTHRESHOLD:
+                    #    d2 = 0.0
+                    sumd += d2
+                #print (x,y,sumd)
+                if sumd < mind:
+                    mind = sumd
+                    minxy = [x,y]
+        #print (mind, minxy)
         if swapped:
-            mapping = zip(m2[0], m1[min_idx])
+            mapping = dict(zip(m2[minxy[1]], m1[minxy[0]]))
         else:
-            mapping = zip(m1[min_idx], m2[0])
+            mapping = dict(zip(m1[minxy[1]], m2[minxy[0]]))
 
-        m1 = m1[min_idx]
-        m2 = m2[0]
+        #dist_sum = []
+        #for match1 in m1:
+        #    dists = []
+        #
+        #    for i, idx1 in enumerate(match1):
+        #        pos1 = conf1.GetAtomPosition(idx1)
+        #        for match2 in m2:
+        #            idx2 = match2[i]
+        #            pos2 = conf2.GetAtomPosition(idx2)
+        #
+        #            d = math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2 +
+        #                          (pos1.z - pos2.z)**2)
+        #            #print pos1.x, pos2.x
+        #            #print idx1, idx2, d
+        #            sumd += d
+        #            dists.append(d)
+        #    dist_sum.append(sum(dists))
+        #    print sum(dists), m1
+        #min_idx = dist_sum.index(min(dist_sum) )
+        #print (min_idx)
+        ## FIXME: assume there is only one match for 2nd molecule
+        #if swapped:
+        #    mapping = dict(zip(m2[0], m1[min_idx]) )
+        #else:
+        #    mapping = dict(zip(m1[min_idx], m2[0]) )
+        #
+        #m1 = m1[min_idx]
+        #m2 = m2[0]
     else:
         m1 = mol1.GetSubstructMatch(p)
         m2 = mol2.GetSubstructMatch(p)
 
-        mapping = zip(m1, m2)
+        mapping = dict(zip(m1, m2) )
 
-    if check_rms:
-        match_map = [(x, y) for x, y in mapping]
-        rms = rdMolAlign.AlignMol(mol1, mol2, atomMap=match_map)
-        logger.write('\nRMSD(mapped atoms) = %f\n' % rms)
+    # FIXME: we may have to reconsider this and understand when rings have
+    #        to be assumed "broken"
+    #
+    # delete atoms from mapping that are also part of an map-external ring
+    if False:
+        ring_info1 = mol1.GetRingInfo()
+        ring_info2 = mol2.GetRingInfo()
 
-        conf1 = mol1.GetConformer()
-        conf2 = mol2.GetConformer()
+        rings1 = ring_info1.AtomRings()
+        rings2 = ring_info2.AtomRings()
 
-        for idx1, idx2 in mapping:
-            pos1 = conf1.GetAtomPosition(idx1)
-            pos2 = conf2.GetAtomPosition(idx2)
+        map1 = set(mapping.keys())
+        map2 = set(mapping.values())
 
-            d = math.sqrt((pos1.x - pos2.x)**2 +
-                          (pos1.y - pos2.y)**2 +
-                          (pos1.z - pos2.z)**2)
+        for ring in rings1:
+            if not set(ring).issubset(map1):
+                for idx in map1:
+                    if idx in ring and ring_info1.NumAtomRings(idx) == 1:
+                        del(mapping[idx])
 
-            if d > 1.5:                 # FIXME: arbitrary
-                logger.write('distance larger than 1.5')
+        delete_values = []
+        for ring in rings2:
+            if not set(ring).issubset(map2):
+                for idx in map2:
+                    if idx in ring and ring_info2.NumAtomRings(idx) == 1:
+                        delete_values.append(idx)
 
-    mapping = dict(mapping)
+        mapping = {k: v for k, v in mapping.items() if v not in delete_values}
+
 
     delete_atoms = []
 
