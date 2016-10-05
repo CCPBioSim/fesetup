@@ -33,6 +33,7 @@ import Sire.MM
 import Sire.Units
 
 from parmed.amber.readparm import AmberParm
+from parmed.tools import change
 
 from FESetup import const, errors, logger
 from FESetup.mutate import util
@@ -257,11 +258,13 @@ def patch_element(parmtop, lig_morph, lig_initial, lig_final, atom_map):
 
             atnum = atom.property('element').nProtons()
 
-            parm.parm_data['ATOMIC_NUMBER'][idx] = atnum
-            parm.parm_data['MASS'][idx] = mass
+            an_change = change(parm, 'ATOMIC_NUMBER @%i %i' % (idx+1, atnum))
+            an_change.execute()
 
-    #parm.overwrite = True
-    parm.write_parm(parmtop)
+            mass_change = change(parm, 'MASS @%i %f' % (idx+1, mass))
+            mass_change.execute()
+
+    parm.save(parmtop, format='amber', overwrite=True)
  
     return
 
