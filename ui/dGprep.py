@@ -33,7 +33,7 @@ if ('%x' % sys.hexversion)[:3] != '207':
 from FESetup import _release
 
 __revision__ = "$Id$"
-__version__ = '0.8.0'
+__version__ = '0.8.1'
 
 vstring = 'FESetup release %s, SUI version: %s' % (_release.release, __version__)
 
@@ -724,8 +724,8 @@ def make_complex(prot, lig, ff, opts, load_cmds):
                                opts[SECT_DEF]['overwrite'])
 
             complex.ligand_fmt = lig.mol_fmt
-            complex.prepare_top()
-            complex.create_top(boxtype = '', addcmd = load_cmds)
+            complex.prepare_top(gaff=options[SECT_DEF]['gaff'])
+            complex.create_top(boxtype='', addcmd=load_cmds)
 
             model['name'] = complex.complex_name
             model['charge.total'] = complex.charge
@@ -736,21 +736,21 @@ def make_complex(prot, lig, ff, opts, load_cmds):
 
         # FIXME: also check for boxlength and neutralize
         if com['box.type']:
-            complex.prepare_top()
-            complex.create_top(boxtype = com['box.type'],
-                               boxlength = com['box.length'],
-                               neutralize = com['neutralize'],
-                               align = com['align_axes'],
-                               addcmd = load_cmds, remove_first = True)
+            complex.prepare_top(gaff=options[SECT_DEF]['gaff'])
+            complex.create_top(boxtype=com['box.type'],
+                               boxlength=com['box.length'],
+                               neutralize=com['neutralize'],
+                               align=com['align_axes'],
+                               addcmd=load_cmds, remove_first = True)
 
             if com['ions.conc'] > 0.0:
-                complex.create_top(boxtype = com['box.type'],
-                                   boxlength = com['box.length'],
-                                   neutralize = 2,
-                                   align = com['align_axes'],
-                                   addcmd = load_cmds, remove_first = False,
-                                   conc = com['ions.conc'],
-                                   dens = com['ions.dens'])
+                complex.create_top(boxtype=com['box.type'],
+                                   boxlength=com['box.length'],
+                                   neutralize=2,
+                                   align=com['align_axes'],
+                                   addcmd=load_cmds, remove_first=False,
+                                   conc=com['ions.conc'],
+                                   dens=com['ions.dens'])
 
             restr_force = com['min.restr_force']
             nsteps = com['min.nsteps']
