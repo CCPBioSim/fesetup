@@ -95,10 +95,6 @@ class PertTopology(object):
         lig._parmchk(mol2, 'mol2', self.frcmod)
         lig.prepare_top()
         lig.create_top(boxtype = '', addcmd = cmd1 + cmd2)
-
-        patch_element(lig.amber_top, lig_morph, self.lig_initial,
-                      self.lig_final, self.atom_map)
-
         lig.flex()
 
         # To get the bonded parameters we reload the morph topolgy because
@@ -193,6 +189,8 @@ class PertTopology(object):
                                        const.MORPH_NAME + os.extsep +
                                        'recharge' + os.extsep + 'pert'))
 
+        patch_element(lig.amber_top, lig_morph, self.lig_initial,
+                      self.lig_final, self.atom_map)
 
     def create_coords(self, curr_dir, dir_name, lig_morph, pdb_file, system,
                       cmd1, cmd2, boxdims):
@@ -213,6 +211,9 @@ class PertTopology(object):
         com.prepare_top(gaff=self.gaff)
         com.create_top(boxtype='set', addcmd=cmd1 + cmd2)
 
+        # FIXME: we do that already in setup but calling create_coords
+        #        from morph.py has not picked up on this
+        lig_morph = finalise_morph(lig_morph, self.atoms_final, self.atom_map)
         patch_element(com.amber_top, lig_morph, self.lig_initial,
                       self.lig_final, self.atom_map)
 
@@ -226,7 +227,7 @@ def patch_element(parmtop, lig_morph, lig_initial, lig_final, atom_map):
     """
     Patch masses and atomic numbers in a AMBER parmtop file.  Dummy atoms are
     created with a zero mass but MD requires finite masses.  Thus get the mass
-    and atomic number from the respective other state.
+    and atomic number from the maximum of both states.
 
     :param parmtop: filename of the parmtop file to be patched
     :type parmtop: string
@@ -242,27 +243,18 @@ def patch_element(parmtop, lig_morph, lig_initial, lig_final, atom_map):
 
     parm = AmberParm(parmtop)
 
-    for idx, num in enumerate(parm.parm_data['ATOMIC_NUMBER']):
-        if num < 0:
-            midx = Sire.Mol.AtomIdx(idx)
-            mname = lig_morph.select(midx).name()
-            fidx = util.search_by_index(midx, atom_map)
+    for matom in lig_morph.atoms():
+        idx = matom.index().value()
+        mass = max(matom.property('initial_mass'),
+                   matom.property('final_mass'))
+        atnum = max(matom.property('initial_element').nProtons(),
+                    matom.property('final_element').nProtons())
 
-            if mname.value().startsWith('DU'):
-                atom = lig_final.select(fidx)
-                mass = atom.property('mass').value()
-            else:
-                atom = lig_initial.select(midx)
-                mass = max(atom.property('mass').value(),
-                           lig_final.select(fidx).property('mass').value() )
+        an_change = change(parm, 'ATOMIC_NUMBER @%i %i' % (idx+1, atnum))
+        an_change.execute()
 
-            atnum = atom.property('element').nProtons()
-
-            an_change = change(parm, 'ATOMIC_NUMBER @%i %i' % (idx+1, atnum))
-            an_change.execute()
-
-            mass_change = change(parm, 'MASS @%i %f' % (idx+1, mass))
-            mass_change.execute()
+        mass_change = change(parm, 'MASS @%i %f' % (idx+1, mass))
+        mass_change.execute()
 
     parm.save(parmtop, format='amber', overwrite=True)
  
@@ -340,20 +332,26 @@ def finalise_morph(morph, atoms_final, atom_map):
     # finalise non-bonded terms of the morph
     for iinfo, finfo in atom_map.items():
         if not finfo.atom:
+            final_element = Sire.Mol.Element('DU')
             final_charge = 0.0 * Sire.Units.mod_electron
             final_lj = Sire.MM.LJParameter(0.0 * Sire.Units.angstrom,
                                            0.0 * Sire.Units.kcal_per_mol)
             final_type = "du"
+            final_mass = 0.0
         else:
             base = atoms_final.select(finfo.index)
+            final_element = base.property('element')
             final_charge = base.property("charge")
             final_lj = base.property("LJ")
             final_type = "%s" % base.property("ambertype")
+            final_mass = base.property('mass').value()
 
         new = morph.atom(iinfo.index) # AtomEditor
+        new.setProperty('final_element', final_element)
         new.setProperty('final_charge', final_charge)
         new.setProperty('final_LJ', final_lj)
         new.setProperty('final_ambertype', final_type)
+        new.setProperty('final_mass', final_mass)
 
         morph = new.molecule()
 
@@ -425,11 +423,6 @@ def make_pert_file(old_morph, new_morph, stepname, qprop0, qprop1,
     # Write atom perts
     morph_natoms = old_morph.nAtoms()
 
-    # FIXME: write only charge terms for 2- and 3-step protocol
-    #        1-step: write as now i.e. all information
-    #        2-step: charges from state0->state1
-    #        3-step: all charges-> zero, or only disappearing atoms to zero and
-    #                other atoms to state1
     for atom in old_morph.atoms():
         outstr = ''
 
@@ -478,11 +471,6 @@ def make_pert_file(old_morph, new_morph, stepname, qprop0, qprop1,
         pertfile.close()
         return
 
-
-    # FIXME: write vdW+bonded terms only for 2- and 3-step protocol
-    #        1-step: write as now
-    #        2-step: write only when vdW+bonded, otherwise skip
-    #        3-step: write only when vdW+bonded, otherwise skip
 
     # Figure out which bond, angles, dihedrals have their potential variable
     params_initial = lig_initial.property('amberparameters')

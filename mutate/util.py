@@ -714,6 +714,7 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
             element = Sire.Mol.Element('DU')
             coordinates = Sire.Maths.Vector(0, 0, 0)
             charge = 0.0 * Sire.Units.mod_electron
+            mass = 0.0
             lj = Sire.MM.LJParameter(0.0 * Sire.Units.angstrom,
                                      0.0 * Sire.Units.kcal_per_mol)
             ambertype = const.DUMMY_TYPE
@@ -728,6 +729,7 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
             element = Sire.Mol.Element(info.name.value())
             coordinates = base.property('coordinates')
             charge = base.property('charge')
+            mass = base.property('mass').value()
             lj = base.property('LJ')
             ambertype = '%s' % base.property('ambertype')
             new = lig_morph.atom(info.index) # AtomEditor
@@ -735,9 +737,11 @@ def parm_conn(lig_morph, atoms_initial, lig_initial, lig_final, atom_map,
         # full setup for initial state otherwise Sire.Mol.Connectivity below
         # will fail (initial_* are not required)
         new.setProperty('element', element)
+        new.setProperty('initial_element', element)
         new.setProperty('coordinates', coordinates)
         new.setProperty('charge', charge)
         new.setProperty('initial_charge', charge)
+        new.setProperty('initial_mass', mass)
         new.setProperty('LJ', lj)
         new.setProperty('initial_LJ', lj)
         new.setProperty('ambertype', ambertype)
