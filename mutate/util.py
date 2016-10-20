@@ -37,8 +37,10 @@ from collections import OrderedDict, defaultdict
 import openbabel as ob
 
 import rdkit.Chem
-from rdkit.Chem import ChiralType
+from rdkit.Chem import ChiralType, rdMolAlign
 from rdkit import rdBase
+
+import numpy as np
 
 import Sire.Mol
 import Sire.MM
@@ -345,7 +347,6 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
 
     ob.obErrorLog.SetOutputLevel(errlev)
 
-
     # NOTE: experimental!
     if selec == 'spatially-closest':
         m1 = mol1.GetSubstructMatches(p, uniquify=False, maxMatches=100, useChirality=False)
@@ -537,6 +538,75 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
     mol1 = write_mol2(lig_initial, notypes = True)
     mol2 = write_mol2(lig_final, notypes = True)
 
+    # JM 10/16
+    if mcs_sel == 'shapealign':
+        #print ("IN SHAPE ALIGN MODE")
+        logger.write("Will map atoms using shape align mode")
+        # Use O3Align to maximise shape overlay
+        m1 = rdkit.Chem.MolFromMol2Block(mol1, removeHs=False)
+        m2 = rdkit.Chem.MolFromMol2Block(mol2, removeHs=False)
+        pyO3A = rdMolAlign.GetO3A(m2, m1)
+        score = pyO3A.Align()
+        #print (score)
+        #rdkit.Chem.MolToPDBFile(m1,"test1.pdb")
+        #rdkit.Chem.MolToPDBFile(m2,"test2.pdb")
+        #print (os.getcwd())
+        # add to isotope map pairs of closest atoms
+        # create 2D distance matrix
+        n1 = m1.GetNumAtoms()
+        n2 = m2.GetNumAtoms()
+        m1conf = m1.GetConformer()
+        m2conf = m2.GetConformer()
+        dists = np.array( np.zeros([n1,n2]), dtype=np.float64 )
+        for i in range (0,n1):
+            ipos = m1conf.GetAtomPosition(i)
+            for j in range(0,n2):
+                jpos = m2conf.GetAtomPosition(j)
+                dij2 = (jpos.x - ipos.x)**2 + (jpos.y - ipos.y)**2 +\
+                       (jpos.z - ipos.z)**2
+                #print (i,j,dij2)
+                #import pdb ; pdb.set_trace()
+                dists[i][j] = dij2
+                #dists[j][i] = dij2
+        #print (dists)
+        tomap = []
+        for i in range(0,n1):
+            tomap.append(i)
+        mapped = {}
+        mapped_dist = {}
+        for j in range(0,n2):
+            mapped[j] = -1
+            mapped_dist[j] = -1
+        it = 0
+        MAXIT = 1000
+        while (len(tomap) > 0):
+            it += 1
+            if (it > MAXIT):
+                logger.write("Exceeed MAXIT to map atoms in shapealign mode. This sounds like a bug.")
+                break
+            #print (len(tomap))
+            i = tomap.pop()
+            j = dists[i].argmin()
+            dij = dists[i].min()
+            if mapped[j] < 0:
+                mapped[j] = i
+                mapped_dist[j] = dij
+            else:
+                if (dij < mapped_dist[j]):
+                    tomap.append(mapped[j])
+                    mapped[j] = i
+                    mapped_dist[j] = dij
+            #import pdb ; pdb.set_trace()
+            #sys.exit(-1)
+        #print (mapped)
+        # if spatially closest atom is within X ANG of next closest atom
+        # do not add to map (ambiguous) ?
+        for j,i in mapped.items():
+            if (i < 0):
+                continue
+            isotope_map[i+1] = j+1
+        #import pdb ; pdb.set_trace()
+        #sys.exit(-1)
     index_map = mcss(mol1, mol2, timeout, isotope_map, mcs_sel)
 
     if not index_map:
