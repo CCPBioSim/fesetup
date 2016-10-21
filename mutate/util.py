@@ -54,6 +54,7 @@ import parmed.tools.actions as Action
 
 from FESetup import const, errors, logger
 
+from FESetup.munkres import Munkres, print_matrix
 
 
 class _AtomInfo(object):
@@ -539,8 +540,9 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
     mol2 = write_mol2(lig_final, notypes = True)
 
     # JM 10/16
-    if mcs_sel == 'shapealign':
-        #print ("IN SHAPE ALIGN MODE")
+    if (mcs_sel == 'shapealign' and len(isotope_map) > 0):
+        logger.write("user provided mappings override shape align mode")
+    elif mcs_sel == 'shapealign':
         logger.write("Will map atoms using shape align mode")
         # Use O3Align to maximise shape overlay
         m1 = rdkit.Chem.MolFromMol2Block(mol1, removeHs=False)
@@ -550,11 +552,18 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
         #print (score)
         #rdkit.Chem.MolToPDBFile(m1,"test1.pdb")
         #rdkit.Chem.MolToPDBFile(m2,"test2.pdb")
+        # JM 10/16 cannot find atomatic types from supplied Mol2 ! 
+        #rdkit.Chem.SetAromaticity(m1)
+        #rdkit.Chem.SetAromaticity(m2)
+        #print (rdkit.Chem.MolToSmiles(m1))
+        #print (rdkit.Chem.MolToSmiles(m2))
+        #import pdb; pdb.set_trace()
         #print (os.getcwd())
         # add to isotope map pairs of closest atoms
         # create 2D distance matrix
         n1 = m1.GetNumAtoms()
         n2 = m2.GetNumAtoms()
+        # FIXME do we need n1 >= n2 ? 
         m1conf = m1.GetConformer()
         m2conf = m2.GetConformer()
         dists = np.array( np.zeros([n1,n2]), dtype=np.float64 )
@@ -569,44 +578,54 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
                 dists[i][j] = dij2
                 #dists[j][i] = dij2
         #print (dists)
-        tomap = []
-        for i in range(0,n1):
-            tomap.append(i)
-        mapped = {}
-        mapped_dist = {}
-        for j in range(0,n2):
-            mapped[j] = -1
-            mapped_dist[j] = -1
-        it = 0
-        MAXIT = 1000
-        while (len(tomap) > 0):
-            it += 1
-            if (it > MAXIT):
-                logger.write("Exceeed MAXIT to map atoms in shapealign mode. This sounds like a bug.")
-                break
-            #print (len(tomap))
-            i = tomap.pop()
-            j = dists[i].argmin()
-            dij = dists[i].min()
-            if mapped[j] < 0:
-                mapped[j] = i
-                mapped_dist[j] = dij
-            else:
-                if (dij < mapped_dist[j]):
-                    tomap.append(mapped[j])
-                    mapped[j] = i
-                    mapped_dist[j] = dij
-            #import pdb ; pdb.set_trace()
-            #sys.exit(-1)
-        #print (mapped)
-        # if spatially closest atom is within X ANG of next closest atom
-        # do not add to map (ambiguous) ?
-        for j,i in mapped.items():
-            if (i < 0):
-                continue
+        #Kuhn-Munkres algorithm for useful solving the rectangular Assignment Problem
+        mu = Munkres()
+        indexes = mu.compute(dists.tolist())
+        for (i,j) in indexes:
             isotope_map[i+1] = j+1
         #import pdb ; pdb.set_trace()
+        #tomap = []
+        #for i in range(0,n1):
+        #    tomap.append(i)
+        #mapped = {}
+        #mapped_dist = {}
+        #for j in range(0,n2):
+        #    mapped[j] = -1
+        #    mapped_dist[j] = -1
+        #it = 0
+        #MAXIT = 1000
+        #while (len(tomap) > 0):
+        #    it += 1
+        #    if (it > MAXIT):
+        #        logger.write("Exceeed MAXIT to map atoms in shapealign mode. This sounds like a bug.")
+        #        break
+        #    #print (len(tomap))
+        #    i = tomap.pop()
+        #    j = dists[i].argmin()
+        #    dij = dists[i].min()
+        #    if mapped[j] < 0:
+        #        mapped[j] = i
+        #        mapped_dist[j] = dij
+        #    else:
+        #        if (dij < mapped_dist[j]):
+        #            tomap.append(mapped[j])
+        #            mapped[j] = i
+        #            mapped_dist[j] = dij
+        #    #import pdb ; pdb.set_trace()
+        #    #sys.exit(-1)
+        ##print (mapped)
+        ## if spatially closest atom is within X ANG of next closest atom
+        ## do not add to map (ambiguous) ?
+        #for j,i in mapped.items():
+        #    if (i < 0):
+        #        continue
+        #    isotope_map[i+1] = j+1
+        #import pdb ; pdb.set_trace()
         #sys.exit(-1)
+    #print (indexes)
+    #print (isotope_map)
+    #import pdb ; pdb.set_trace()
+    #sys.exit(-1)
     index_map = mcss(mol1, mol2, timeout, isotope_map, mcs_sel)
 
     if not index_map:
