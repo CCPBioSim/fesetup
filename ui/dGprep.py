@@ -45,7 +45,7 @@ import glob
 import copy
 import signal
 import atexit
-import warnings                         
+import warnings
 from collections import OrderedDict, namedtuple
 
 import FESetup.prepare as prep
@@ -98,7 +98,7 @@ def check_dict(section, opts):
 def prelude(opts):
     lff = len(opts[SECT_DEF]['forcefield'])
     deff = defaults[SECT_DEF]['forcefield'][0]
-    
+
     if lff < 1 or lff > 5:
         raise dGprepError('malformed "forcefield" key, must have 1-5 strings '
                           'required')
@@ -125,7 +125,7 @@ def prelude(opts):
 
 def _param_glob(cmds):
     load_cmds = []
-    
+
     for ext in cmds:
         files = glob.glob('*' + os.extsep + ext)
 
@@ -549,9 +549,6 @@ def make_protein(name, ff, opts):
 
     print('Making biomolecule %s...' % name)
 
-    if from_scratch:
-        model = ModelConfig(name)
-
     if not prot['basedir']:
         raise dGprepError('[%s] "basedir" must be set' % SECT_PROT)
 
@@ -560,9 +557,11 @@ def make_protein(name, ff, opts):
     else:
         src = os.path.join(os.getcwd(), prot['basedir'], name)
 
-    protein = ff.Protein(name, prot['file.name'])
-    model['crd.original'] = protein.mol_file
-    model.add_file(protein.mol_file)
+    if from_scratch:
+        model = ModelConfig(name)
+        protein = ff.Protein(name, prot['file.name'])
+        model['crd.original'] = protein.mol_file
+        model.add_file(protein.mol_file)
 
     with DirManager(workdir):
         if from_scratch:
@@ -582,6 +581,7 @@ def make_protein(name, ff, opts):
             save_model(model, protein, vac_model_filename, '..')
 
         # FIXME: also check for boxlength and neutralize
+
         if prot['box.type']:
             protein.prepare_top()
             protein.create_top(boxtype = prot['box.type'],
@@ -674,7 +674,7 @@ def make_complex(prot, lig, ff, opts, load_cmds):
     from_scratch = True
 
     workdir = os.path.join(os.getcwd(), const.COMPLEX_WORKDIR, name)
- 
+
     if not opts[SECT_DEF]['remake']:
         model_path = _search_for_model([sol_model_filename, vac_model_filename],
                                        const.COMPLEX_WORKDIR)
@@ -868,7 +868,7 @@ defaults[SECT_LIG] = {
     'file.format': ('', None),
     'molecules': ('', ('list', LIST_SEP) ),
     'morph_pairs': ('', ('pairlist', LIST_SEP, MORPH_PAIR_SEP) ),
-    'morph.absolute': (False, ('bool', ) ), 
+    'morph.absolute': (False, ('bool', ) ),
     'box.type': ('', None),
     'box.length': (10.0, (float, ) ),
     'neutralize': (False, ('bool', ) ),
@@ -1144,7 +1144,7 @@ if __name__ == '__main__':
                 print ('WARNING: not making complex with ligand %s '
                        'because build failed' % lig_name)
                 continue
-                
+
             if options[SECT_COM]['pairs']:
                 bfound = False
 
@@ -1223,5 +1223,3 @@ if __name__ == '__main__':
 
     if success:
         print ('\n=== All molecules built successfully ===\n')
-
-

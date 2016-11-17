@@ -307,13 +307,13 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
     bond_deltas = {}
 
     logger.write('Computing flexible ligand residues from %s' % self.amber_crd)
-    
-    # JM 02/13 With the new Sire code (r1832 onwards) there won't be a ring 
+
+    # JM 02/13 With the new Sire code (r1832 onwards) there won't be a ring
     # error so some of the code below could be cleaned up, but I won't right
     # now to maintain compatibility with older versions
 
     # Redundant torsions are discarded according to the following algorithm
-    # 1) Do not sample a torsion at0-at1-at2-at3 if a variable torsion has 
+    # 1) Do not sample a torsion at0-at1-at2-at3 if a variable torsion has
     # already been defined around at1-at2 or at2-at1.
     # 2) Do not sample a torsion if it would break a ring
     #
@@ -330,18 +330,18 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
             # see if one of the variable dihedral already rotates around
             # the same torsion
             # --> Note to self This behavior will cause us to skip some
-            # torsions (for instance won't sample separately 
+            # torsions (for instance won't sample separately
             # 1-2-3-4 , 1-2-3-5 and 1-2-3-6 with 4-5-6 attached to 3
             #
             # JM 03/13
             # Commented out code below. We will end up with multiple torsions
             # that are sampled around the same central bond Sire can choose to
             # either rotate all atoms around the bond, or sample one torsion
-            # separately. 
+            # separately.
             #for vardih in var_dihedrals:
-            #    if ( (at1 == vardih.atom1() and at2 == vardih.atom2() ) or 
+            #    if ( (at1 == vardih.atom1() and at2 == vardih.atom2() ) or
             #         (at2 == vardih.atom1() and at1 == vardih.atom2() ) ):
-            #        # Yes so will not move this torsion 
+            #        # Yes so will not move this torsion
             #        move = False
             #        break
             for vardih in var_dihedrals:
@@ -349,7 +349,7 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
                     move = False
                     break
 
-            # see if a rotation around this dihedral would break a ring 
+            # see if a rotation around this dihedral would break a ring
             if move:
                 try:
                     dihbond = Sire.Mol.BondID(at1, at2)
@@ -361,12 +361,12 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
                         #move = False
                         continue
                     else:
-                        raise error 
+                        raise error
 
             if move:
                 var_dihedrals.append(dihedral)
 
-                # find out how many atoms would move 
+                # find out how many atoms would move
                 gr0, gr1 = connectivity.split(at1, at2)
                 ngr0 = gr0.nSelected()
                 ngr1 = gr1.nSelected()
@@ -378,7 +378,7 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
 
                 smallgroup = smallgroup.subtract(at1)
                 smallgroup = smallgroup.subtract(at2)
-                
+
                 nmoved = smallgroup.nSelected()
                 if nmoved < 1:
                     nmoved = 1
@@ -402,7 +402,7 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
             at2 = angle.atom2()
 
             at1 = angle.atom1()
-            
+
             # test if the angle breaks a ring
             try:
                 solute.move().change(angle, 1.0 * Sire.Units.degrees)
@@ -443,7 +443,7 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
                 if error_type == 'SireMol::ring_error':
                     continue
                 else:
-                    raise error 
+                    raise error
 
             var_bonds.append(bond)
 
@@ -456,7 +456,7 @@ def flex(self, name = const.LIGAND_NAME, dobonds = True,
             else:
                 smallgroup = gr1
 
-            if ( connectivity.inRing(bond) ):            
+            if ( connectivity.inRing(bond) ):
                 bond_deltas[bond] = const.BASE_BONDRING_FLEX / smallgroup.nSelected()
             else:
                 bond_deltas[bond] = const.BASE_BOND_FLEX / smallgroup.nSelected()
