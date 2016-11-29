@@ -33,7 +33,7 @@ if ('%x' % sys.hexversion)[:3] != '207':
 from FESetup import _release
 
 __revision__ = "$Id$"
-__version__ = '0.8.1'
+__version__ = '0.8.2'
 
 vstring = 'FESetup release %s, SUI version: %s' % (_release.release, __version__)
 
@@ -1109,6 +1109,7 @@ if __name__ == '__main__':
             print ('Morphing %s to %s...' % pair)
 
             if (pair[1], pair[0]) in morph_pairs:
+                print('---->', pair)
                 rev = ligand2
             else:
                 rev = None

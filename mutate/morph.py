@@ -372,7 +372,7 @@ class Morph(object):
                 top2 = os.path.join(sys_rev_path, system.amber_top)
 
                 try:
-                    mols2 = Sire.IO.Amber().readCrdTop(crd, top)[0]
+                    mols2 = Sire.IO.Amber().readCrdTop(crd2, top2)[0]
                 except UserWarning as error:
                     raise errors.SetupError('error opening %s/%s: %s' %
                                             (crd, top, error) )
@@ -380,7 +380,6 @@ class Morph(object):
                 rest = util.split_system(mols2)[1]
                 crd = crd2
                 boxdims = boxdims_rev
-
 
         if lig.nAtoms() != (len(self.atom_map) - len(self.dummy_idx) ):
             raise errors.SetupError('reference state has wrong number of '
