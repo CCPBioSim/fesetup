@@ -1109,7 +1109,6 @@ if __name__ == '__main__':
             print ('Morphing %s to %s...' % pair)
 
             if (pair[1], pair[0]) in morph_pairs:
-                print('---->', pair)
                 rev = ligand2
             else:
                 rev = None
