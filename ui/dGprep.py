@@ -43,7 +43,6 @@ import argparse
 import shutil
 import glob
 import copy
-import signal
 import atexit
 import warnings
 from collections import OrderedDict, namedtuple
@@ -331,7 +330,7 @@ def make_ligand(name, ff, opts):
     print('Making ligand %s...' % name)
 
     if not lig['basedir']:
-        raise dGprepError('[%s] "basedir" must be set' % SECTLIG)
+        raise dGprepError('[%s] "basedir" must be set' % SECT_LIG)
 
     if not lig['file.format']:
         fmt = os.path.splitext(lig['file.name'])[1][1:]
