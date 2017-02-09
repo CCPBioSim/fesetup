@@ -103,7 +103,7 @@ class Morph(object):
             type_dir = FE_type.replace('/', '-')
 
         # FIXME: kludge
-        type_dir = re.sub('\d$', '', type_dir) 
+        type_dir = re.sub('\d$', '', type_dir)
 
         self.dst = os.path.join(self.topdir, const.MORPH_WORKDIR, type_dir,
                                 self.name)
@@ -150,7 +150,7 @@ class Morph(object):
     # context manager used to keep track of directory changes
     def __enter__(self):
         """Enter directory dst."""
-        
+
         logger.write('Entering %s' % self.dst)
         os.chdir(self.dst)
 
@@ -250,8 +250,7 @@ class Morph(object):
                 util.parm_conn(lig_morph, atoms_initial, lig_initial, lig_final,
                                self.atom_map, self.reverse_atom_map)
 
-
-        lig_morph, lig_initial, lig_final, self.zz_atoms, = \
+        lig_morph, lig_initial, lig_final, self.zz_atoms = \
                 util.dummy_coords(lig_morph, con_morph, atoms_initial,
                                   lig_initial, lig_final, self.atom_map,
                                   self.reverse_atom_map, connect_final,
@@ -472,4 +471,3 @@ class Morph(object):
                                  REST_PDB_NAME, system, cmd1, cmd2, boxdims)
 
         os.chdir(curr_dir)
-

@@ -30,7 +30,7 @@ import os
 from FESetup import const, errors, logger
 from FESetup.mutate import util
 
-import amber 
+import amber
 
 
 
@@ -192,7 +192,7 @@ class PertTopology(object):
                 lig._parm_overwrite = 'vdw'
 
                 patch_parms.append( (lig._parm_overwrite,
-                                     ':%s' % const.INT_NAME, 
+                                     ':%s' % const.INT_NAME,
                                      ':%s' % const.LIGAND1_NAME) )
             else:
                 lig._parm_overwrite = 'charge'
@@ -309,7 +309,7 @@ class PertTopology(object):
 
         if self.FE_sub_type == 'softcore2' or self.FE_sub_type == 'dummy2':
             ow_add = '_int'
-            
+
             if self.FE_sub_type == 'dummy2':
                 f = True
             else:
@@ -330,7 +330,7 @@ class PertTopology(object):
             if self.dummies0:
                 com._parm_overwrite = 'vdw'
                 patch_parms.append( (com._parm_overwrite,
-                                     ':%s' % const.LIGAND0_NAME, 
+                                     ':%s' % const.LIGAND0_NAME,
                                      ':%s' % const.INT_NAME) )
             else:
                 com._parm_overwrite = 'charge'
@@ -390,5 +390,3 @@ class PertTopology(object):
         if self.FE_sub_type[:5] == 'dummy':
             for prm in patch_parms:
                 util.patch_parmtop(prm[0] + com.TOP_EXT, "", prm[1], prm[2])
-
-

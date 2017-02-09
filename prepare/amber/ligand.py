@@ -258,8 +258,8 @@ class Ligand(Common):
 
 
     def __init__(self, ligand_name, start_file='ligand.pdb', start_fmt='pdb',
-                 frcmod = const.LIGAND_FRCMOD_FILE,
-                 gaff='gaff'):    # gaff only for compatibility with morph code
+                 frcmod=const.LIGAND_FRCMOD_FILE, gaff='gaff'):
+        # gaff option only for compatibility with morph code
         """
         :param ligand_name: name of the ligand, will be used as directory name
         :type ligand_name: string
@@ -298,7 +298,7 @@ class Ligand(Common):
 
 
     @report
-    def param(self, gb_charges = False, sqm_strategy = None):
+    def param(self, gb_charges=False, sqm_strategy=None):
         """
         Compute symmetrized AM1/BCC charges and generate missing forcefield
         parameters. Runs antechamber, parmchk. Finally generated MOL2 file
@@ -569,18 +569,20 @@ class Ligand(Common):
 
         params += '-i %s -f %s -o %s -a N ' % (infile, informat, outfile)
 
-        # FIXME: parmchk only reads on parmfile, possible solution: write
-        #        temporary frcmod files and paste together?
-        if self.ff_addons:
-            addon = self.ff_addons[0]
+        # FIXME: parmchk only reads one parmfile since AmberTools 16,
+        #        and ignores -p, not sure what the thinking her is...
+        #        possible solution: write temporary frcmod files and paste
+        #                           together?
+#       if self.ff_addons:
+#           addon = self.ff_addons[0]
 
-            # FIXME: Can it get any uglier? Consistent file naming, ey...
-            if addon.startswith('GLYCAM_06'):
-                addon = addon[:10]
+#           # FIXME: Can it get any uglier? Consistent file naming, ey...
+#           if addon.startswith('GLYCAM_06'):
+#               addon = addon[:10]
             
-            params += ' -p %s' % (os.path.join(os.environ['AMBERHOME'], 'dat',
-                                              'leap', 'parm', addon) +
-                                  os.extsep + 'dat')
+#           params += ' -p %s' % (os.path.join(os.environ['AMBERHOME'], 'dat',
+#                                             'leap', 'parm', addon) +
+#                                 os.extsep + 'dat')
 
         utils.run_amber(parmchk, params)
 
@@ -704,8 +706,8 @@ class Ligand(Common):
 
 
     @report
-    def mk_esp(self, program = 'gauss', gkeys = '', gmem = '', gnproc = '',
-               gus_header = GUS_HEADER):
+    def mk_esp(self, program='gauss', gkeys='', gmem='', gnproc='',
+               gus_header=GUS_HEADER):
         """
         Create an input file for ESP calculation using the MK scheme.
         The input is written for either Gaussian or Gamess-US.
