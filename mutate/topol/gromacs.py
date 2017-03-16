@@ -241,7 +241,7 @@ class PertTopology(object):
                                                  mass_lambdas=masl,
                                                  sc_coul='no'))
 
-            fepvdw = '0.0 0.2 0.4 0.6 0.8 1.0'
+            coul = '0.0 0.2 0.4 0.6 0.8 1.0'
             masl = '0.0 0.0 0.0 0.0 0.0 0.0'
             seps = 'step 2: q_on (appearing)'
 
@@ -250,8 +250,8 @@ class PertTopology(object):
                     (VAC_MDP % (COMMON_MDP_TMPL,
                                 FE_TMPL)).format(nsteps='2000000',
                                                  seps=seps,
-                                                 fep_lambdas=fepvdw,
-                                                 vdw_lambdas=fepvdw,
+                                                 fep_lambdas=coul,
+                                                 vdw_lambdas='',
                                                  mass_lambdas=masl,
                                                  sc_coul='no'))
 
@@ -381,7 +381,7 @@ class PertTopology(object):
                           PERT2_ITP)
             top1.writeGro(MORPH2_GRO)
 
-            fepvdw = '0.0 0.2 0.4 0.6 0.8 1.0'
+            coul = '0.0 0.2 0.4 0.6 0.8 1.0'
             masl = '0.0 0.0 0.0 0.0 0.0 0.0'
             seps = 'step 2: q_on (appearing)'
 
@@ -390,8 +390,8 @@ class PertTopology(object):
                     (SOL_MDP % (COMMON_MDP_TMPL,
                                  FE_TMPL)).format(nsteps='500000',
                                                   seps=seps,
-                                                  fep_lambdas=fepvdw,
-                                                  vdw_lambdas=fepvdw,
+                                                  fep_lambdas=coul,
+                                                  vdw_lambdas='',
                                                   mass_lambdas=masl,
                                                   sc_coul='no'))
         else:
