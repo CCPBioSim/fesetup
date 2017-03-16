@@ -72,8 +72,10 @@ def _lambda_paths(dummies0, dummies1, separate=True):
 
     if not dummies0 and not dummies1:
         seps = 'linear transformation only'
+        sc_coul = 'no'
     elif not separate:
         seps = 'one-step protocol'
+        sc_coul = 'yes'
     elif dummies0:
         fepl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.4 '
                 '0.6 0.8 1.0')
@@ -82,6 +84,7 @@ def _lambda_paths(dummies0, dummies1, separate=True):
         masl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 '
                 '0.0 0.0 0.0')
         seps = 'appearing atoms: vdW before q_on'
+        sc_coul = 'no'
     elif dummies1:
         fepl = ('0.0 0.2 0.4 0.6 0.8 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 '
                 '1.0 1.0 1.0')
@@ -90,11 +93,12 @@ def _lambda_paths(dummies0, dummies1, separate=True):
         masl = ('0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 '
                 '0.0 0.0 0.0')
         seps = 'disappearing atoms: q_off before vdW'
+        sc_coul = 'no'
     else:
         raise errors.SetupError('BUG: gromacs morph tolopgy - unexpected '
                                 'dummies in "dummy" protocol')
 
-    return fepl, vdwl, masl, seps
+    return fepl, vdwl, masl, seps, sc_coul
 
 
 class PertTopology(object):
@@ -126,7 +130,7 @@ class PertTopology(object):
             self.FE_sub_type = 'dummy'
 
         self.topol = None
-        
+
 
     def setup(self, curr_dir, lig_morph, cmd1, cmd2):
         """
@@ -171,9 +175,9 @@ class PertTopology(object):
                                            itp=const.GROMACS_PERT_ITP,
                                            ligname=const.LIGAND_NAME))
 
-            fepl, vdwl, masl, seps = _lambda_paths(self.dummies0,
-                                                   self.dummies1,
-                                                   self.separate)
+            fepl, vdwl, masl, seps, sc_coul = _lambda_paths(self.dummies0,
+                                                            self.dummies1,
+                                                            self.separate)
 
             with open(VAC_MDP_FILE, 'w') as mdp:
                 mdp.write(
@@ -182,12 +186,13 @@ class PertTopology(object):
                                                  seps=seps,
                                                  fep_lambdas=fepl,
                                                  vdw_lambdas=vdwl,
-                                                 mass_lambdas=masl))
+                                                 mass_lambdas=masl,
+                                                 sc_coul=sc_coul))
 
             self.files_created.extend((const.GROMACS_PERT_ATP,
                                        const.GROMACS_PERT_ITP, MORPH_GRO,
                                        MORPH_TOP, VAC_MDP_FILE))
-                                                      
+
         elif self.FE_sub_type == 'dummy3':
             int_name = topol.int_state._parm_overwrite
 
@@ -233,7 +238,8 @@ class PertTopology(object):
                                                  seps=seps,
                                                  fep_lambdas=fepl,
                                                  vdw_lambdas=vdwl,
-                                                 mass_lambdas=masl))
+                                                 mass_lambdas=masl,
+                                                 sc_coul='no'))
 
             fepvdw = '0.0 0.2 0.4 0.6 0.8 1.0'
             masl = '0.0 0.0 0.0 0.0 0.0 0.0'
@@ -246,7 +252,8 @@ class PertTopology(object):
                                                  seps=seps,
                                                  fep_lambdas=fepvdw,
                                                  vdw_lambdas=fepvdw,
-                                                 mass_lambdas=masl))
+                                                 mass_lambdas=masl,
+                                                 sc_coul='no'))
 
             self.files_created.extend((PERT1_ATP, PERT2_ITP, MORPH1_GRO,
                                        MORPH1_TOP, VAC1_MDP_FILE,
@@ -295,9 +302,9 @@ class PertTopology(object):
             top.writeTop(MORPH_TOP, '', const.LIGAND_NAME, False)
             top.writeGro(MORPH_GRO)
 
-            fepl, vdwl, masl, seps = _lambda_paths(self.dummies0,
-                                                   self.dummies1,
-                                                   self.separate)
+            fepl, vdwl, masl, seps, sc_coul = _lambda_paths(self.dummies0,
+                                                            self.dummies1,
+                                                            self.separate)
             with open(SOL_MDP_FILE, 'w') as mdp:
                 mdp.write(
                     (SOL_MDP % (COMMON_MDP_TMPL,
@@ -305,7 +312,8 @@ class PertTopology(object):
                                                  seps=seps,
                                                  fep_lambdas=fepl,
                                                  vdw_lambdas=vdwl,
-                                                 mass_lambdas=masl))
+                                                 mass_lambdas=masl,
+                                                 sc_coul=sc_coul))
         elif self.FE_sub_type == 'dummy3':
             # FIXME: ugly kludge, assuming the file is one level up
             if not os.access(PERT1_ATP, os.F_OK):
@@ -353,7 +361,8 @@ class PertTopology(object):
                                                  seps=seps,
                                                  fep_lambdas=fepl,
                                                  vdw_lambdas=vdwl,
-                                                 mass_lambdas=masl))
+                                                 mass_lambdas=masl,
+                                                 sc_coul='no'))
 
             top1 = gromacs.GromacsTop()
             top1.readParm(self.topol.parmtop1, self.topol.inpcrd1)
@@ -383,7 +392,8 @@ class PertTopology(object):
                                                   seps=seps,
                                                   fep_lambdas=fepvdw,
                                                   vdw_lambdas=fepvdw,
-                                                  mass_lambdas=masl))
+                                                  mass_lambdas=masl,
+                                                  sc_coul='no'))
         else:
             raise NotImplementedError
 
@@ -440,7 +450,7 @@ mass-lambdas             = {mass_lambdas}
 nstdhdl                  = 100
 calc-lambda-neighbors    = -1
 sc-alpha                 = 0.5
-sc-coul                  = yes
+sc-coul                  = {sc_coul}
 sc-power                 = 1.0
 sc-r-power               = 6
 sc-sigma                 = 0.3
