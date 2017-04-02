@@ -36,7 +36,11 @@ __revision__ = "$Id$"
 __version__ = '0.8.3'
 
 vstring = 'FESetup release %s, SUI version: %s' % (_release.release, __version__)
-
+istring = ('Please cite: HH Loeffler, J Michel, C Woods, '
+           'J Chem Inf Mod, 55, 2485\n'
+           '             DOI 10.1021/acs.jcim.5b00368\n'
+           'For more information please visit '
+           'http://www.ccpbiosim.ac.uk/fesetup/')
 
 import os
 import argparse
@@ -107,11 +111,7 @@ def prelude(opts):
 
 
     create_logger(opts[SECT_DEF]['logfile'])
-    logger.write('\n%s\n\nPlease cite: HH Loeffler, J Michel, C Woods, '
-                 'J Chem Inf Mod, 55, 2485\n'
-                 '             DOI 10.1021/acs.jcim.5b00368\n'
-                 'For more information please visit '
-                 'http://www.ccpbiosim.ac.uk/fesetup/\n' % vstring)
+    logger.write('\n%s\n\n%s\n' % (vstring, istring))
     atexit.register(lambda : logger.finalize() )
 
     ff_opts = list(opts[SECT_DEF]['forcefield'])
@@ -966,7 +966,7 @@ if __name__ == '__main__':
                         help='set the Python traceback limit (for debugging)')
     args = parser.parse_args()
 
-    print('\n=== %s ===\n' % vstring)
+    print('\n=== %s ===\n\n%s\n' % (vstring, istring))
 
     options = IniParser(copy.deepcopy(defaults))
 
