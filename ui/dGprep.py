@@ -1,4 +1,4 @@
-#  Copyright (C) 2013-2016  Hannes H Loeffler
+#  Copyright (C) 2013-2017  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ if ('%x' % sys.hexversion)[:3] != '207':
 from FESetup import _release
 
 __revision__ = "$Id$"
-__version__ = '0.8.2'
+__version__ = '0.8.3'
 
 vstring = 'FESetup release %s, SUI version: %s' % (_release.release, __version__)
 
@@ -107,7 +107,11 @@ def prelude(opts):
 
 
     create_logger(opts[SECT_DEF]['logfile'])
-    logger.write('\n%s\n\n' % vstring)
+    logger.write('\n%s\n\nPlease cite: HH Loeffler, J Michel, C Woods, '
+                 'J Chem Inf Mod, 55, 2485\n'
+                 '             DOI 10.1021/acs.jcim.5b00368\n'
+                 'For more information please visit '
+                 'http://www.ccpbiosim.ac.uk/fesetup/\n' % vstring)
     atexit.register(lambda : logger.finalize() )
 
     ff_opts = list(opts[SECT_DEF]['forcefield'])

@@ -230,7 +230,7 @@ class MDEngine(mdebase.MDEBase):
         # FIXME: rectangular box only
         box_dims = [float(d) / const.A2NM for d in last_line.split()]
         box_dims.extend( (90.0, 90.0, 90.0) )
-                        
+
         return box_dims
 
 
@@ -241,7 +241,7 @@ class MDEngine(mdebase.MDEBase):
 
         filename = prefix + os.extsep
         config_filename = '_' + filename + 'mdp'
-        
+
         with open(config_filename, 'w') as mdin:
             mdin.writelines(config)
 
@@ -250,11 +250,13 @@ class MDEngine(mdebase.MDEBase):
                       (config_filename, self.gro, self.gro, self.top,
                        filename + 'tpr', filename + 'mdp') )
         else:
+            edr = self.prev + os.extsep + 'edr'
+            trr = self.prev + os.extsep + 'trr'
+
             params = ('-f %s -c %s -r %s -e %s -t %s -p %s -o %s -po %s' %
-                      (config_filename, self.prev + os.extsep + 'gro', self.gro,
-                       self.prev + os.extsep + 'edr',
-                       self.prev + os.extsep + 'trr',
-                       self.top, filename + 'tpr', filename + 'mdp') )
+                      (config_filename, self.prev + os.extsep + 'gro',
+                       self.gro, edr, trr, self.top, filename + 'tpr',
+                       filename + 'mdp'))
 
         if mask:
              self._make_restraints(mask, restr_force)
@@ -352,7 +354,7 @@ class MDEngine(mdebase.MDEBase):
             if m:
                 t = m.group(1).split(',')
                 box.extend(t)
-      
+
             m = re.match('      x\[.*\]={(.*)}', line)
 
             if m:
@@ -374,7 +376,7 @@ class MDEngine(mdebase.MDEBase):
         # time unit is 1/20.455 ps
         if vels:
             vel_conv = const.AMBER_VELCONV / 10.0
-            
+
             for i in range(natoms * 3):
                 vels[i] = float(vels[i]) / vel_conv
         else:
@@ -442,7 +444,7 @@ class MDEngine(mdebase.MDEBase):
             self.grompp = ' '.join((full_path, 'grompp'))
             self.gmxdump = ' '.join((full_path, 'dump'))
 
-            return 
+            return
         else:
             suffix = _get_suffix(mdprog, '_')
 
@@ -649,7 +651,7 @@ gen_vel              = {6}
 gen_temp             = {7}
 gen_seed             = 173529
 
-%s 
+%s
 ''' % (NB_PARAMS, CONS_PARAMS),
 
     # goes faster if temperature is higher...
@@ -687,5 +689,5 @@ gen_temp             = {7}
 gen_seed             = 173529
 
 %s
-''' % (NB_PARAMS, CONS_PARAMS) 
+''' % (NB_PARAMS, CONS_PARAMS)
 )
