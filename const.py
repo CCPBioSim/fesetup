@@ -165,7 +165,7 @@ RAD2DEG = 57.29577951308232             # 180.0 / math.pi
 AMBER_VELCONV = 20.455                  # AMBER time in 1/20.455 ps
 A2NM = 0.1
 CAL2J = 4.184
-CALA2JNM2 = CAL2J * 100.0               # kcal/mol/A2 to kJ/mol/nm2
+CALA2JNM2 = CAL2J                       # kcal/mol/A2 to kJ/mol/nm2
 ATM2BAR = 1.01325
 AMU2GRAMS = 1.6605402                   # * 10^-24 grams
 
