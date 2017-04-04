@@ -417,7 +417,7 @@ FESetup
 {ligname} 1
 '''
 
-COMMON_MDP_TMPL = '''\
+COMMON_MDP_TMPL = '''; Note: this is for Gromacs 2016 and later
 integrator               = sd
 ld-seed                  = -1
 bd-fric                  = 0
@@ -430,13 +430,18 @@ nstvout                  = 0
 nstfout                  = 0
 nstlog                   = 10000
 nstenergy                = 10000
-nstxtcout                = 0
+nstxout-compressed       = 0
 
-tcoupl                   = v-rescale
+tcoupl                   = no
 nsttcouple               = 10
 tc_grps                  = System
 tau_t                    = 2.0
 ref_t                    = 298.0
+
+constraints              = h-bonds
+constraint_algorithm     = Lincs
+lincs_order              = 4
+lincs_warnangle          = 30
 '''
 
 FE_TMPL = '''\
@@ -486,7 +491,6 @@ gen-vel                  = yes
 gen-temp                 = 298.0
 gen-seed                 = -1
 
-constraints              = none
 continuation             = no
 
 ; TI/FEP parameters
@@ -497,8 +501,7 @@ SOL_MDP = '''; TI/FEP mdp template for solution
 %s
 comm-mode                = Linear
 
-cutoff-scheme            = group
-nstcalclr                = 1
+cutoff-scheme            = Verlet
 nstlist                  = 10
 ns_type                  = grid
 pbc                      = xyz
@@ -510,7 +513,6 @@ rcoulomb                 = 0.8
 fourierspacing           = 0.10
 pme_order                = 4
 ewald_rtol               = 1.0E-5
-optimize_fft             = yes
 
 vdwtype                  = cut-off
 vdw-modifier             = none
@@ -525,12 +527,7 @@ ref_p                    = 1.0
 refcoord-scaling         = com
 
 gen-vel                  = no
-
-constraints              = h-bonds
-constraint_algorithm     = Lincs
 continuation             = yes
-lincs_order              = 4
-lincs_warnangle          = 30
 
 ; TI/FEP parameters
 %s
