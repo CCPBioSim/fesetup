@@ -1,4 +1,4 @@
-#  Copyright (C) 2012-2016  Hannes H Loeffler
+#  Copyright (C) 2012-2017  Hannes H Loeffler
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,13 +18,9 @@
 #  that should have come with this distribution.
 
 """
-The amber package handles the AMBER type of force fields.  Currently, only
-modern force fields (see Amber14 manual) are supported.
+The amber package handles the AMBER family of force fields.  Currently, only
+the modern force fields (see Amber16 manual) are supported.
 """
-
-
-__revision__ = "$Id$"
-
 
 
 import os
@@ -36,9 +32,20 @@ from FESetup.prepare.amber.protein import *
 from FESetup.prepare.amber.complex import *
 
 
+# default names (preceded with leaprc) for leap,
+# see $AMBERHOME/amberNN/dat/leap/cmd/
+# TODO: The names have changed in AmberTools16 because the force field
+#       files have been split since into protein, DNA, RNA, etc.
+#       This will need adaptation at some point as the scheme below requires
+#       files to be read from the old/ directory which however needs to be
+#       added to the search path in the tleap shell script.  Newer versions
+#       of AMBER may stop supoorting the old scheme.  See manual for up-to-date
+#       information.
 AMBER_FF_TYPES = frozenset( ('protein.ff14SB',
                              'ff14SB', 'ff14ipq', 'ff12SB', 'ff10', 'ff99SB',
                              'ff99SBildn', 'ff99SBnmr', 'ff03.r1') )
+
+# leap commands to read water models and associated ion parameters
 AMBER_SOLVENT_TYPES = {
     'tip3p' : ['loadAmberParams frcmod.ionsjc_tip3p\n'
                'loadAmberParams frcmod.ionslrcm_%s_tip3p\n',
@@ -56,20 +63,19 @@ AMBER_SOLVENT_TYPES = {
               'SPCBOX'],
     }
 
-# NOTE: 12-6-4 type not supported yet because requires manipulation of
-#       parmtop with parmed
+# NOTE: 12-6-4 type not supported yet because that would require manipulation
+#       of the prmtop file with ParmEd
 AMBER_DIVALENT_TYPES = frozenset( ('hfe', 'cm', 'iod') )
-
 
 
 def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version=2,
          gaff='gaff'):
     """
-    Set force field and solvent types for *all* classes in the amber
-    hierarchy.  Leap commands and names are directly written into the Common
-    class *before* initialisation of the class.
+    This functions is meant to set force field and solvent types for *all*
+    classes in the amber hierarchy.  Leap commands and names are directly
+    written into the Common class *before* initialisation of that class.
 
-    :param ff_type: the AMBER force field
+    :param ff_type: the main AMBER force field
     :type ff_type: string
     :param solvent: solvent force field
     :type solvent: string
@@ -77,7 +83,7 @@ def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version=2,
     :type div_ions: string
     :param add_ons: additional force fields
     :type add_ons: list
-    :param mdengine: MD engine
+    :param mdengine: abstract MD engine
     :type mdengine: string
     :param parmchk_version: version of parmchk, either 1 or 2
     :type parmchk_version: int
@@ -100,7 +106,7 @@ def init(ff_type, solvent, div_ions, add_ons, mdengine, parmchk_version=2,
 
     try:
         solvent_type = AMBER_SOLVENT_TYPES[solvent]
- 
+
         # special treatment for namd (kludgy?)
         if '.namd' in mdengine.__module__ and solvent == 'tip4pew':
             solvent_type[0] += 'set default FlexibleWater on '
