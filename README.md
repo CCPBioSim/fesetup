@@ -8,4 +8,4 @@ FESetup particularly aims at automation where it makes sense and is possible, ea
 
 The basis of the current code was a collection of Python and shell scripts written previously by Julien Michel and Christopher Woods. The current code base is now mainly developed by Hannes Loeffler (STFC) with contributions from the original developers.
 
-Please cite DOI: 10.1021/acs.jcim.5b00368 when you use FESetup.
+Please cite [DOI: 10.1021/acs.jcim.5b00368](https://dx.doi.org/10.1021/acs.jcim.5b00368) when you use FESetup.
