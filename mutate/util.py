@@ -22,7 +22,7 @@ Actual functionality and utility functions for the Morph class.
 """
 
 
-__revision__ = "$Id$"
+__revision__ = "$Id: util.py 654 2017-11-08 12:06:35Z jmichel $"
 
 
 import sys
@@ -356,6 +356,7 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
         logger.write('Applying spatially-closest algorithm (%s, %s matches)\n' %
                      (len(m1), len(m2) ) )
 
+
         # FIXME: is it possible that the smaller one has more then one matches
         #        when uniquify=True?
         if len(m1) < len(m2):
@@ -388,19 +389,18 @@ def mcss(mol2str_1, mol2str_2, maxtime=60, isotope_map=None, selec=''):
                     pos2 = conf2.GetAtomPosition(idx2)
                     d2 = (pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2 +\
                          (pos1.z - pos2.z)**2
-                    # Ignore small deviations
-                    #if d2 < DEVTHRESHOLD:
-                    #    d2 = 0.0
                     sumd += d2
-                #print (x,y,sumd)
+                #print (x,y,sumd,mind)
                 if sumd < mind:
                     mind = sumd
                     minxy = [x,y]
-        #print (mind, minxy)
         if swapped:
             mapping = dict(zip(m2[minxy[1]], m1[minxy[0]]))
         else:
-            mapping = dict(zip(m1[minxy[1]], m2[minxy[0]]))
+            # JM bug 11/17 ? 
+            #mapping = dict(zip(m1[minxy[1]], m2[minxy[0]]))
+             mapping = dict(zip(m1[minxy[0]], m2[minxy[1]]))
+        #print (mapping)
 
         #dist_sum = []
         #for match1 in m1:
