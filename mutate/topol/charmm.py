@@ -32,8 +32,8 @@ import Sire.MM
 import Sire.Units
 
 import sander
-from FESetup import const, errors, logger
-from FESetup.prepare.amber import charmm
+from fesetup import const, errors, logger
+from fesetup.prepare.amber import charmm
 
 
 

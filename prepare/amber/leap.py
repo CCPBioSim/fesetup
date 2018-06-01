@@ -66,7 +66,7 @@ class Leap(object):
         self.force_fields.add(ff)
 
 
-    def generate_init(self):
+    def generate_init(self, addcmd=''):
         leap_cmds = []
 
         for ff in self.force_fields:
@@ -74,8 +74,8 @@ class Leap(object):
 
         leap_cmds.append(self.solvents)
 
-        for up in self.user_params:
-            leap_cmds(up)
+        if addcmd:
+            leap_cmds.append(addcmd)
 
         load_cmd = {'pdb': 'loadPDB', 'mol2': 'loadmol2'}
 

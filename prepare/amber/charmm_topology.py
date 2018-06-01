@@ -31,7 +31,7 @@ import os, math
 import Sire.IO
 import Sire.MM
 
-from FESetup import const, errors, logger
+from fesetup import const, errors, logger
 
 
 

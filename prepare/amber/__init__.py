@@ -25,11 +25,11 @@ the modern force fields (see Amber16 manual) are supported.
 
 import os
 
-from FESetup.prepare.amber.utils import *
-from FESetup.prepare.amber.common import *
-from FESetup.prepare.amber.ligand import *
-from FESetup.prepare.amber.protein import *
-from FESetup.prepare.amber.complex import *
+from fesetup.prepare.amber.utils import *
+from fesetup.prepare.amber.common import *
+from fesetup.prepare.amber.ligand import *
+from fesetup.prepare.amber.protein import *
+from fesetup.prepare.amber.complex import *
 
 
 # default names (preceded with leaprc) for leap,

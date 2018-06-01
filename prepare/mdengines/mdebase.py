@@ -30,7 +30,7 @@ import os, sys
 from parmed.amber.mask import AmberMask
 from parmed.amber.readparm import AmberParm
 
-from FESetup import const
+from fesetup import const
 
 
 

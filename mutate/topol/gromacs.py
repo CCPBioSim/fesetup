@@ -30,8 +30,8 @@ import sys
 from collections import defaultdict
 
 import sander
-from FESetup import const, errors, logger
-from FESetup.prepare.amber import gromacs
+from fesetup import const, errors, logger
+from fesetup.prepare.amber import gromacs
 
 
 
@@ -410,7 +410,7 @@ TOP_TMPL = '''\
 #include "{itp}"
 
 [ system ]
-FESetup
+fesetup
 
 [ molecules ]
 ; Compound        nmols

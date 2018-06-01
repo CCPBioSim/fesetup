@@ -18,7 +18,7 @@
 #  that should have come with this distribution.
 
 r"""
-A class to build a ligand with FESetup.  Derives from Common.
+A class to build a ligand with fesetup.  Derives from Common.
 
 The Ligand class does parameterization and coordinate manipulation
 based on a single coordinate input file.  AMBER topology and coordinate
@@ -40,8 +40,8 @@ import os, math, shutil
 
 import openbabel as ob
 
-import FESetup
-from FESetup import const, errors, logger
+import fesetup
+from fesetup import const, errors, logger
 from . import dlfield
 from common import *
 import utils
@@ -253,7 +253,7 @@ class Ligand(Common):
     """The ligand setup class."""
 
     # import force field independent functionality (to avoid mixins)
-    from FESetup.prepare.ligutil import prepare, align, conf_search, flex, \
+    from fesetup.prepare.ligutil import prepare, align, conf_search, flex, \
          preminimize
 
 
@@ -632,8 +632,8 @@ class Ligand(Common):
 
     @report
     def create_top(self, boxtype='', boxlength='10.0', align=False,
-                   neutralize=0, addcmd='', addcmd2='', remove_first=False,
-                   conc=0.0, dens=1.0, write_dlf=False):
+                   neutralize=0, addcmd='', remove_first=False, conc=0.0, 
+                   dens=1.0, write_dlf=False):
         """
         Generate an AMBER topology file via leap. Leap requires atom names in
         GAFF format to match against GAFF force field database.  Finally
@@ -672,9 +672,9 @@ class Ligand(Common):
             return
 
         leapin = self._amber_top_common(boxtype, boxlength,
-                                        neutralize, align=align,
-                                        remove_first=remove_first,
-                                        conc=conc, dens=dens)
+                                        neutralize, align, addcmd,
+                                        remove_first,
+                                        conc, dens)
 
 
         # Strangely, sleap does not create sander compatible top files with

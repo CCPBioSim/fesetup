@@ -30,8 +30,8 @@ import glob
 import re
 
 import mdebase
-from FESetup import const, errors, logger
-from FESetup.prepare.amber import gromacs, utils
+from fesetup import const, errors, logger
+from fesetup.prepare.amber import gromacs, utils
 
 
 # assume standard GROMACS file name conventions

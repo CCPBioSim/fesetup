@@ -32,7 +32,7 @@ import Sire.IO
 import Sire.MM
 import Sire.Maths
 
-from FESetup import const, errors, logger
+from fesetup import const, errors, logger
 
 
 BOX_BUFFER = 3.0

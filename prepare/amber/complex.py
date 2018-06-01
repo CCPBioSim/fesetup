@@ -29,8 +29,8 @@ __revision__ = "$Id$"
 
 
 
-import FESetup
-from FESetup import const, errors, logger
+import fesetup
+from fesetup import const, errors, logger
 import utils
 
 from ligand import Ligand
@@ -42,7 +42,7 @@ from common import *
 class Complex(Common):
     """The complex setup class."""
 
-    from FESetup.prepare.ligutil import flex as lig_flex
+    from fesetup.prepare.ligutil import flex as lig_flex
 
     SSBONDS_OFFSET = 1
 
@@ -130,15 +130,15 @@ class Complex(Common):
 
     @report
     def create_top(self, boxtype='', boxlength=10.0, align=False,
-                   neutralize=False, addcmd='', addcmd2='',
-                   remove_first=False, conc = 0.0, dens = 1.0):
+                   neutralize=False, addcmd='', remove_first=False, 
+                   conc = 0.0, dens = 1.0):
         """Generate an AMBER topology file via leap.
 
         :param boxtype: rectangular, octahedron or set (set dimensions explicitly)
         :param boxlength: side length of the box
         :param align: align solute along the principal axes
         :param neutralize: neutralise the system
-        :param addcmd: inject additional leap commands
+        :param addcmd: inject additional leap commands with user_params input
         :param remove_first: remove first unit/residue
         :param conc: ion concentration
         :type conc: float
@@ -160,9 +160,9 @@ class Complex(Common):
         #        when tip4pew is used the frcmod files are only loaded after
         #        reading PDB and MOL2
         leapin = self._amber_top_common(boxtype, boxlength,
-                                        neutralize, align=align,
-                                        remove_first=remove_first,
-                                        conc=conc, dens=dens)
+                                        neutralize, align, addcmd,
+                                        remove_first,
+                                        conc, dens)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)
 

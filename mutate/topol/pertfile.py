@@ -35,8 +35,8 @@ import Sire.Units
 from parmed.amber.readparm import AmberParm
 from parmed.tools import change
 
-from FESetup import const, errors, logger
-from FESetup.mutate import util
+from fesetup import const, errors, logger
+from fesetup.mutate import util
 
 
 

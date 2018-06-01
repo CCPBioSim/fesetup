@@ -33,7 +33,7 @@ import string
 import glob
 import subprocess as subp
 
-from FESetup import const, errors, logger
+from fesetup import const, errors, logger
 
 
 

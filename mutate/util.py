@@ -52,9 +52,9 @@ from parmed.amber.mask import AmberMask
 from parmed.amber.readparm import AmberParm
 import parmed.tools.actions as Action
 
-from FESetup import const, errors, logger
+from fesetup import const, errors, logger
 
-from FESetup.munkres import Munkres, print_matrix
+from fesetup.munkres import Munkres, print_matrix
 
 
 class _AtomInfo(object):

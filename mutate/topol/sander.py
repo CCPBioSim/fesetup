@@ -27,8 +27,8 @@ __revision__ = "$Id$"
 
 import os
 
-from FESetup import const, errors, logger
-from FESetup.mutate import util
+from fesetup import const, errors, logger
+from fesetup.mutate import util
 
 import amber
 

@@ -31,7 +31,7 @@ import os, sys, re
 import pybel
 import openbabel as ob
 
-from FESetup import const, errors, report, logger
+from fesetup import const, errors, report, logger
 
 
 

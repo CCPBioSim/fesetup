@@ -18,7 +18,7 @@
 #  that should have come with this distribution.
 
 r"""
-A class to build a protein receptor with FESetup.  Derives from Common.
+A class to build a protein receptor with fesetup.  Derives from Common.
 
 The protein Setup class protonates and creates AMBER topology and
 coordinate files based on a single coordinate input file.
@@ -30,8 +30,8 @@ __revision__ = "$Id$"
 
 import os
 
-import FESetup
-from FESetup import const, errors, logger
+import fesetup
+from fesetup import const, errors, logger
 from common import *
 import utils
 
@@ -64,7 +64,7 @@ class Protein(Common):
 
 
     # import force field independent functionality (to avoid mixins)
-    from FESetup.prepare.protutil import protonate_propka
+    from fesetup.prepare.protutil import protonate_propka
 
 
     @report
@@ -105,7 +105,7 @@ class Protein(Common):
 
 
     @report
-    def prepare_top(self, pert=None):
+    def prepare_top(self, gaff='gaff', pert=None):
         """
         Prepare for parmtop creation i.e. add molecules to Leap structure.
         This needs to be run before create_top() to ensure that the molecule
@@ -115,6 +115,7 @@ class Protein(Common):
         """
 
         if not self.leap_added:
+            self.leap.add_force_field(gaff)
             self.leap.add_mol(self.mol_file, self.mol_fmt, pert=pert)
 
             self.leap_added = True
@@ -122,8 +123,8 @@ class Protein(Common):
 
     @report
     def create_top(self, boxtype='', boxlength=10.0, align=False,
-                   neutralize=0, addcmd='', addcmd2='',
-                   remove_first=False, conc=0.0, dens=1.0):
+                   neutralize=0, addcmd='', remove_first=False, conc=0.0, 
+                   dens=1.0):
         """
         Generate an AMBER topology file via leap.
 
@@ -131,6 +132,8 @@ class Protein(Common):
         :param boxlength: side length of the box
         :param align: align solute along the principal axes
         :param neutralize: neutralise the system
+        :param addcmd: extra commands for leap with user_params input
+        :type addcmd: string
         :param remove_first: noop! (remove first unit/residue)
         :param conc: ion concentration
         :type conc: float
@@ -156,8 +159,8 @@ class Protein(Common):
             return
 
         leapin = self._amber_top_common(boxtype, boxlength,
-                                        neutralize, align=align,
-                                        remove_first = False,
-                                        conc=conc, dens=dens)
+                                        neutralize, align, addcmd,
+                                        remove_first,
+                                        conc, dens)
 
         utils.run_leap(self.amber_top, self.amber_crd, 'tleap', leapin)

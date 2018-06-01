@@ -28,8 +28,8 @@ __revision__ = "$Id$"
 import os, sys, struct
 
 import mdebase
-from FESetup import const, errors, logger
-from FESetup.prepare.amber import utils
+from fesetup import const, errors, logger
+from fesetup.prepare.amber import utils
 
 
 SOLVENT_TRANS = {

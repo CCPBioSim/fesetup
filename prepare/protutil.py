@@ -28,7 +28,7 @@ __revision__ = "$Id$"
 
 import os
 
-from FESetup import const, report, CaptureOutput, logger
+from fesetup import const, report, CaptureOutput, logger
 
 
 # NOTE: PROPKA 3.1 can actually also protonate ligands but for the time being
@@ -47,7 +47,7 @@ def protonate_propka(self, pH = 7.0):
     import  StringIO
 
     import propka.lib as plib
-    import FESetup.propka.newmc as pmc
+    import fesetup.propka.newmc as pmc
 
     PROT_RES = ('HIS', 'ASP', 'GLU')
     DEPROT_RES = ('LYS', 'CYS', 'ARG', 'TYR')

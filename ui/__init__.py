@@ -23,4 +23,4 @@ UI package.
 
 __revision__ = "$Id$"
 
-from FESetup.ui.iniparser import *
+from fesetup.ui.iniparser import *

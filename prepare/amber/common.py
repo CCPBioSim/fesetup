@@ -41,7 +41,7 @@ import openbabel as ob
 import pybel
 
 import utils                            # relative import
-from FESetup import const, errors, logger, report
+from fesetup import const, errors, logger, report
 from leap import Leap
 
 import Sire.IO
@@ -194,7 +194,8 @@ class Common(object):
 
 
     def _amber_top_common(self, boxtype='', boxlength='10.0', neutralize=0,
-                          align=None, remove_first=False, conc=0.0, dens=1.0):
+                          align=None, addcmd='', remove_first=False, 
+                          conc=0.0, dens=1.0):
         """Common scripting commands for leap.  Internal function only.
 
         :param boxtype: rectangular, octahedron or set
@@ -205,6 +206,8 @@ class Common(object):
         :type neutralize: int
         :param align: align axes?
         :type align: bool
+        :param addcmd: extra commands for leap with user_params input
+        :type addcmd: string
         :param remove_first: remove first molecule?
         :type remove_first: bool
         :param conc: ion concentration in mol/litres
@@ -214,7 +217,7 @@ class Common(object):
         :raises: SetupError
         """
 
-        leapin = self.leap.generate_init()
+        leapin = self.leap.generate_init(addcmd)
 
         if os.access(const.SSBOND_FILE, os.R_OK):
             pairs = ssbonds(const.SSBOND_FILE, self.__class__.SSBONDS_OFFSET)
@@ -228,7 +231,7 @@ class Common(object):
             self.ssbond_file = const.SSBOND_FILE
 
         boxdata = None
-
+            
         if align:
             leapin += 'alignAxes s\n'
 
@@ -303,7 +306,6 @@ class Common(object):
                           nneg) )
 
             leapin += 'addIonsRand s Na+ %i Cl- %i 2.0\n' % (npos, nneg)
-
 
         leapin += ('saveAmberParm s "%s" "%s"\nsavepdb s "%s"\n' %
                    (self.amber_top, self.amber_crd, self.amber_pdb) )

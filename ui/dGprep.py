@@ -30,12 +30,11 @@ if ('%x' % sys.hexversion)[:3] != '207':
     sys.exit(1)
 
 
-from FESetup import _release
+from fesetup import _release
 
 __revision__ = "$Id$"
-__version__ = '0.8.3'
 
-vstring = 'FESetup release %s, SUI version: %s' % (_release.release, __version__)
+vstring = 'FESetup release %s' % (_release.release)
 istring = ('Please cite: HH Loeffler, J Michel, C Woods, '
            'J Chem Inf Mod, 55, 2485\n'
            '             DOI 10.1021/acs.jcim.5b00368\n'
@@ -51,10 +50,10 @@ import atexit
 import warnings
 from collections import OrderedDict, namedtuple
 
-import FESetup.prepare as prep
-from FESetup import const, errors, create_logger, logger, DirManager
-from FESetup.ui.iniparser import IniParser
-from FESetup.modelconf import ModelConfig
+import fesetup.prepare as prep
+from fesetup import const, errors, create_logger, logger, DirManager
+from fesetup.ui.iniparser import IniParser
+from fesetup.modelconf import ModelConfig
 
 # FIXME: That's here solely to suppress a warning over a fmcs/Sire double
 # data type registration collision.  Impact limited as much as possible but
@@ -63,7 +62,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings('ignore',
                             'to-Python converter for.*already registered')
 
-    from FESetup import mutate
+    from fesetup import mutate
 
 
 
@@ -383,7 +382,7 @@ def make_ligand(name, ff, opts):
                 ligand.mol_file = const.GAFF_MOL2_FILE
                 ligand.mol_fmt = 'mol2'
 
-            ligand.prepare_top()
+            ligand.prepare_top(gaff=options[SECT_DEF]['gaff'])
             ligand.create_top(boxtype='', addcmd=load_cmds,
                               write_dlf=lig['write_dlf'])
 
@@ -423,7 +422,7 @@ def make_ligand(name, ff, opts):
 
         # FIXME: also check for boxlength and neutralize
         if lig['box.type']:
-            ligand.prepare_top()
+            ligand.prepare_top(gaff=options[SECT_DEF]['gaff'])
             ligand.create_top(boxtype = lig['box.type'],
                               boxlength = lig['box.length'],
                               neutralize = lig['neutralize'],
@@ -574,8 +573,8 @@ def make_protein(name, ff, opts):
                 protein.protonate_propka(pH = prot['propka.pH'])
 
             protein.get_charge()    # must be done explicitly
-            protein.prepare_top()
-            protein.create_top(boxtype = '')
+            protein.prepare_top(gaff=options[SECT_DEF]['gaff'])
+            protein.create_top(boxtype = '', addcmd = load_cmds)
 
             model['charge.total'] = protein.charge
             model['forcefield'] = 'AMBER'    # FIXME
@@ -586,7 +585,7 @@ def make_protein(name, ff, opts):
         # FIXME: also check for boxlength and neutralize
 
         if prot['box.type']:
-            protein.prepare_top()
+            protein.prepare_top(gaff=options[SECT_DEF]['gaff'])
             protein.create_top(boxtype = prot['box.type'],
                                boxlength = prot['box.length'],
                                neutralize = prot['neutralize'],

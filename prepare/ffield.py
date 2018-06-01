@@ -28,7 +28,7 @@ __revision__ = "$Id$"
 
 import sys, warnings
 
-from FESetup import logger
+from fesetup import logger
 
 
 

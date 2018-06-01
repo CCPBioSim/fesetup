@@ -28,8 +28,8 @@ __revision__ = "$Id$"
 import os
 
 import mdebase
-from FESetup import errors, logger
-from FESetup.prepare.amber import utils
+from fesetup import errors, logger
+from fesetup.prepare.amber import utils
 
 
 

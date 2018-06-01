@@ -29,8 +29,8 @@ __revision__ = "$Id$"
 import Sire.Mol
 import Sire.Units
 
-from FESetup import const, errors
-from FESetup.mutate import util
+from fesetup import const, errors
+from fesetup.mutate import util
 
 
 

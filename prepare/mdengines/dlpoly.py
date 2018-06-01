@@ -28,8 +28,8 @@ __revision__ = "$Id$"
 import os, sys, shutil, math
 
 import mdebase
-from FESetup import const, errors, logger
-from FESetup.prepare.amber import dlpoly, utils
+from fesetup import const, errors, logger
+from fesetup.prepare.amber import dlpoly, utils
 
 
 FIELD_FILENAME = 'FIELD'

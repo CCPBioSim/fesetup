@@ -35,7 +35,7 @@ def get_MDEngine(mdengine):
     """
 
     try:
-        mde = __import__('FESetup.prepare.mdengines.' + mdengine,
+        mde = __import__('fesetup.prepare.mdengines.' + mdengine,
                          fromlist = '*')
     except ImportError as detail:
         print >> sys.stderr, 'Error: %s' % detail

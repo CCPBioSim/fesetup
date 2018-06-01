@@ -33,7 +33,7 @@ import os
 import re
 import shutil
 
-from FESetup import const, errors, logger, report
+from fesetup import const, errors, logger, report
 from . import util
 
 import Sire.IO
