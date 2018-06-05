@@ -69,6 +69,9 @@ class Leap(object):
     def generate_init(self, addcmd=''):
         leap_cmds = []
 
+        # force field files (ff) and user parameters (addcmd) must be
+        # loaded before the molecule (pdb/mol2) otherwise leap will fail.
+
         for ff in self.force_fields:
             leap_cmds.append('source "leaprc.%s"' % ff)
 

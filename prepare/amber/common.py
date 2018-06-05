@@ -217,8 +217,10 @@ class Common(object):
         :raises: SetupError
         """
 
+        # Make the leapin file with commands for running leap.
         leapin = self.leap.generate_init(addcmd)
 
+        # Add commands for leap to create disulfide bridges if relevant.
         if os.access(const.SSBOND_FILE, os.R_OK):
             pairs = ssbonds(const.SSBOND_FILE, self.__class__.SSBONDS_OFFSET)
             cmd = []
@@ -238,7 +240,7 @@ class Common(object):
         # bug #976: input may contain ions and water
         #leapin += self.solvent_load
 
-        if boxtype:
+        if boxtype:     # Add leap commands for solvation if requested. 
             self.amber_top = const.LEAP_SOLVATED + self.TOP_EXT
             self.amber_crd = const.LEAP_SOLVATED + self.RST_EXT
             self.amber_pdb = const.LEAP_SOLVATED + const.PDB_EXT
