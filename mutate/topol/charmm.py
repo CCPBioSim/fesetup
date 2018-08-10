@@ -33,7 +33,7 @@ import Sire.Units
 
 import sander
 from fesetup import const, errors, logger
-from fesetup.prepare.amber import charmm
+from fesetup.prepare.amber import charmm_topology as charmm
 
 
 

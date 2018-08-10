@@ -31,7 +31,8 @@ import re
 
 import mdebase
 from fesetup import const, errors, logger
-from fesetup.prepare.amber import gromacs, utils
+from fesetup.prepare.amber import gromacs_topology as gromacs
+from fesetup.prepare.amber import utils
 
 
 # assume standard GROMACS file name conventions

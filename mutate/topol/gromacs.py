@@ -31,7 +31,7 @@ from collections import defaultdict
 
 import sander
 from fesetup import const, errors, logger
-from fesetup.prepare.amber import gromacs
+from fesetup.prepare.amber import gromacs_topology as gromacs
 
 
 

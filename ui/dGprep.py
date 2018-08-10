@@ -256,12 +256,12 @@ def make_ligand(name, ff, opts):
     confomer search + alignment (both optional), optionally hydrated
     top/crd and minimisation/MD simulation.
 
-    :param name: the name of the ligandx
+    :param name: the name of the ligand
     :type name: str
     :param ff: the ForceField class holding all relevant data for setup and
                also simulation
     :type ff: ForceField
-    :param opts: the name of the ligandx
+    :param opts: options for the setup
     :type opts: IniParser
     """
 
@@ -501,6 +501,15 @@ def make_ligand(name, ff, opts):
 def make_protein(name, ff, opts):
     """
     Prepare proteins for simulation.
+    
+    :param name: the name of the protein
+    :type name: str
+    :param ff: the ForceField class holding all relevant data for setup and
+               also simulation
+    :type ff: ForceField
+    :param opts: options for the setup
+    :type opts: IniParser
+    
     """
 
     logger.write('*** Working on %s ***\n' % name)
@@ -667,6 +676,22 @@ def make_protein(name, ff, opts):
 
 
 def make_complex(prot, lig, ff, opts, load_cmds):
+    """
+    Prepare protein/ligand complexes for simulation.
+    
+    :param prot: the protein
+    :type prot: ???
+    :param lig: the ligand
+    :type lig: ???
+    :param ff: the ForceField class holding all relevant data for setup and
+               also simulation
+    :type ff: ForceField
+    :param opts: options for the setup
+    :type opts: IniParser
+    
+    """
+
+    logger.write('Making complex from %s and %s...' % (prot.mol_name, lig.mol_name))
 
     com = opts[SECT_COM]
 
@@ -1010,6 +1035,7 @@ if __name__ == '__main__':
         except errors.SetupError as why:
             prot_failed.append(prot_name)
             print ('ERROR: %s failed: %s' % (prot_name, why))
+            logger.write('ERROR: %s failed: %s' % (prot_name, why))
 
 
     ### ligands
@@ -1045,6 +1071,8 @@ if __name__ == '__main__':
                             temp_map[int(a)] = int(b)
                         except ValueError:
                             print('Error: map contains non-integers')
+                            logger.write('ValueError: in morph_pairs map contains '
+                                         'non-integers')
                             sys.exit(1)
 
                 morph_maps[pair[0],p1[0]] = temp_map
@@ -1064,6 +1092,7 @@ if __name__ == '__main__':
         except errors.SetupError as why:
             lig_failed.append(lig_name)
             print('ERROR: %s failed: %s' % (lig_name, why))
+            logger.write('ERROR: %s failed: %s' % (lig_name, why))
 
 
     ### ligand morphs
@@ -1083,7 +1112,8 @@ if __name__ == '__main__':
         except KeyError as why:
             name = pair[0] + const.MORPH_SEP + pair[1]
             morph_failed.append(name)
-            print ('ERROR: %s failed: %s' % (name, why))
+            print('ERROR: %s failed: %s' % (name, why))
+            logger.write('ERROR: %s failed: %s' % (name, why))
             continue
 
         ligand1 = l1.ref
@@ -1109,6 +1139,7 @@ if __name__ == '__main__':
                           options[SECT_DEF]['gaff']) as morph:
 
             print ('Morphing %s to %s...' % pair)
+            logger.write('Morphing %s to %s...' % pair)
 
             if (pair[1], pair[0]) in morph_pairs:
                 rev = ligand2
@@ -1124,6 +1155,7 @@ if __name__ == '__main__':
             except errors.SetupError as why:
                 morph_failed.append(morph.name)
                 print ('ERROR: %s failed: %s' % (morph.name, why))
+                logger.write('ERROR: %s failed: %s' % (morph.name, why))
 
             morphs.append(morph)
 
@@ -1139,11 +1171,15 @@ if __name__ == '__main__':
         if proteins[protein] in prot_failed:
             print ('WARNING: not making complex with protein %s because '
                    'build failed' %  protein.mol_name)
+            logger.write('WARNING: not making complex with protein %s because '
+                   'build failed' %  protein.mol_name)
             continue
 
         for lig_name in ligands:
             if lig_name in lig_failed:
                 print ('WARNING: not making complex with ligand %s '
+                       'because build failed' % lig_name)
+                logger.write('WARNING: not making complex with ligand %s '
                        'because build failed' % lig_name)
                 continue
 
@@ -1178,6 +1214,7 @@ if __name__ == '__main__':
                 except errors.SetupError as why:
                     com_failed.append(name)
                     print ('ERROR: %s failed: %s' % (name, why))
+                    logger.write('ERROR: %s failed: %s' % (name, why))
 
 
     ### complex morphs
@@ -1195,6 +1232,8 @@ if __name__ == '__main__':
             if complex.ligand.mol_name == morph.initial_name:
                 print('Creating complex %s with ligand morph %s...' %
                       (complex.mol_name, morph.name) )
+                logger.write('Creating complex %s with ligand morph %s...' %
+                             (complex.mol_name, morph.name) )
 
                 #print(os.getcwd())
                 wd = os.path.join(cwd, const.COMPLEX_WORKDIR, complex.mol_name)
@@ -1206,6 +1245,8 @@ if __name__ == '__main__':
                     morph_failed.append(name)
                     print ('ERROR: complex %s with ligand morph %s failed: %s'
                            % (complex.mol_name, morph.name, why) )
+                    logger.write('ERROR: complex %s with ligand morph %s failed: %s'
+                                 % (complex.mol_name, morph.name, why) )
 
 
     ### final message
@@ -1225,3 +1266,4 @@ if __name__ == '__main__':
 
     if success:
         print ('\n=== All molecules built successfully ===\n')
+        logger.write('\n=== All molecules built successfully ===\n')

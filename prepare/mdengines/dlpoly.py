@@ -29,7 +29,8 @@ import os, sys, shutil, math
 
 import mdebase
 from fesetup import const, errors, logger
-from fesetup.prepare.amber import dlpoly, utils
+from fesetup.prepare.amber import dlpoly_topology as dlpoly 
+from fesetup.prepare.amber import utils
 
 
 FIELD_FILENAME = 'FIELD'
