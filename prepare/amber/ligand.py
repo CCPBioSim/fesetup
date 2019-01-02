@@ -69,7 +69,7 @@ GB_MAX_ITER = 20
 GB_MAX_CHARGE = 0.001                   # FIXME: this may be problematic
 
 GB_LEAP_IN = '''\
-source leaprc.gaff
+"%s"
 set default PBRadii mbondi2
 mods = loadAmberParams "%s"
 s = loadmol2 "%s"
@@ -157,7 +157,7 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
 
     # FIXME: more robust error checking!
     for i in range(0, GB_MAX_ITER):
-        leap_script = GB_LEAP_IN % (frcmod_file, mol2_file, top, crd)
+        leap_script = GB_LEAP_IN % (self.ff_cmd, frcmod_file, mol2_file, top, crd)
 
         utils.run_leap(top, crd, 'tleap', leap_script)
 
@@ -206,7 +206,7 @@ def _calc_gb_charge(ac_file, frcmod_file, charge, scfconv, tight,
             converged = True
             break
 
-        # charges convergenced?
+        # charges converged?
         utils.run_amber(antechamber,
                         '-i %s -fi mol2 '
                         '-o %s -fo mol2 '
@@ -345,8 +345,8 @@ class Ligand(Common):
         #       structure is "too" distorted and no bonding information, etc. are
         #       available a priori.
         #       A test on a few thousand ZINC structures showed that this feature
-        #       is rarly useful.  It also complicates the code because the
-        #       coordinates are changed and this mus be guarded against.
+        #       is rarely useful.  It also complicates the code because the
+        #       coordinates are changed and this must be guarded against.
         if not sqm_strategy:
             if not gb_charges:
                 sqm_strategy = (
@@ -502,6 +502,7 @@ class Ligand(Common):
             logger.write('Warning: some atom charges > %.2f' %
                          const.MAX_CHARGE)
 
+        # dec_frac shows how far the total charge is from being an integer
         total_charge = sum(charges)
         dec_frac = total_charge - round(total_charge)
 
@@ -509,8 +510,8 @@ class Ligand(Common):
             logger.write('Warning: total molecule charge (%f) is far from '
                          'being an integer' % total_charge)
         
+        # Correct the charges so the sum is an integer
         corr = dec_frac / len(charges)
-
         for idx, charge in enumerate(charges):
             charges[idx] = charge - corr
 
@@ -518,6 +519,8 @@ class Ligand(Common):
            for charge in charges:
                chfile.write('%.9f\n' % charge)
 
+        # Run antechamber again with the corrected charges as input
+        # Produces a corr.ac file with the integer total charge
         utils.run_amber(antechamber,
                         '-i %s -fi ac '
                         '-o %s -fo ac '
@@ -531,6 +534,7 @@ class Ligand(Common):
         shutil.copyfile(const.LIGAND_AC_FILE,
                         const.LIGAND_AC_FILE + os.extsep + '0')
 
+        # renames corr.ac to ligand.ac
         shutil.move(const.CORR_AC_FILE, const.LIGAND_AC_FILE)
 
         self.charge = float('%.12f' % sum(charges))

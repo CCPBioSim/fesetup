@@ -24,7 +24,7 @@ Leap related functionality
 
 __revision__ = "$Id$"
 
-
+import os
 
 class Leap(object):
     """
@@ -67,11 +67,16 @@ class Leap(object):
 
 
     def generate_init(self, addcmd=''):
-        leap_cmds = []
+        leap_cmds = []     
 
         # force field files (ff) and user parameters (addcmd) must be
         # loaded before the molecule (pdb/mol2) otherwise leap will fail.
 
+        # SKF Aug-18: addPath for Amber18???
+        leap_cmds.append('addPath %s/dat/leap/prep/oldff' % os.environ['AMBERHOME'])
+        leap_cmds.append('addPath %s/dat/leap/lib/oldff' % os.environ['AMBERHOME'])
+        leap_cmds.append('addPath %s/dat/leap/cmd/oldff' % os.environ['AMBERHOME'])
+        
         for ff in self.force_fields:
             leap_cmds.append('source "leaprc.%s"' % ff)
 

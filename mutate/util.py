@@ -626,6 +626,7 @@ def map_atoms(lig_initial, lig_final, timeout, isotope_map = None,
     #print (isotope_map)
     #import pdb ; pdb.set_trace()
     #sys.exit(-1)
+    
     index_map = mcss(mol1, mol2, timeout, isotope_map, mcs_sel)
 
     if not index_map:

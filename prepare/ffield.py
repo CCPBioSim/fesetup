@@ -54,7 +54,7 @@ class ForceField(object):
         :type type: string
         :param solvent: solvent force field
         :type solvent: string
-        :param div_ions: divalent ion set (Li, Roberts, Chakravorty and Merz)
+        :param div_ions: divalent ion set (Li and Merz)
         :type div_ions: string
         :param add_ons: additional force fields
         :type add_ons: list

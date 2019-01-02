@@ -71,7 +71,6 @@ class Protein(Common):
     def get_charge(self):
         """
         Get the protein charge via leap.
-
         :raises: SetupError
         """
 
@@ -80,10 +79,9 @@ class Protein(Common):
         if not os.access(mol_file, os.R_OK):
             raise errors.SetupError('the protein start file %s does not exist '
                                     % mol_file)
-
+            
         out = utils.run_leap('', '', 'tleap',
-                             '%s\np = loadpdb %s\ncharge p\n' %
-                             (self.ff_cmd, mol_file) )
+                             '%s\np = loadpdb %s\ncharge p\n' %(self.ff_cmd, mol_file) )
 
         charge = None
 
