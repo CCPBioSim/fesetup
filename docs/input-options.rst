@@ -65,6 +65,9 @@ The following tables list all options unique to each section.  Note that empty s
 | mcs.timeout           | 60.0                | float   | timeout in seconds for fmcs,  |
 |                       |                     |         |    0 means no timeout         |
 +-----------------------+---------------------+---------+-------------------------------+
+| mcs.match_by          | none, shapealign    | string  | controls RDKit structure      |
+|                       | spatially-closest   |         | matching behaviour            |
++-----------------------+---------------------+---------+-------------------------------+
 | remake                | False, True         | bool    | remake already done           |
 |                       |                     |         | molecules (excluding morphs)  |
 +-----------------------+---------------------+---------+-------------------------------+
@@ -114,6 +117,13 @@ The following tables list all options unique to each section.  Note that empty s
 | conf_search.steep_econv | 0.0001                | float   | conformation search option                           |
 +-------------------------+-----------------------+---------+------------------------------------------------------+
 | conf_search.steep_steps | 100                   | integer | conformation search option                           |
++-------------------------+-----------------------+---------+------------------------------------------------------+
+| add_hydrogens           | False, True           | bool    | add hydrogens, allow for adjusting pH                |
++-------------------------+-----------------------+---------+------------------------------------------------------+
+| correct_for_pH          | False, True           | bool    | adjust protonation state /partial charges of ligand, |
+|                         |                       |         | only works if add_hydrogens = True                   |
++-------------------------+-----------------------+---------+------------------------------------------------------+
+| pH                      | 7.4                   | float   | pH for ligand                                        |
 +-------------------------+-----------------------+---------+------------------------------------------------------+
 | molecules 	          | none,                 | list of | list of molecules                                    | 
 |                         | must be set by user   | strings |                                                      |
