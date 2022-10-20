@@ -1,4 +1,6 @@
-# FESetup
+# FESetup [Deprecated]
+
+## This code is no longer being developed or maintained.
 
 FESetup automates the setup of relative alchemical free energy (AFE) simulations such as thermodynamic integration (TI) and free energy perturbation (FEP).  Post–processing methods like MM–PBSA and LIE are supported as well.  FESetup can also be used for general simulation setup ("equilibration") through an abstract MD engine (currently supported MD engines are AMBER, GROMACS, NAMD and DL_POLY).  For relative AFE simulation the mapping of corresponding atoms between the two free energy states, that is their topological similarity, is computed via a maximum common substructure search (MCSS).  This enables a maximal single topology description of the perturbed molecule pair.  Ligand molecules can automatically be parameterised using the AMBER GAFF/AM1-BCC method.  Supported force fields for biomolecules are all the modern AMBER force fields.
 
